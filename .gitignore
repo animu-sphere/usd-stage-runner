@@ -1,0 +1,36 @@
+# OpenStrata and build state.
+/build/
+**/build/
+**/dist/
+/.strata/
+**/.strata/
+CMakeUserPresets.json
+strata.lock
+
+# Installed or staged build products.
+**/bin/
+**/lib/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.dll
+*.exe
+
+# Editor and operating-system state.
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Tool and language caches.
+__pycache__/
+*.pyc
+/.ost-ci/
+/.ost-ci-home/

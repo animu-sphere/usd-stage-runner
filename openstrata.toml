@@ -1,0 +1,17 @@
+[project]
+name = "usd-stage-runner"
+version = "0.1.0"
+
+[requires]
+platform = "cy2026"
+profile = "usd"
+
+[workspace]
+members = [
+  "libs/runtimeCore",
+  "apps/stage_runner",
+]
+release_members = [
+  "runtimeCore",
+  "stage_runner",
+]
