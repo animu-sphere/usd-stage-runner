@@ -1,0 +1,33 @@
+schema: 1
+
+# OpenStrata 0.22.x generates a plugin graph step for every workspace cell,
+# while `ost plugin test --workspace --graph-only` rejects a workspace with no
+# plugin bundles. After regeneration, retain the hashFiles guard in
+# .github/workflows/ost-source-ci.yml until an openstrata.plugin.yaml member is
+# added or the generator supports library/tool-only workspaces.
+
+bootstrap:
+  ost:
+    version: "0.22.6"
+    repository: animu-sphere/open-strata
+
+runners:
+  windows-hosted:
+    kind: github-hosted
+    image: windows-2022
+    billing:
+      acknowledgement: required
+
+cells:
+  - name: workspace-pr-windows
+    kind: workspace
+    lane: pull_request
+    runner: windows-hosted
+    runtime_artifact: sha256:ebb0c7da509ee14ada19ee5b461de6996aad0024b5c9640f12dde76912e849b5
+    runtime_remote:
+      uri: oci://ghcr.io/animu-sphere/openstrata-runtime-cy2026-usd@sha256:d3ff79a6f330558c3b9a427a927d340fe3dcab1fe89107faa0ea9f66a104b7bf
+      expected_oci_digest: sha256:d3ff79a6f330558c3b9a427a927d340fe3dcab1fe89107faa0ea9f66a104b7bf
+    platform: cy2026
+    profile: usd
+    host_python: "3.13"
+    verify: test

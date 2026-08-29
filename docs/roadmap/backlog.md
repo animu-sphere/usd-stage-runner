@@ -5,15 +5,6 @@ Status: ⬜ not started unless noted otherwise
 Work is ordered as vertical slices. Each phase should result in a runnable,
 testable capability rather than only a collection of disconnected libraries.
 
-## Phase 1: Input and transform
-
-- Add `inputCore` and an SDL input adapter.
-- Normalize gamepad and keyboard state into named input actions.
-- Add a simple controllable runtime component.
-- Synchronize dirty runtime transforms to USD.
-
-Success: a gamepad can move a cube prim in real time.
-
 ## Phase 2: Jolt physics
 
 - Add the minimal `physicsCore` interfaces and Jolt adapter.

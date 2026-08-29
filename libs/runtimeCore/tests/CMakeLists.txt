@@ -1,0 +1,9 @@
+add_executable(runtime_clock_tests clock_tests.cpp)
+target_compile_features(runtime_clock_tests PRIVATE cxx_std_17)
+target_link_libraries(runtime_clock_tests PRIVATE runtimeCore::runtimeCore runtimeCore_warnings)
+add_test(NAME runtime.clock COMMAND runtime_clock_tests)
+
+add_executable(runtime_registry_tests registry_tests.cpp)
+target_compile_features(runtime_registry_tests PRIVATE cxx_std_17)
+target_link_libraries(runtime_registry_tests PRIVATE runtimeCore::runtimeCore runtimeCore_warnings)
+add_test(NAME runtime.registry COMMAND runtime_registry_tests)

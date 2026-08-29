@@ -1,0 +1,11 @@
+schema: openstrata.tool/v1alpha1
+tool:
+  id: stage_runner
+  version: 0.1.0
+  license: Apache-2.0
+executables: [stage_runner]
+directories: [bin]
+requires:
+  libraries:
+    - id: runtimeCore
+      version: ">=0.1,<0.2"
