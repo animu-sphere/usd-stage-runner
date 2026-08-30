@@ -1,0 +1,32 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "Ground"
+    {
+        custom token runner:physics:motionType = "static"
+        double3 xformOp:scale = (5, 0.5, 5)
+        double3 xformOp:translate = (0, -0.5, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Cube "PlayerCube"
+    {
+        custom double runner:physics:mass = 1
+        custom token runner:physics:motionType = "dynamic"
+        double3 xformOp:scale = (0.5, 0.5, 0.5)
+        double3 xformOp:translate = (0, 3, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+    }
+
+    def Camera "Camera"
+    {
+        double3 xformOp:translate = (0, 3, 8)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

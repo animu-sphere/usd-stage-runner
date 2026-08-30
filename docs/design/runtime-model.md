@@ -1,7 +1,7 @@
 # Runtime Model
 
-Status: intended contract; input, transform, and backend-neutral physics
-synchronization portions implemented
+Status: intended contract; first input, transform, and Jolt physics vertical
+slice implemented
 
 ## State ownership
 
@@ -79,10 +79,11 @@ Host and render frames may use variable time. Physics starts at 60 Hz
 (`dt = 1 / 60`) and uses the existing bounded accumulator. A controlled clock
 must be injectable so the same path can be tested without wall-clock sleeps.
 
-The current host implementation stops after direct movement updates the runtime
-transform. Backend-neutral body-to-prim synchronization is implemented, while
-the remaining [Jolt milestone](../roadmap/current.md) work replaces that
-temporary movement step with physics-driven motion.
+The current host maps player movement intent to desired horizontal body
+velocity, preserves vertical velocity, advances Jolt through the bounded fixed
+step, and synchronizes changed bodies through the dirty transform queue. Direct
+movement remains only as compatibility behavior for a Stage without physics
+declarations or an unbound player prim.
 
 ## Domain systems
 

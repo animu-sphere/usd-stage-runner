@@ -11,3 +11,4 @@ one when later evidence supersedes it.
 | # | Date | Report | `ost` | Focus |
 | --- | --- | --- | --- | --- |
 | 1 | 2026-08-30 | [A local Windows build finishes work but does not return](01-2026-08-30-v0.22.8-windows-ninja-wait.md) | 0.22.8 | Local `ost build`, per-library build, and direct CMake/Ninja invocations remain alive after output stops; both Windows CI paths pass on the same commit. **Live P1 diagnostic ask** |
+| 2 | 2026-08-30 | [The Windows runtime exports its producer's Python paths](02-2026-08-30-v0.22.6-runtime-python-paths.md) | 0.22.6 | A direct consumer on `windows-2022` cannot configure against the pulled runtime until its Python dependency hints and imported-target include paths are repaired. **Upstream runtime-export issue** |

@@ -12,9 +12,12 @@
 # Fork-PR safety: this workflow never publishes, never promotes, and uses no
 # secrets; keep it that way when editing the matrix.
 #
-# Repository adjustment: OpenStrata 0.22.x emits a plugin-only graph command
-# for every workspace cell. Skip that command until this library/tool-only
-# workspace contains an openstrata.plugin.yaml member.
+# Repository adjustments retained after regeneration:
+# - OpenStrata 0.22.x emits a plugin-only graph command for every workspace
+#   cell. Skip it until this library/tool-only workspace contains a plugin.
+# - Build pinned Jolt beside the pinned USD runtime and run the root CMake
+#   integration tests so the combined OpenUSD + real-Jolt path cannot be
+#   silently skipped by the component-oriented workspace build.
 name: ost source ci
 
 on:
@@ -60,6 +63,12 @@ jobs:
     steps:
       - name: Check out the repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Check out Jolt Physics 5.5.0
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          repository: jrouwe/JoltPhysics
+          ref: 23dadd0e603f1b321142d4c74df07fce85064989
+          path: .ci/jolt
       - name: Hosted runner billing notice
         if: ${{ matrix.hosted }}
         shell: bash
@@ -200,17 +209,89 @@ jobs:
           set -euo pipefail
           mkdir -p .ost-ci
           ost runtime validate ${{ matrix.platform }} --profile ${{ matrix.profile }} --json | tee .ost-ci/runtime-validate.json
+      - name: Build and install Jolt Physics for the vertical slice
+        shell: pwsh
+        run: |
+          $joltPrefix = Join-Path $env:GITHUB_WORKSPACE ".ci/jolt-install"
+          cmake -S .ci/jolt/Build -B .ci/jolt-build -A x64 `
+            -DCMAKE_INSTALL_PREFIX="$joltPrefix" `
+            -DINTERPROCEDURAL_OPTIMIZATION=OFF `
+            -DENABLE_ALL_WARNINGS=OFF `
+            -DGENERATE_DEBUG_SYMBOLS=OFF `
+            -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=OFF `
+            -DPROFILER_IN_DEBUG_AND_RELEASE=OFF `
+            -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF `
+            -DTARGET_UNIT_TESTS=OFF `
+            -DTARGET_HELLO_WORLD=OFF `
+            -DTARGET_PERFORMANCE_TEST=OFF `
+            -DTARGET_SAMPLES=OFF `
+            -DTARGET_VIEWER=OFF
+          cmake --build .ci/jolt-build --config Release --target Jolt
+          cmake --install .ci/jolt-build --config Release
+          "JOLT_PREFIX=$joltPrefix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Prepare the runtime for the combined integration build
+        shell: pwsh
+        run: |
+          $runtime = (& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --json | ConvertFrom-Json).data
+          $pythonExecutable = (Get-Command python).Source
+          $pythonLibrary = Get-ChildItem (Join-Path $env:Python_ROOT_DIR "libs") -Filter "python3??.lib" | Select-Object -First 1 -ExpandProperty FullName
+          $pythonInclude = Join-Path $env:Python_ROOT_DIR "Include"
+
+          foreach ($path in @($pythonExecutable, $pythonLibrary, $pythonInclude)) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              throw "Python Development artifact is missing: $path"
+            }
+          }
+
+          # The published runtime has the producer's Python include directory
+          # embedded in its imported targets. Repair only that exact, absent
+          # path in the materialized copy; pulling the runtime again restores it.
+          $pxrConfig = Join-Path $runtime.prefix "pxrConfig.cmake"
+          $pxrTargets = Join-Path $runtime.prefix "cmake/pxrTargets.cmake"
+          $configText = Get-Content -LiteralPath $pxrConfig -Raw
+          $bakedMatch = [regex]::Match($configText, 'set\(Python3_INCLUDE_DIR \[\[(.+?)\]\]\)')
+          if (-not $bakedMatch.Success) {
+            throw "pxrConfig.cmake does not expose its baked Python include directory"
+          }
+          $bakedInclude = $bakedMatch.Groups[1].Value
+          if (-not (Test-Path -LiteralPath $bakedInclude)) {
+            $replacement = $pythonInclude.Replace('\', '/')
+            $targetsText = Get-Content -LiteralPath $pxrTargets -Raw
+            $updatedTargets = $targetsText.Replace($bakedInclude, $replacement).Replace($bakedInclude.Replace('\', '/'), $replacement)
+            if ($updatedTargets -eq $targetsText) {
+              throw "pxrTargets.cmake does not contain the absent producer path: $bakedInclude"
+            }
+            [System.IO.File]::WriteAllText($pxrTargets, $updatedTargets, [System.Text.UTF8Encoding]::new($false))
+          }
+
       - name: Validate the workspace dependency graph
         if: ${{ hashFiles('**/openstrata.plugin.yaml') != '' }}
         shell: bash
         run: ost plugin test --workspace --graph-only --json
       - name: Build the workspace from source
-        shell: bash
-        run: ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+        shell: pwsh
+        run: |
+          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $build = Get-ChildItem build -Directory |
+            Where-Object Name -Like "${{ matrix.platform }}-*-${{ matrix.profile }}" |
+            Select-Object -First 1
+          if (-not $build) {
+            throw "OpenStrata did not create the expected workspace build directory"
+          }
+          $testList = ctest --test-dir $build.FullName -N
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (($testList -join "`n") -notmatch "stage_runner.physics_falling_cube") {
+            throw "The workspace configured without the real Jolt physics tests"
+          }
       - name: Run the workspace test suite
         if: ${{ matrix.verify == 'test' }}
-        shell: bash
-        run: ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+        shell: pwsh
+        run: |
+          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
       - name: Upload the build logs and CI evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

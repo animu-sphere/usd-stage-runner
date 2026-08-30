@@ -1,6 +1,7 @@
 # USD Integration
 
-Status: intended contract; transform import and dirty write-back implemented
+Status: intended contract; temporary physics import, transform import, and
+dirty write-back implemented
 
 ## Runtime declarations
 
@@ -35,6 +36,15 @@ def Xform "Player"
 
 Temporary conventions are acceptable while proving a vertical slice, but the
 schema milestone must replace them before they become a public asset contract.
+
+The implemented temporary convention is limited to `UsdGeomCube` prims. It
+uses custom `runner:physics:motionType` token values `static` and `dynamic`, plus
+an optional `runner:physics:mass` double for dynamic bodies. Cube size and local
+scale ops determine the box half extents. Physics Cubes currently require a
+Y-up Stage with `metersPerUnit = 1`, one translate op followed only by scale
+ops, and identity ancestor transforms unless `resetXformStack` is set. These
+names deliberately mirror the candidate schema namespace, but they are not yet
+a stable asset contract.
 
 ## Runtime to USD
 

@@ -1,18 +1,25 @@
-#include "usd_stage_runner/runtime/fixed_step_accumulator.h"
-#include "usd_stage_runner/runtime/frame_clock.h"
-#include "usd_stage_runner/runtime/runtime_world.h"
 #include "usd_stage_runner/input/action_state.h"
 #include "usd_stage_runner/input/movement_controller.h"
 #include "usd_stage_runner/input_sdl/physical_input.h"
 #include "usd_stage_runner/input_sdl/sdl_input_source.h"
+#include "usd_stage_runner/physics/physics_runtime.h"
+#include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
+#include "usd_stage_runner/runtime/fixed_step_accumulator.h"
+#include "usd_stage_runner/runtime/frame_clock.h"
+#include "usd_stage_runner/runtime/runtime_world.h"
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
+#include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec3h.h>
+#include <pxr/base/tf/token.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/cube.h>
+#include <pxr/usd/usdGeom/metrics.h>
+#include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/xformOp.h>
 #include <pxr/usd/usdGeom/xformable.h>
 #endif
@@ -32,14 +39,23 @@
 
 namespace {
 
-using usd_stage_runner::runtime::FixedStepAccumulator;
-using usd_stage_runner::runtime::FrameClock;
-using usd_stage_runner::runtime::RuntimeWorld;
 using usd_stage_runner::input::ActionState;
 using usd_stage_runner::input::applyMovementIntent;
 using usd_stage_runner::input::updateMovementIntent;
+using usd_stage_runner::physics::BodyDescriptor;
+using usd_stage_runner::physics::MotionType;
+using usd_stage_runner::physics::PhysicsRuntime;
+using usd_stage_runner::physics::PhysicsWorld;
+using usd_stage_runner::physics::ShapeDescriptor;
+using usd_stage_runner::runtime::FixedStepAccumulator;
+using usd_stage_runner::runtime::FrameClock;
+using usd_stage_runner::runtime::RuntimeWorld;
 
 constexpr const char* playerPrim = "/World/PlayerCube";
+#if USD_STAGE_RUNNER_HAS_OPENUSD
+const pxr::TfToken physicsMotionTypeAttribute{"runner:physics:motionType"};
+const pxr::TfToken physicsMassAttribute{"runner:physics:mass"};
+#endif
 
 struct Options {
   std::filesystem::path stagePath;
@@ -88,8 +104,7 @@ Options parseOptions(int argc, char** argv) {
     if (argument == "--deterministic") {
       options.deterministic = true;
     } else if (argument == "--frames" || argument == "--max-fixed-steps" ||
-               argument == "--fixed-dt" || argument == "--move-x" ||
-               argument == "--move-y") {
+               argument == "--fixed-dt" || argument == "--move-x" || argument == "--move-y") {
       if (++index >= argc) {
         usageError(argument + " requires a value");
       }
@@ -123,6 +138,11 @@ Options parseOptions(int argc, char** argv) {
 struct StageContext {
   pxr::UsdStageRefPtr stage;
   RuntimeWorld world;
+};
+
+struct PhysicsImportSummary {
+  std::size_t shapeCount{0};
+  std::size_t bodyCount{0};
 };
 
 usd_stage_runner::runtime::RuntimeTransform readTransform(const pxr::UsdPrim& prim) {
@@ -160,6 +180,172 @@ StageContext openWorld(const std::filesystem::path& stagePath) {
     }
   }
   return {stage, std::move(world)};
+}
+
+std::optional<MotionType> readMotionType(const pxr::UsdPrim& prim) {
+  const auto attribute = prim.GetAttribute(physicsMotionTypeAttribute);
+  if (!attribute) {
+    return std::nullopt;
+  }
+
+  pxr::TfToken value;
+  if (!attribute.Get(&value)) {
+    throw std::runtime_error("could not read " + physicsMotionTypeAttribute.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  if (value == pxr::TfToken{"static"}) {
+    return MotionType::staticBody;
+  }
+  if (value == pxr::TfToken{"dynamic"}) {
+    return MotionType::dynamicBody;
+  }
+  throw std::runtime_error(physicsMotionTypeAttribute.GetString() + " on " +
+                           prim.GetPath().GetString() + " must be 'static' or 'dynamic'");
+}
+
+usd_stage_runner::runtime::Vec3d readBoxHalfExtents(const pxr::UsdGeomCube& cube) {
+  double size = 2.0;
+  if (!cube.GetSizeAttr().Get(&size) || !std::isfinite(size) || size <= 0.0) {
+    throw std::runtime_error("physics Cube size must be finite and positive on " +
+                             cube.GetPath().GetString());
+  }
+
+  pxr::GfVec3d scale{1.0};
+  bool resetsStack = false;
+  for (const auto& operation : cube.GetOrderedXformOps(&resetsStack)) {
+    if (operation.GetOpType() == pxr::UsdGeomXformOp::TypeTranslate) {
+      continue;
+    }
+    if (operation.GetOpType() != pxr::UsdGeomXformOp::TypeScale) {
+      throw std::runtime_error("temporary physics import supports only translate and scale ops: " +
+                               cube.GetPath().GetString());
+    }
+    pxr::GfVec3d operationScale;
+    if (!operation.GetAs(&operationScale, pxr::UsdTimeCode::Default())) {
+      throw std::runtime_error("could not read scale op on " + cube.GetPath().GetString());
+    }
+    scale[0] *= operationScale[0];
+    scale[1] *= operationScale[1];
+    scale[2] *= operationScale[2];
+  }
+
+  const double halfSize = size * 0.5;
+  return {std::abs(scale[0]) * halfSize, std::abs(scale[1]) * halfSize,
+          std::abs(scale[2]) * halfSize};
+}
+
+void validatePhysicsTransform(const pxr::UsdGeomCube& cube) {
+  bool resetsStack = false;
+  const auto operations = cube.GetOrderedXformOps(&resetsStack);
+  if (operations.empty() || operations.front().IsInverseOp() ||
+      operations.front().GetOpType() != pxr::UsdGeomXformOp::TypeTranslate) {
+    throw std::runtime_error(
+        "temporary physics import requires one translate op before any scale ops: " +
+        cube.GetPath().GetString());
+  }
+  pxr::GfVec3d translation;
+  if (!operations.front().GetAs(&translation, pxr::UsdTimeCode::Default())) {
+    throw std::runtime_error("could not read translate op on " + cube.GetPath().GetString());
+  }
+  for (std::size_t index = 1; index < operations.size(); ++index) {
+    if (operations[index].IsInverseOp() ||
+        operations[index].GetOpType() != pxr::UsdGeomXformOp::TypeScale) {
+      throw std::runtime_error(
+          "temporary physics import requires one translate op followed only by scale ops: " +
+          cube.GetPath().GetString());
+    }
+  }
+
+  if (resetsStack) {
+    return;
+  }
+  for (auto ancestor = cube.GetPrim().GetParent(); ancestor && !ancestor.IsPseudoRoot();
+       ancestor = ancestor.GetParent()) {
+    const pxr::UsdGeomXformable ancestorTransform(ancestor);
+    if (ancestorTransform &&
+        !pxr::GfIsClose(ancestorTransform.ComputeLocalToWorldTransform(pxr::UsdTimeCode::Default()),
+                        pxr::GfMatrix4d{1.0}, 1e-9)) {
+      throw std::runtime_error(
+          "temporary physics import requires identity parent transforms or resetXformStack: " +
+          cube.GetPath().GetString());
+    }
+  }
+}
+
+double readBodyMass(const pxr::UsdPrim& prim, MotionType motionType) {
+  if (motionType == MotionType::staticBody) {
+    return 1.0;
+  }
+  const auto attribute = prim.GetAttribute(physicsMassAttribute);
+  if (!attribute) {
+    return 1.0;
+  }
+  double mass = 0.0;
+  if (!attribute.Get(&mass)) {
+    throw std::runtime_error("could not read " + physicsMassAttribute.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  return mass;
+}
+
+std::size_t physicsDeclarationCount(const pxr::UsdStageRefPtr& stage) {
+  std::size_t count = 0;
+  for (const auto& prim : stage->Traverse()) {
+    if (prim.GetAttribute(physicsMotionTypeAttribute)) {
+      ++count;
+    }
+  }
+  return count;
+}
+
+PhysicsImportSummary importPhysicsBodies(StageContext& context, PhysicsWorld& physicsWorld,
+                                         PhysicsRuntime& physicsRuntime) {
+  if (pxr::UsdGeomGetStageUpAxis(context.stage) != pxr::UsdGeomTokens->y) {
+    throw std::runtime_error("temporary physics import requires a Y-up Stage");
+  }
+  if (!pxr::UsdGeomLinearUnitsAre(pxr::UsdGeomGetStageMetersPerUnit(context.stage),
+                                  pxr::UsdGeomLinearUnits::meters)) {
+    throw std::runtime_error("temporary physics import requires metersPerUnit = 1");
+  }
+  PhysicsImportSummary summary;
+  for (const auto& prim : context.stage->Traverse()) {
+    const auto motionType = readMotionType(prim);
+    if (!motionType.has_value()) {
+      continue;
+    }
+
+    const pxr::UsdGeomCube cube(prim);
+    if (!cube) {
+      throw std::runtime_error("temporary physics import supports only UsdGeomCube prims: " +
+                               prim.GetPath().GetString());
+    }
+    validatePhysicsTransform(cube);
+    const auto primId = prim.GetPath().GetString();
+    const auto shape = physicsWorld.createShape(
+        ShapeDescriptor{usd_stage_runner::physics::ShapeType::box, readBoxHalfExtents(cube)});
+    ++summary.shapeCount;
+    const bool dynamic = *motionType == MotionType::dynamicBody;
+    const auto body = physicsWorld.createBody(BodyDescriptor{
+        shape, *motionType, *context.world.transform(primId), readBodyMass(prim, *motionType),
+        dynamic ? usd_stage_runner::physics_jolt::movingCollisionLayer
+                : usd_stage_runner::physics_jolt::nonMovingCollisionLayer});
+    physicsRuntime.bindBody(primId, body);
+    ++summary.bodyCount;
+  }
+  return summary;
+}
+
+bool applyMovementIntentToPhysics(RuntimeWorld& world, const std::string& prim,
+                                  PhysicsWorld& physicsWorld, PhysicsRuntime& physicsRuntime,
+                                  double speed) {
+  const auto body = physicsRuntime.bodyForPrim(prim);
+  const auto* intent = world.component<usd_stage_runner::input::MovementIntent>(prim);
+  if (!body || intent == nullptr) {
+    return false;
+  }
+  const auto state = physicsWorld.bodyState(body);
+  return physicsWorld.setLinearVelocity(
+      body, {intent->x * speed, state.linearVelocity.y, intent->y * speed});
 }
 
 bool setTranslate(const pxr::UsdGeomXformOp& operation,
@@ -219,12 +405,26 @@ int run(const Options& options) {
       "OpenStrata usd runtime");
 #else
   StageContext context = openWorld(options.stagePath);
+  std::unique_ptr<PhysicsWorld> physicsWorld;
+  std::unique_ptr<PhysicsRuntime> physicsRuntime;
+  PhysicsImportSummary physicsImport;
+  const std::size_t declaredPhysicsBodies = physicsDeclarationCount(context.stage);
+  if (declaredPhysicsBodies != 0) {
+    if (!usd_stage_runner::physics_jolt::isJoltPhysicsAvailable()) {
+      throw std::runtime_error("Stage declares physics bodies, but Jolt Physics is unavailable "
+                               "in this build");
+    }
+    physicsWorld = usd_stage_runner::physics_jolt::createJoltPhysicsWorld();
+    physicsRuntime = std::make_unique<PhysicsRuntime>(*physicsWorld, context.world);
+    physicsImport = importPhysicsBodies(context, *physicsWorld, *physicsRuntime);
+  }
   const FixedStepAccumulator::Duration fixedStep{options.fixedDt};
   FixedStepAccumulator accumulator(fixedStep, options.maxFixedSteps);
   FrameClock clock;
   std::size_t fixedSteps = 0;
   std::size_t droppedSteps = 0;
   std::size_t synchronizedTransforms = 0;
+  std::size_t synchronizedPhysicsBodies = 0;
   std::size_t processedFrames = 0;
   ActionState actions;
   std::unique_ptr<usd_stage_runner::input_sdl::SdlInputSource> inputSource;
@@ -262,7 +462,17 @@ int run(const Options& options) {
 
     const auto result = accumulator.advance(frameTime, [&](const auto step) {
       ++fixedSteps;
-      if (context.world.containsPrim(playerPrim)) {
+      if (physicsRuntime) {
+        const bool playerHasPhysicsBody =
+            static_cast<bool>(physicsRuntime->bodyForPrim(playerPrim));
+        if (playerHasPhysicsBody) {
+          (void)applyMovementIntentToPhysics(context.world, playerPrim, *physicsWorld,
+                                             *physicsRuntime, 3.0);
+        } else if (context.world.containsPrim(playerPrim)) {
+          applyMovementIntent(context.world, playerPrim, 3.0, step.count());
+        }
+        synchronizedPhysicsBodies += physicsRuntime->step(step);
+      } else if (context.world.containsPrim(playerPrim)) {
         applyMovementIntent(context.world, playerPrim, 3.0, step.count());
       }
     });
@@ -277,9 +487,11 @@ int run(const Options& options) {
             << ", synchronized_transforms=" << synchronizedTransforms;
   if (const auto* transform = context.world.transform(playerPrim)) {
     const auto& value = transform->translation;
-    std::cout << ", player_translation=(" << value.x << ", " << value.y << ", " << value.z
-              << ')';
+    std::cout << ", player_translation=(" << value.x << ", " << value.y << ", " << value.z << ')';
   }
+  std::cout << ", physics_shapes=" << physicsImport.shapeCount
+            << ", physics_bodies=" << physicsImport.bodyCount
+            << ", physics_body_updates=" << synchronizedPhysicsBodies;
   std::cout << '\n';
   return 0;
 #endif
