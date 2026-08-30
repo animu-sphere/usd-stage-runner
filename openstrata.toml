@@ -9,9 +9,13 @@ profile = "usd"
 [workspace]
 members = [
   "libs/runtimeCore",
+  "libs/inputCore",
+  "backends/inputSdl",
   "apps/stage_runner",
 ]
 release_members = [
   "runtimeCore",
+  "inputCore",
+  "inputSdl",
   "stage_runner",
 ]

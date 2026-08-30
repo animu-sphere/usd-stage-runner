@@ -1,44 +1,43 @@
-# Next Milestone: Input and Transform
+# Next Milestone: Jolt Physics
 
 Status: ⬜ not started
 
-Phase 0 established the buildable runtime skeleton and is now represented in
-the [architecture overview](../architecture/overview.md). The next vertical
-slice adds backend-neutral input actions, an SDL adapter, and the first dirty
-runtime-to-USD transform synchronization path.
+The input and transform slice is implemented and recorded in the
+[architecture overview](../architecture/overview.md). The next vertical slice
+introduces backend-neutral physics contracts and a Jolt adapter, then replaces
+direct movement integration with force-based motion.
 
 ## Scope
 
-- add `inputCore` without SDL types in its public API;
-- add an `inputSdl` adapter for keyboard and gamepad state;
-- normalize physical controls into named actions;
-- add a simple movement-intent runtime component;
-- add runtime transform state and a dirty synchronization queue;
-- synchronize only dirty runtime transforms to their USD prims; and
-- add core unit tests plus an adapter/Stage integration test.
-
-Initial actions should include `move.x` and `move.y`. Device bindings belong to
-the adapter or host configuration; consumers see action names and values only.
+- add minimal `physicsCore` interfaces for worlds, bodies, shapes, and
+  constraints;
+- add a `physicsJolt` adapter without leaking Jolt types into core APIs;
+- build rigid bodies and colliders from the representative Stage;
+- advance physics through the existing bounded fixed-step accumulator;
+- extract changed body transforms into runtime transform components;
+- synchronize dirty simulated transforms to USD; and
+- connect movement intent to force-based player movement.
 
 ## Required boundaries
 
-- `inputCore` depends inward on `runtimeCore` and does not include SDL or
-  OpenUSD types.
-- `inputSdl` implements the core input boundary and owns SDL object lifetime.
-- USD writes stay in the host or a dedicated adapter, not in `runtimeCore`.
-- Runtime transforms are keyed by the existing prim identity; no second scene
-  hierarchy is introduced.
-- Tests can inject action state without requiring a physical device.
+- `physicsCore` depends inward on `runtimeCore` and does not include OpenUSD,
+  OpenExec, or Jolt types.
+- `physicsJolt` owns Jolt object lifetime and implements the core contracts.
+- USD declarations and writes stay in the host or a dedicated adapter.
+- Runtime bodies remain keyed by existing prim identity.
+- Physics and controller tests use deterministic fixed steps without wall-clock
+  sleeps.
 
 ## Completion criteria
 
 ```text
-keyboard or gamepad state
-    -> named move actions
+move actions
     -> movement intent
+    -> physics force
+    -> fixed Jolt step
     -> dirty runtime transform
-    -> USD xform update for /World/PlayerCube
+    -> USD xform update
 ```
 
-The demo must run with a real SDL adapter, while the controller and transform
-logic remain testable without SDL or wall-clock sleeps.
+The representative Stage must contain a cube that falls onto a floor and can
+then be controlled through `input -> physics -> USD`.

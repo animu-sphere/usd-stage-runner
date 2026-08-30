@@ -1,0 +1,4 @@
+add_executable(input_sdl_tests input_sdl_tests.cpp)
+target_compile_features(input_sdl_tests PRIVATE cxx_std_17)
+target_link_libraries(input_sdl_tests PRIVATE inputSdl::inputSdl inputSdl_warnings)
+add_test(NAME inputSdl.physical_mapping COMMAND input_sdl_tests)

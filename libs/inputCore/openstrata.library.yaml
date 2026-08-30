@@ -1,0 +1,11 @@
+schema: openstrata.library/v1alpha1
+library:
+  id: inputCore
+  version: 0.1.0
+cmake:
+  package: inputCore
+  target: inputCore::inputCore
+requires:
+  libraries:
+    - id: runtimeCore
+      version: ">=0.1,<0.2"

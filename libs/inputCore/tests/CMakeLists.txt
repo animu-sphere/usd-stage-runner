@@ -1,0 +1,4 @@
+add_executable(input_core_tests input_tests.cpp)
+target_compile_features(input_core_tests PRIVATE cxx_std_17)
+target_link_libraries(input_core_tests PRIVATE inputCore::inputCore inputCore_warnings)
+add_test(NAME inputCore.actions_and_movement COMMAND input_core_tests)

@@ -9,6 +9,32 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   set_tests_properties(stage_runner.minimal_stage PROPERTIES
     PASS_REGULAR_EXPRESSION "with 4 prims.*frames=4, fixed_steps=4, dropped_steps=0"
   )
+
+  add_test(
+    NAME stage_runner.input_transform_sync
+    COMMAND stage_runner
+      ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/minimal.usda
+      --frames 4
+      --deterministic
+      --move-x 1
+  )
+  set_tests_properties(stage_runner.input_transform_sync PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "fixed_steps=4, dropped_steps=0, synchronized_transforms=4, player_translation=\\(0.2, 1, 0\\)"
+  )
+
+  add_test(
+    NAME stage_runner.float_transform_sync
+    COMMAND stage_runner
+      ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/float_translate.usda
+      --frames 4
+      --deterministic
+      --move-x 1
+  )
+  set_tests_properties(stage_runner.float_transform_sync PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "fixed_steps=4, dropped_steps=0, synchronized_transforms=4, player_translation=\\(1.2, 1, 0\\)"
+  )
 endif()
 
 if(TARGET stage_runner)
@@ -31,6 +57,28 @@ if(TARGET stage_runner)
       -DOPTION=--fixed-dt
       -DVALUE=nan
       "-DEXPECTED=--fixed-dt requires a positive number"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_out_of_range_move_axis
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/minimal.usda
+      -DOPTION=--move-x
+      -DVALUE=2
+      "-DEXPECTED=--move-x requires a number from -1 to 1"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_move_axis_without_deterministic
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/minimal.usda
+      -DOPTION=--move-x
+      -DVALUE=1
+      "-DEXPECTED=--move-x and --move-y require --deterministic"
       -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
   )
 endif()

@@ -17,6 +17,7 @@ else()
 endif()
 
 add_library(runtimeCore
+  src/dirty_prim_queue.cpp
   src/fixed_step_accumulator.cpp
   src/frame_clock.cpp
   src/runtime_world.cpp
