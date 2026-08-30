@@ -2,6 +2,9 @@
 
 Status: in progress
 
+The `physicsJolt` bootstrap is implemented. Runtime integration, temporary
+Stage import, and the complete input-to-physics path remain in progress.
+
 The input-and-transform slice is implemented and recorded in the
 [architecture overview](../architecture/overview.md). This milestone replaces
 temporary direct transform movement with physics-driven motion while preserving
@@ -44,8 +47,8 @@ to input through physics.
 
 ## Recommended PR sequence
 
-1. **`physicsJolt` bootstrap** — initialization, one box body, a static floor,
-   and fixed stepping.
+1. **`physicsJolt` bootstrap** — implemented: initialization, box bodies, a
+   static floor, fixed stepping, changed-state extraction, and adapter coverage.
 2. **Runtime physics integration** — prim/body mapping, transform extraction,
    and dirty synchronization.
 3. **Stage importer** — create bodies and colliders through an explicitly

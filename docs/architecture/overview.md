@@ -2,12 +2,12 @@
 
 ## Current state
 
-The repository implements the input-and-transform vertical slice and the
-backend-neutral foundation of the physics slice. It contains runtime, input,
-and physics core libraries, an SDL adapter, an OpenUSD-aware host executable,
-core/adapter/integration tests, and dual CMake/OpenStrata build configuration.
-The Jolt adapter and runtime physics integration do not exist yet; neither do
-OpenExec, camera, behavior, or vehicle targets.
+The repository implements the input-and-transform vertical slice, the
+backend-neutral physics contracts, and the first Jolt adapter. It contains
+runtime, input, and physics core libraries, SDL and Jolt adapters, an
+OpenUSD-aware host executable, core/adapter/integration tests, and dual
+CMake/OpenStrata build configuration. Runtime physics integration does not
+exist yet; neither do OpenExec, camera, behavior, or vehicle targets.
 
 ## Implemented targets
 
@@ -17,6 +17,7 @@ OpenExec, camera, behavior, or vehicle targets.
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
 | `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, and changed-body extraction contracts. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
+| `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, and changed-body extraction behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, build runtime transforms, poll input, advance movement, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `inputSdl`; OpenUSD `usd` and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
@@ -39,6 +40,16 @@ velocity commands; advances a positive fixed duration; and returns a draining
 list of changed `BodyState` values. `PhysicsBody` is a small handle component
 that can be attached to a prim in `RuntimeWorld`. The contract test uses a
 deterministic mock with gravity to verify this boundary without Jolt.
+
+`physicsJolt` implements that contract behind a factory boundary: its public
+header exposes only `physicsCore` and standard-library types. The adapter maps
+static and dynamic bodies to separate non-moving and moving broad-phase layers,
+owns Jolt's process-wide type registration while adapter worlds exist, and
+drains changed dynamic body state after fixed steps. Its focused adapter test
+drops a cube onto a static floor and verifies settling and explicit resource
+cleanup. When no Jolt CMake package is available, a small unavailable
+implementation preserves backend-neutral builds; requiring Jolt is an explicit
+configure option.
 
 ## Runtime World and transforms
 
@@ -93,14 +104,14 @@ exactly one fixed interval per host frame without sleeping.
 
 ## Build and verification
 
-The root CMake tree builds the four libraries, host, and CTest suite. Each
-library installs headers and an exported CMake package. OpenUSD and SDL discovery
-remain isolated to their adapter/host directories.
+The root CMake tree builds the five libraries, host, and CTest suite. Each
+library installs headers and an exported CMake package. OpenUSD, SDL, and Jolt
+discovery remain isolated to their adapter/host directories.
 
 OpenStrata owns the pinned `cy2026`/`usd` environment. That profile supplies
-OpenUSD but not SDL; interactive builds therefore need an SDL2 or SDL3 package
-on `CMAKE_PREFIX_PATH`. Dependency-free and deterministic tests do not require
-SDL or physical devices.
+OpenUSD but not SDL or Jolt; interactive or Jolt-backed builds therefore need
+those packages on `CMAKE_PREFIX_PATH`. Backend-neutral deterministic tests do
+not require either SDK or physical devices.
 
 The committed `tests/fixtures/minimal.usda` Stage contains `/World/Ground`,
 `/World/PlayerCube`, and `/World/Camera`. The synchronization integration test
@@ -122,6 +133,9 @@ stage_runner -----> OpenUSD usd + usdGeom
       ^
       |
  physicsCore <----- physics contract tests
+      ^
+      |
+ physicsJolt -----> Jolt (optional at configure time)
 ```
 
 The core targets include no OpenUSD, SDL, Jolt, or OpenExec headers. The

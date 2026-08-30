@@ -3,8 +3,8 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; normalized input and incremental transform sync are implemented, and
-the physics slice now has its backend-neutral core contracts.
+slices; normalized input, incremental transform sync, and the first Jolt
+Physics adapter are implemented.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -18,6 +18,9 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `physicsCore`, with typed backend-neutral resource handles, descriptors for
   boxes, bodies, and fixed constraints, fixed-step commands, and changed-body
   extraction contracts;
+- `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
+  box shapes and static or dynamic bodies, advances fixed simulation steps, and
+  extracts changed body state without exposing Jolt types publicly;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y` without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
@@ -25,7 +28,7 @@ behavior are documented in [docs/README.md](docs/README.md).
 - a minimal USDA fixture and dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-The Jolt adapter and runtime physics integration are the current roadmap work.
+Runtime physics integration and Stage import are the current roadmap work.
 Character, camera, behavior, and OpenExec integration are later slices.
 
 ## Build with OpenStrata
@@ -76,7 +79,10 @@ unavailable; the backend-neutral unit tests remain buildable. Set
 error. Interactive input is enabled when CMake can find `SDL3::SDL3` or
 `SDL2::SDL2`; set `USD_STAGE_RUNNER_REQUIRE_SDL=ON` to require a real SDL-backed
 demo build. The OpenStrata `usd` profile does not currently bundle SDL, so pass
-an SDL package through `CMAKE_PREFIX_PATH` for interactive builds.
+an SDL package through `CMAKE_PREFIX_PATH` for interactive builds. The Jolt
+adapter similarly uses a `Jolt::Jolt` or `Jolt` CMake package when available;
+set `USD_STAGE_RUNNER_REQUIRE_JOLT=ON` to require it. Without that package, the
+adapter remains buildable but reports that world creation is unavailable.
 
 ## Host usage
 
