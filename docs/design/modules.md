@@ -1,6 +1,7 @@
 # Modules and Dependency Boundaries
 
-Status: intended contract; `runtimeCore`, `inputCore`, and `inputSdl` implemented
+Status: intended contract; `runtimeCore`, `inputCore`, `physicsCore`, and
+`inputSdl` implemented
 
 ## Core and adapter rule
 

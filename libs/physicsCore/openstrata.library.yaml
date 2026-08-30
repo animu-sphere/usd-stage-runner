@@ -1,0 +1,11 @@
+schema: openstrata.library/v1alpha1
+library:
+  id: physicsCore
+  version: 0.1.0
+cmake:
+  package: physicsCore
+  target: physicsCore::physicsCore
+requires:
+  libraries:
+    - id: runtimeCore
+      version: ">=0.1,<0.2"

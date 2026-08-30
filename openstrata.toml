@@ -10,12 +10,14 @@ profile = "usd"
 members = [
   "libs/runtimeCore",
   "libs/inputCore",
+  "libs/physicsCore",
   "backends/inputSdl",
   "apps/stage_runner",
 ]
 release_members = [
   "runtimeCore",
   "inputCore",
+  "physicsCore",
   "inputSdl",
   "stage_runner",
 ]

@@ -1,6 +1,6 @@
 # Milestone 1: Jolt Physics Vertical Slice
 
-Status: not started
+Status: in progress
 
 The input-and-transform slice is implemented and recorded in the
 [architecture overview](../architecture/overview.md). This milestone replaces
@@ -25,13 +25,6 @@ to input through physics.
 
 ## Scope
 
-### `physicsCore`
-
-- Add minimal world, body, shape, and constraint contracts.
-- Use backend-neutral handles and descriptors.
-- Add a deterministic mock backend or equivalent contract test.
-- Depend on `runtimeCore`, not OpenUSD, OpenExec, or Jolt.
-
 ### `physicsJolt`
 
 - Initialize and shut down Jolt.
@@ -51,15 +44,13 @@ to input through physics.
 
 ## Recommended PR sequence
 
-1. **`physicsCore` skeleton** — contracts, handles, descriptors, and mock-backed
-   deterministic tests.
-2. **`physicsJolt` bootstrap** — initialization, one box body, a static floor,
+1. **`physicsJolt` bootstrap** — initialization, one box body, a static floor,
    and fixed stepping.
-3. **Runtime physics integration** — prim/body mapping, transform extraction,
+2. **Runtime physics integration** — prim/body mapping, transform extraction,
    and dirty synchronization.
-4. **Stage importer** — create bodies and colliders through an explicitly
+3. **Stage importer** — create bodies and colliders through an explicitly
    temporary convention.
-5. **Full vertical slice** — connect input to physics and verify the complete
+4. **Full vertical slice** — connect input to physics and verify the complete
    path through USD.
 
 The following schema work is deliberately a separate milestone so the asset

@@ -3,7 +3,8 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; the current slice adds normalized input and incremental transform sync.
+slices; normalized input and incremental transform sync are implemented, and
+the physics slice now has its backend-neutral core contracts.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -14,6 +15,9 @@ behavior are documented in [docs/README.md](docs/README.md).
   prim-indexed component registry, Runtime World, runtime transforms, and a dirty
   synchronization queue;
 - `inputCore`, with named action state and backend-neutral movement intent;
+- `physicsCore`, with typed backend-neutral resource handles, descriptors for
+  boxes, bodies, and fixed constraints, fixed-step commands, and changed-body
+  extraction contracts;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y` without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
@@ -21,8 +25,8 @@ behavior are documented in [docs/README.md](docs/README.md).
 - a minimal USDA fixture and dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Physics, character, camera, behavior, and OpenExec integration are later roadmap
-slices and are not implemented yet.
+The Jolt adapter and runtime physics integration are the current roadmap work.
+Character, camera, behavior, and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 

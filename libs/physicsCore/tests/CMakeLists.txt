@@ -1,0 +1,4 @@
+add_executable(physics_core_tests physics_tests.cpp)
+target_compile_features(physics_core_tests PRIVATE cxx_std_17)
+target_link_libraries(physics_core_tests PRIVATE physicsCore::physicsCore physicsCore_warnings)
+add_test(NAME physicsCore.contracts COMMAND physics_core_tests)
