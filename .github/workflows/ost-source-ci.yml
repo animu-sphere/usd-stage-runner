@@ -233,7 +233,37 @@ jobs:
         shell: pwsh
         run: |
           $runtime = (& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --json | ConvertFrom-Json).data
+          $pythonExecutable = (Get-Command python).Source
           $pythonLibrary = Get-ChildItem (Join-Path $env:Python_ROOT_DIR "libs") -Filter "python3??.lib" | Select-Object -First 1 -ExpandProperty FullName
+          $pythonInclude = Join-Path $env:Python_ROOT_DIR "Include"
+
+          foreach ($path in @($pythonExecutable, $pythonLibrary, $pythonInclude)) {
+            if (-not (Test-Path -LiteralPath $path)) {
+              throw "Python Development artifact is missing: $path"
+            }
+          }
+
+          # The published runtime has the producer's Python include directory
+          # embedded in its imported targets. Repair only that exact, absent
+          # path in the materialized copy; pulling the runtime again restores it.
+          $pxrConfig = Join-Path $runtime.prefix "pxrConfig.cmake"
+          $pxrTargets = Join-Path $runtime.prefix "cmake/pxrTargets.cmake"
+          $configText = Get-Content -LiteralPath $pxrConfig -Raw
+          $bakedMatch = [regex]::Match($configText, 'set\(Python3_INCLUDE_DIR \[\[(.+?)\]\]\)')
+          if (-not $bakedMatch.Success) {
+            throw "pxrConfig.cmake does not expose its baked Python include directory"
+          }
+          $bakedInclude = $bakedMatch.Groups[1].Value
+          if (-not (Test-Path -LiteralPath $bakedInclude)) {
+            $replacement = $pythonInclude.Replace('\', '/')
+            $targetsText = Get-Content -LiteralPath $pxrTargets -Raw
+            $updatedTargets = $targetsText.Replace($bakedInclude, $replacement).Replace($bakedInclude.Replace('\', '/'), $replacement)
+            if ($updatedTargets -eq $targetsText) {
+              throw "pxrTargets.cmake does not contain the absent producer path: $bakedInclude"
+            }
+            [System.IO.File]::WriteAllText($pxrTargets, $updatedTargets, [System.Text.UTF8Encoding]::new($false))
+          }
+
           Invoke-Expression ((& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --shell pwsh) -join "`n")
           $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$($runtime.prefix);$env:CMAKE_PREFIX_PATH"
           cmake -S . -B build/vertical-slice -A x64 `
@@ -243,13 +273,9 @@ jobs:
             -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON `
             "-Dpxr_DIR=$($runtime.prefix)" `
             "-DJolt_DIR=$(Join-Path $env:JOLT_PREFIX 'lib/cmake/Jolt')" `
-            "-DPython3_ROOT_DIR=$env:Python_ROOT_DIR" `
-            "-DPython3_EXECUTABLE=$(Join-Path $env:Python_ROOT_DIR 'python.exe')" `
+            "-DPython3_EXECUTABLE=$pythonExecutable" `
             "-DPython3_LIBRARY=$pythonLibrary" `
-            "-DPython3_LIBRARY_RELEASE=$pythonLibrary" `
-            "-DPython3_INCLUDE_DIR=$(Join-Path $env:Python_ROOT_DIR 'include')" `
-            "-DPython3_INCLUDE_DIRS=$(Join-Path $env:Python_ROOT_DIR 'include')" `
-            "-DPython3_LIBRARIES=$pythonLibrary" `
+            "-DPython3_INCLUDE_DIR=$pythonInclude" `
             "-DMaterialX_DIR=$(Join-Path $runtime.prefix 'lib/cmake/MaterialX')" `
             "-DOpenSubdiv_DIR=$(Join-Path $runtime.prefix 'lib/cmake/OpenSubdiv')" `
             "-DTBB_DIR=$(Join-Path $runtime.prefix 'lib/cmake/TBB')"

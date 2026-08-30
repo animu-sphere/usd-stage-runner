@@ -1,12 +1,5 @@
 set(USD_STAGE_RUNNER_OPENUSD_TARGET "")
 set(USD_STAGE_RUNNER_USDGEOM_TARGET "")
-
-# Some OpenUSD package configs discover only Python's Development component.
-# Asking for the matching interpreter at the same time gives FindPython3 the
-# installation root it needs on hosted Windows runners. Keep this optional so
-# OpenUSD builds produced without Python remain supported.
-find_package(Python3 COMPONENTS Interpreter Development QUIET)
-
 if(USD_STAGE_RUNNER_REQUIRE_OPENUSD)
   find_package(pxr CONFIG REQUIRED)
 else()
