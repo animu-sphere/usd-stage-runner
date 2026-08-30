@@ -266,7 +266,7 @@ jobs:
 
           Invoke-Expression ((& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --shell pwsh) -join "`n")
           $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$($runtime.prefix);$env:CMAKE_PREFIX_PATH"
-          cmake -S . -B build/vertical-slice -A x64 `
+          cmake --debug-find-pkg=Python3 -S . -B build/vertical-slice -A x64 `
             -DBUILD_TESTING=ON `
             -DUSD_STAGE_RUNNER_BUILD_APP=ON `
             -DUSD_STAGE_RUNNER_REQUIRE_OPENUSD=ON `
