@@ -6,6 +6,7 @@
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -198,6 +199,11 @@ template <typename Function> bool rejectsOutOfRange(Function&& function) {
 int main() {
   using namespace usd_stage_runner;
 
+  static_assert(!std::is_copy_constructible_v<physics::PhysicsRuntime>);
+  static_assert(!std::is_copy_assignable_v<physics::PhysicsRuntime>);
+  static_assert(!std::is_move_constructible_v<physics::PhysicsRuntime>);
+  static_assert(!std::is_move_assignable_v<physics::PhysicsRuntime>);
+
   DeterministicPhysicsWorld world;
   const auto box = world.createShape({physics::ShapeType::box, {0.5, 0.5, 0.5}});
   const auto floor = world.createBody(physics::BodyDescriptor{
@@ -276,19 +282,19 @@ int main() {
       runtimeWorld.dirtyTransformCount() != 0) {
     return fail("unchanged body transforms must not be dirtied for USD synchronization");
   }
-  if (!runtimeWorld.removePrim("/World/PlayerCube") ||
-      physicsRuntime.step(physics::PhysicsWorld::Duration{0.1}) != 0 ||
+  if (!runtimeWorld.removePrim("/World/PlayerCube") || physicsRuntime.primForBody(cube) ||
       physicsRuntime.bodyCount() != 0) {
-    return fail("removed prims must be discarded from physics transform synchronization");
+    return fail("removed prims must be discarded from physics body mappings immediately");
   }
 
   runtimeWorld.addPrim("/World/PlayerCube");
   runtimeWorld.emplaceTransform("/World/PlayerCube", world.bodyState(floor).transform);
   if (!physicsRuntime.bindBody("/World/PlayerCube", floor) ||
-      !physicsRuntime.unbindBody("/World/PlayerCube") ||
-      physicsRuntime.bodyForPrim("/World/PlayerCube") || physicsRuntime.primForBody(floor) ||
-      physicsRuntime.bodyCount() != 0) {
-    return fail("unbinding must remove both directions of the prim-to-body mapping");
+      !runtimeWorld.removePrim("/World/PlayerCube") ||
+      !physicsRuntime.bindBody("/World/OtherCube", floor) ||
+      physicsRuntime.primForBody(floor) != runtime::PrimId{"/World/OtherCube"} ||
+      !physicsRuntime.unbindBody("/World/OtherCube") || physicsRuntime.bodyCount() != 0) {
+    return fail("removed static bodies must be reusable and unbind in both mapping directions");
   }
 
   if (!rejectsInvalidArgument([&] {

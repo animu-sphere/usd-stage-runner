@@ -32,7 +32,12 @@ bool PhysicsRuntime::bindBody(const runtime::PrimId& prim, BodyHandle body) {
 
   (void)physicsWorld_.bodyState(body);
 
-  const auto mappedPrim = bodyToPrim_.find(body);
+  auto mappedPrim = bodyToPrim_.find(body);
+  if (mappedPrim != bodyToPrim_.end() &&
+      !isMappingCurrent(mappedPrim->first, mappedPrim->second)) {
+    bodyToPrim_.erase(mappedPrim);
+    mappedPrim = bodyToPrim_.end();
+  }
   if (mappedPrim != bodyToPrim_.end() && mappedPrim->second != prim) {
     throw std::invalid_argument("physics body is already bound to another prim");
   }
@@ -43,7 +48,10 @@ bool PhysicsRuntime::bindBody(const runtime::PrimId& prim, BodyHandle body) {
     return false;
   }
   if (currentBody != nullptr) {
-    bodyToPrim_.erase(currentBody->handle);
+    const auto currentMapping = bodyToPrim_.find(currentBody->handle);
+    if (currentMapping != bodyToPrim_.end() && currentMapping->second == prim) {
+      bodyToPrim_.erase(currentMapping);
+    }
   }
 
   runtimeWorld_.emplaceComponent<PhysicsBody>(prim, PhysicsBody{body});
@@ -64,21 +72,57 @@ bool PhysicsRuntime::unbindBody(const runtime::PrimId& prim) noexcept {
     bodyToPrim_.erase(staleMapping);
     return true;
   }
-  bodyToPrim_.erase(body->handle);
+  const auto mappedPrim = bodyToPrim_.find(body->handle);
+  if (mappedPrim != bodyToPrim_.end() && mappedPrim->second == prim) {
+    bodyToPrim_.erase(mappedPrim);
+  }
   return runtimeWorld_.removeComponent<PhysicsBody>(prim);
 }
 
 BodyHandle PhysicsRuntime::bodyForPrim(const runtime::PrimId& prim) const noexcept {
   const auto* body = runtimeWorld_.component<PhysicsBody>(prim);
-  return body == nullptr ? BodyHandle{} : body->handle;
+  if (body == nullptr) {
+    const auto staleMapping =
+        std::find_if(bodyToPrim_.begin(), bodyToPrim_.end(), [&](const auto& entry) {
+          return entry.second == prim;
+        });
+    if (staleMapping != bodyToPrim_.end()) {
+      bodyToPrim_.erase(staleMapping);
+    }
+    return {};
+  }
+
+  const auto mappedPrim = bodyToPrim_.find(body->handle);
+  if (mappedPrim == bodyToPrim_.end() || mappedPrim->second != prim ||
+      !isMappingCurrent(mappedPrim->first, mappedPrim->second)) {
+    if (mappedPrim != bodyToPrim_.end() && mappedPrim->second == prim) {
+      bodyToPrim_.erase(mappedPrim);
+    }
+    return {};
+  }
+  return body->handle;
 }
 
 std::optional<runtime::PrimId> PhysicsRuntime::primForBody(BodyHandle body) const {
   const auto found = bodyToPrim_.find(body);
-  if (found == bodyToPrim_.end()) {
+  if (found == bodyToPrim_.end() || !isMappingCurrent(found->first, found->second)) {
+    if (found != bodyToPrim_.end()) {
+      bodyToPrim_.erase(found);
+    }
     return std::nullopt;
   }
   return found->second;
+}
+
+std::size_t PhysicsRuntime::bodyCount() const noexcept {
+  for (auto mapping = bodyToPrim_.begin(); mapping != bodyToPrim_.end();) {
+    if (!isMappingCurrent(mapping->first, mapping->second)) {
+      mapping = bodyToPrim_.erase(mapping);
+    } else {
+      ++mapping;
+    }
+  }
+  return bodyToPrim_.size();
 }
 
 std::size_t PhysicsRuntime::step(PhysicsWorld::Duration fixedStep) {
@@ -94,13 +138,12 @@ std::size_t PhysicsRuntime::synchronizeChangedBodyStates() {
       continue;
     }
 
-    const auto& prim = mappedPrim->second;
-    const auto* boundBody = runtimeWorld_.component<PhysicsBody>(prim);
-    auto* transform = runtimeWorld_.transform(prim);
-    if (boundBody == nullptr || boundBody->handle != state.body || transform == nullptr) {
+    if (!isMappingCurrent(mappedPrim->first, mappedPrim->second)) {
       bodyToPrim_.erase(mappedPrim);
       continue;
     }
+    const auto& prim = mappedPrim->second;
+    auto* transform = runtimeWorld_.transform(prim);
     if (sameTransform(*transform, state.transform)) {
       continue;
     }
@@ -110,6 +153,13 @@ std::size_t PhysicsRuntime::synchronizeChangedBodyStates() {
     ++synchronized;
   }
   return synchronized;
+}
+
+bool PhysicsRuntime::isMappingCurrent(BodyHandle body,
+                                      const runtime::PrimId& prim) const noexcept {
+  const auto* boundBody = runtimeWorld_.component<PhysicsBody>(prim);
+  return runtimeWorld_.containsPrim(prim) && runtimeWorld_.transform(prim) != nullptr &&
+         boundBody != nullptr && boundBody->handle == body;
 }
 
 } // namespace usd_stage_runner::physics
