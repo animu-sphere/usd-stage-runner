@@ -232,13 +232,23 @@ jobs:
       - name: Configure the combined OpenUSD and Jolt integration build
         shell: pwsh
         run: |
+          $runtime = (& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --json | ConvertFrom-Json).data
+          $pythonLibrary = Get-ChildItem (Join-Path $env:Python_ROOT_DIR "libs") -Filter "python3*.lib" | Select-Object -First 1 -ExpandProperty FullName
           Invoke-Expression ((& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --shell pwsh) -join "`n")
-          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$($runtime.prefix);$env:CMAKE_PREFIX_PATH"
           cmake -S . -B build/vertical-slice -A x64 `
             -DBUILD_TESTING=ON `
             -DUSD_STAGE_RUNNER_BUILD_APP=ON `
             -DUSD_STAGE_RUNNER_REQUIRE_OPENUSD=ON `
-            -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON
+            -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON `
+            "-Dpxr_DIR=$($runtime.prefix)" `
+            "-DJolt_DIR=$(Join-Path $env:JOLT_PREFIX 'lib/cmake/Jolt')" `
+            "-DPython3_EXECUTABLE=$(Join-Path $env:Python_ROOT_DIR 'python.exe')" `
+            "-DPython3_LIBRARY=$pythonLibrary" `
+            "-DPython3_INCLUDE_DIR=$(Join-Path $env:Python_ROOT_DIR 'include')" `
+            "-DMaterialX_DIR=$(Join-Path $runtime.prefix 'lib/cmake/MaterialX')" `
+            "-DOpenSubdiv_DIR=$(Join-Path $runtime.prefix 'lib/cmake/OpenSubdiv')" `
+            "-DTBB_DIR=$(Join-Path $runtime.prefix 'lib/cmake/TBB')"
       - name: Build and test the combined physics vertical slice
         shell: pwsh
         run: |
