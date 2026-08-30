@@ -7,18 +7,23 @@
 
 def Xform "World"
 {
-    def Cube "Ground"
+    def Cube "Ground" (
+        prepend apiSchemas = ["RunnerPhysicsBodyAPI", "RunnerColliderAPI"]
+    )
     {
-        custom token runner:physics:motionType = "static"
+        uniform double3 runner:physics:halfExtents = (1, 1, 1)
+        uniform token runner:physics:motionType = "static"
         double3 xformOp:scale = (5, 0.5, 5)
         double3 xformOp:translate = (0, -0.5, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
     }
 
-    def Cube "PlayerCube"
+    def Cube "PlayerCube" (
+        prepend apiSchemas = ["RunnerPhysicsBodyAPI", "RunnerColliderAPI"]
+    )
     {
-        custom double runner:physics:mass = 1
-        custom token runner:physics:motionType = "dynamic"
+        uniform double3 runner:physics:halfExtents = (1, 1, 1)
+        uniform token runner:physics:motionType = "dynamic"
         double3 xformOp:scale = (0.5, 0.5, 0.5)
         double3 xformOp:translate = (0, 3, 0)
         uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]

@@ -1,0 +1,56 @@
+#usda 1.0
+(
+    """
+    Authored physics declarations for usd-stage-runner. This is the source of
+    truth for the codeless RunnerPhysicsBodyAPI and RunnerColliderAPI schemas.
+    """
+    subLayers = [
+        @usd/schema.usda@
+    ]
+)
+
+over "GLOBAL" (
+    customData = {
+        string libraryName      = "runnerSchema"
+        string libraryPath      = "."
+        string libraryPrefix    = ""
+        string tokensPrefix     = "Runner"
+        bool skipCodeGeneration = true
+    }
+)
+{
+}
+
+class "RunnerPhysicsBodyAPI" (
+    inherits = </APISchemaBase>
+    customData = {
+        token apiSchemaType = "singleApply"
+    }
+    doc = "Declares a prim as a static or dynamic runtime physics body."
+)
+{
+    uniform token runner:physics:motionType = "static" (
+        allowedTokens = ["static", "dynamic"]
+        doc = "Whether the body is static or dynamically simulated."
+    )
+    uniform double runner:physics:mass = 1 (
+        doc = "Positive body mass in kilograms. Ignored for static bodies."
+    )
+}
+
+class "RunnerColliderAPI" (
+    inherits = </APISchemaBase>
+    customData = {
+        token apiSchemaType = "singleApply"
+    }
+    doc = "Declares the collision shape used by a runtime physics body."
+)
+{
+    uniform token runner:physics:shape = "box" (
+        allowedTokens = ["box"]
+        doc = "Collider shape. The initial contract supports boxes only."
+    )
+    uniform double3 runner:physics:halfExtents = (1, 1, 1) (
+        doc = "Positive local-space box half extents, before xform scale ops."
+    )
+}

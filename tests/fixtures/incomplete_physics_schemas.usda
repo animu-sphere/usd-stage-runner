@@ -1,20 +1,17 @@
 #usda 1.0
 (
     defaultPrim = "World"
-    metersPerUnit = 0.01
+    metersPerUnit = 1
     upAxis = "Y"
 )
 
 def Xform "World"
 {
     def Cube "PlayerCube" (
-        prepend apiSchemas = ["RunnerPhysicsBodyAPI", "RunnerColliderAPI"]
+        prepend apiSchemas = ["RunnerPhysicsBodyAPI"]
     )
     {
-        uniform double3 runner:physics:halfExtents = (0.5, 0.5, 0.5)
-        uniform double runner:physics:mass = 1
         uniform token runner:physics:motionType = "dynamic"
-        uniform token runner:physics:shape = "box"
         double3 xformOp:translate = (0, 3, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }

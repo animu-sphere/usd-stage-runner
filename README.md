@@ -20,18 +20,20 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
   box shapes and static or dynamic bodies, advances fixed simulation steps, and
   extracts changed body state without exposing Jolt types publicly;
+- `runnerSchema`, a codeless OpenUSD plugin defining the single-apply
+  `RunnerPhysicsBodyAPI` and `RunnerColliderAPI` declaration contracts;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y` without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
-  frame bound, imports the temporary physics convention, maps movement intent to
+  frame bound, imports physics API schemas, maps movement intent to
   desired body velocity, advances Jolt, and synchronizes only dirty runtime
   transforms to USD;
 - minimal transform and falling-cube USDA fixtures plus dependency-free unit
   tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Formal physics API schemas are the next roadmap milestone. Character, camera,
-behavior, and OpenExec integration are later slices.
+Character control is the next roadmap milestone. Camera, behavior, and OpenExec
+integration are later slices.
 
 ## Build with OpenStrata
 
@@ -100,14 +102,16 @@ and repeatable. `--move-x` and `--move-y` accept normalized values from -1 to 1
 for deterministic adapter-to-Stage tests and require `--deterministic`.
 Interactive runs use SDL keyboard and gamepad input.
 
-The temporary physics convention applies `runner:physics:motionType = "static"`
-or `"dynamic"` to a `UsdGeomCube`; dynamic bodies may also author
-`runner:physics:mass`. Cube size and scale determine box half extents. A Stage
-using these attributes must be Y-up with `metersPerUnit = 1`. Physics Cubes
+Physics prims apply both `RunnerPhysicsBodyAPI` and `RunnerColliderAPI`.
+`runner:physics:motionType` accepts `static` or `dynamic`, mass is authored with
+`runner:physics:mass`, and the initial collider contract uses
+`runner:physics:shape = "box"` plus positive local-space
+`runner:physics:halfExtents`. Ordered scale ops multiply those extents. A Stage
+with physics declarations must be Y-up with `metersPerUnit = 1`. Physics prims
 require one translate op followed only by scale ops, plus identity ancestor
 transforms unless they set `resetXformStack`. A build with both OpenUSD and Jolt
-is required. The next schema milestone will replace this convention with applied
-API schemas.
+is required to simulate the declarations. Authored `runner:physics:*`
+attributes without their owning API schema are rejected as legacy data.
 
 ## License
 

@@ -1,76 +1,67 @@
-# Milestone 1: Jolt Physics Vertical Slice
+# Milestone 3: Character Controller
 
-Status: implemented
+Status: not started
 
-The `physicsJolt` bootstrap, backend-neutral Runtime integration, temporary
-Stage import, and complete input-to-physics path are implemented.
-
-The input-and-transform slice is implemented and recorded in the
-[architecture overview](../architecture/overview.md). This milestone replaces
-temporary direct transform movement with physics-driven motion while preserving
-the existing fixed-step and dirty-synchronization foundations.
+The physics schemas and complete input-to-physics-to-USD path are implemented.
+This milestone adds a backend-neutral character contract that moves, grounds,
+and jumps through `physicsCore` instead of editing transforms directly.
 
 ## Outcome
 
 ```text
-move actions
-    -> movement intent
-    -> force or desired motion
-    -> bounded Jolt fixed step
-    -> runtime transform
+input or AI
+    -> CharacterIntent
+    -> character controller state
+    -> physics commands and ground queries
+    -> RuntimeTransform
     -> dirty queue
     -> USD xform update
 ```
 
-The representative Stage contains `/World/Ground`, `/World/PlayerCube`, and
-`/World/Camera`. The cube falls under gravity, rests on the ground, and responds
-to input through physics.
+The representative Stage adds a character that can walk, ground, and jump in a
+small deterministic scenario. Human input and later behavior systems use the
+same intent boundary.
 
 ## Scope
 
-### `physicsJolt`
+### `characterCore`
 
-- Initialize and shut down Jolt.
-- Create box shapes and static or dynamic bodies.
-- Define the first collision layers.
-- Advance fixed simulation steps.
-- Extract changed body transforms.
-- Own Jolt objects and body lifetime without exposing Jolt types publicly.
+- Add `CharacterIntent` with desired velocity, facing direction, and jump.
+- Track velocity, grounded state, jump state, facing, and support body.
+- Implement ground detection, movement, basic slope handling, and jumping
+  through backend-neutral `physicsCore` contracts.
+- Keep controller logic testable without Jolt or OpenUSD.
 
 ### Runtime and Stage integration
 
-- Map `PrimId` values to physics bodies.
-- Import the ground and player body through a temporary Stage convention.
-- Feed movement intent to force or desired-motion commands.
-- Update and dirty `RuntimeTransform` only when simulation results change.
-- Synchronize only dirty body transforms to USD.
+- Add `RunnerCharacterAPI` only with the vertical slice that consumes it.
+- Import character declarations into prim-indexed runtime components.
+- Feed both movement input and deterministic injected intent through the same
+  controller path.
+- Preserve fixed-step ordering and dirty-only USD synchronization.
+- Add `character_walk.usda` as the runnable golden scenario.
 
 ## Recommended PR sequence
 
-1. **`physicsJolt` bootstrap** — implemented: initialization, box bodies, a
-   static floor, fixed stepping, changed-state extraction, and adapter coverage.
-2. **Runtime physics integration** — implemented: prim/body mapping, transform
-   extraction, and dirty synchronization.
-3. **Stage importer** — implemented: bodies and colliders are created from an
-   explicitly temporary Cube attribute convention.
-4. **Full vertical slice** — implemented: input sets desired horizontal body
-   velocity before Jolt stepping, and changed transforms flow back through the
-   dirty USD synchronization queue.
-
-The following schema work is deliberately a separate milestone so the asset
-contract is based on a proven runtime path.
+1. **Character contracts** — intent, state, and isolated controller tests using
+   a deterministic physics test double.
+2. **Physics integration** — grounding, desired motion, slope limits, and jump
+   commands through `physicsCore`.
+3. **Schema and importer** — `RunnerCharacterAPI` plus Stage-to-runtime mapping.
+4. **Full vertical slice** — input and injected intent drive the character in
+   `character_walk.usda`, with runtime transforms synchronized incrementally.
 
 ## Completion criteria
 
-- The cube falls under gravity and settles on the floor.
-- Keyboard, gamepad, or injected movement input moves it through physics.
-- Fixed-step results are repeatable with a controlled clock.
+- A character walks, grounds, and jumps without direct transform movement.
+- Human input and deterministic injected intent share one contract.
+- Core tests require neither OpenUSD nor Jolt.
+- Fixed-step results are repeatable under a controlled clock.
 - Runtime-to-USD writes contain only dirty simulated transforms.
-- Unit, Jolt adapter, and Stage integration tests cover the slice.
-- Plain CMake and OpenStrata build paths continue to work in their supported
-  environments.
+- Plain CMake and OpenStrata build paths remain valid in supported environments.
 
 The relevant long-term contracts are documented in the
 [runtime model](../design/runtime-model.md),
-[module boundaries](../design/modules.md), and
+[module boundaries](../design/modules.md),
+[USD integration](../design/usd-integration.md), and
 [testing strategy](../design/testing.md).

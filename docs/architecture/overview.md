@@ -2,11 +2,12 @@
 
 ## Current state
 
-The repository implements the first input-to-physics-to-USD vertical slice. It
-contains runtime, input, and physics core libraries, SDL and Jolt adapters, an
+The repository implements the input-to-physics-to-USD vertical slice and its
+formal authored-data contract. It contains runtime, input, and physics core
+libraries, SDL and Jolt adapters, a codeless OpenUSD physics-schema plugin, an
 OpenUSD-aware host executable, core/adapter/integration tests, and dual
-CMake/OpenStrata build configuration. Formal physics schemas do not exist yet;
-neither do OpenExec, camera, behavior, or vehicle targets.
+CMake/OpenStrata build configuration. Character, OpenExec, camera, behavior,
+and vehicle targets do not exist yet.
 
 ## Implemented targets
 
@@ -17,13 +18,15 @@ neither do OpenExec, camera, behavior, or vehicle targets.
 | `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, and changed-body extraction contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, and changed-body extraction behind `physicsCore`. | `physicsCore`; Jolt when available. |
-| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import temporary Cube physics declarations, poll input, set desired body motion, step physics, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `inputSdl`, `physicsJolt`; OpenUSD `usd` and `usdGeom` when available. |
+| `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI` and `RunnerColliderAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
+| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics schemas, poll input, set desired body motion, step physics, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
 movement logic, physics-core resource, deterministic-step, prim/body mapping,
 and changed-transform synchronization contracts, physical-control mapping,
 host option validation, Stage loading, and the complete injected-input-to-USD
-synchronization path.
+synchronization path. `ost plugin test plugins/runnerSchema` additionally
+verifies schema registration and authored-attribute flatten round-tripping.
 
 ## Physics boundary
 
@@ -71,17 +74,20 @@ synchronization point. Removing a prim removes its components and any pending
 dirty entry.
 
 When a Stage opens, the host traverses its prims and imports local translate ops
-for xformable prims. It also recognizes an explicitly temporary convention on
-`UsdGeomCube` prims: `runner:physics:motionType` selects `static` or `dynamic`,
-and `runner:physics:mass` optionally sets dynamic mass. Cube size and local
-scale ops determine box half extents. This convention requires a Y-up meter
-Stage, one translate op followed by scale ops, and identity ancestor transforms
-unless the Cube resets its transform stack. These restrictions keep the local
-USD translation identical to the Jolt world-space position until composed
-transform support lands. The importer creates and binds backend bodies through
-`PhysicsRuntime`; a physics-declaring Stage is rejected when Jolt is unavailable.
-After each host frame, the host sets the USD translate op only for dirty runtime
-transforms. Stage writes remain outside the core libraries.
+for xformable prims. A physics prim applies both `RunnerPhysicsBodyAPI` and
+`RunnerColliderAPI`. Motion type, mass, shape, and local-space box half extents
+come from their declared `runner:physics:*` attributes; ordered scale ops
+multiply the half extents. The importer currently accepts `static` or `dynamic`
+motion and `box` shapes. It requires a Y-up meter Stage, one translate op
+followed by scale ops, and identity ancestor transforms unless the prim resets
+its transform stack. These restrictions keep local USD translation identical
+to Jolt world position until composed transform support lands. The importer
+creates and binds backend bodies through `PhysicsRuntime`; a physics-declaring
+Stage is rejected when Jolt is unavailable. After each host frame, the host
+sets the USD translate op only for dirty runtime transforms. Stage writes remain
+outside the core libraries. Authored body or collider attributes without their
+owning API schema are rejected instead of being silently interpreted through
+the removed temporary convention.
 
 ## Input boundary
 
@@ -122,9 +128,10 @@ exactly one fixed interval per host frame without sleeping.
 
 ## Build and verification
 
-The root CMake tree builds the five libraries, host, and CTest suite. Each
-library installs headers and an exported CMake package. OpenUSD, SDL, and Jolt
-discovery remain isolated to their adapter/host directories.
+The root CMake tree builds the five compiled libraries, codeless schema plugin,
+host, and CTest suite. Each library installs headers and an exported CMake
+package. OpenUSD, SDL, and Jolt discovery remain isolated to schema,
+adapter, and host directories.
 
 OpenStrata owns the pinned `cy2026`/`usd` environment. That profile supplies
 OpenUSD but not SDL or Jolt; interactive or Jolt-backed builds therefore need
@@ -136,17 +143,21 @@ The committed `tests/fixtures/minimal.usda` Stage contains `/World/Ground`,
 injects `move.x = 1` for four 1/60-second frames at speed 3, verifies four dirty
 writes, and observes `/World/PlayerCube` move from X=0 to X=0.2. A second Stage
 fixture verifies the same path with a float-precision translate op.
-`falling_cube.usda` declares a static floor and dynamic player Cube through the
-temporary convention. When OpenUSD and Jolt are both available, its integration
-test verifies imported body counts, changed-body extraction, dirty USD writes,
-gravity, collision, and injected horizontal movement through one host path.
+`falling_cube.usda` declares a static floor and dynamic player Cube exclusively
+through the two applied physics APIs. When OpenUSD and Jolt are both available,
+its integration test verifies imported body counts, changed-body extraction,
+dirty USD writes, gravity, collision, and injected horizontal movement through
+one host path.
 
 ## Dependency direction
 
 The realized graph is:
 
 ```text
-stage_runner -----> OpenUSD usd + usdGeom
+runnerSchema -----> OpenUSD resource-plugin registry
+      ^
+      |
+stage_runner -----> OpenUSD plug + usd + usdGeom
       |  \
       |   `-------> inputSdl -----> SDL2 or SDL3 (optional at configure time)
       |                 |

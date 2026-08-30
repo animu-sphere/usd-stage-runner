@@ -17,7 +17,7 @@ matches the question you are trying to answer.
 
 For an implementation overview, read the
 [current architecture](architecture/overview.md), then the
-[current Jolt milestone](roadmap/current.md).
+[current character milestone](roadmap/current.md).
 
 For design work, begin with the [design specification](design/spec.md) and then
 open the focused contract for the area being changed:

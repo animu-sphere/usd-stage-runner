@@ -13,17 +13,18 @@
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec3h.h>
+#include <pxr/base/plug/registry.h>
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
-#include <pxr/usd/usdGeom/cube.h>
 #include <pxr/usd/usdGeom/metrics.h>
 #include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/xformOp.h>
 #include <pxr/usd/usdGeom/xformable.h>
 #endif
 
+#include <algorithm>
 #include <charconv>
 #include <chrono>
 #include <cmath>
@@ -53,8 +54,12 @@ using usd_stage_runner::runtime::RuntimeWorld;
 
 constexpr const char* playerPrim = "/World/PlayerCube";
 #if USD_STAGE_RUNNER_HAS_OPENUSD
+const pxr::TfToken physicsBodySchema{"RunnerPhysicsBodyAPI"};
+const pxr::TfToken colliderSchema{"RunnerColliderAPI"};
 const pxr::TfToken physicsMotionTypeAttribute{"runner:physics:motionType"};
 const pxr::TfToken physicsMassAttribute{"runner:physics:mass"};
+const pxr::TfToken physicsShapeAttribute{"runner:physics:shape"};
+const pxr::TfToken physicsHalfExtentsAttribute{"runner:physics:halfExtents"};
 #endif
 
 struct Options {
@@ -145,6 +150,23 @@ struct PhysicsImportSummary {
   std::size_t bodyCount{0};
 };
 
+void registerRunnerSchemas() {
+#ifdef USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH
+  (void)pxr::PlugRegistry::GetInstance().RegisterPlugins(
+      std::string{USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH});
+#endif
+}
+
+bool hasAppliedSchema(const pxr::UsdPrim& prim, const pxr::TfToken& schema) {
+  const auto& schemas = prim.GetAppliedSchemas();
+  return std::find(schemas.begin(), schemas.end(), schema) != schemas.end();
+}
+
+bool hasAuthoredAttribute(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
+  const auto attribute = prim.GetAttribute(name);
+  return attribute && attribute.HasAuthoredValue();
+}
+
 usd_stage_runner::runtime::RuntimeTransform readTransform(const pxr::UsdPrim& prim) {
   usd_stage_runner::runtime::RuntimeTransform transform;
   const pxr::UsdGeomXformable xformable(prim);
@@ -166,6 +188,7 @@ usd_stage_runner::runtime::RuntimeTransform readTransform(const pxr::UsdPrim& pr
 }
 
 StageContext openWorld(const std::filesystem::path& stagePath) {
+  registerRunnerSchemas();
   const auto stage = pxr::UsdStage::Open(stagePath.string());
   if (!stage) {
     throw std::runtime_error("could not open USD Stage: " + stagePath.string());
@@ -183,9 +206,14 @@ StageContext openWorld(const std::filesystem::path& stagePath) {
 }
 
 std::optional<MotionType> readMotionType(const pxr::UsdPrim& prim) {
+  if (!hasAppliedSchema(prim, physicsBodySchema)) {
+    return std::nullopt;
+  }
   const auto attribute = prim.GetAttribute(physicsMotionTypeAttribute);
   if (!attribute) {
-    return std::nullopt;
+    throw std::runtime_error(physicsBodySchema.GetString() + " on " +
+                             prim.GetPath().GetString() + " does not provide " +
+                             physicsMotionTypeAttribute.GetString());
   }
 
   pxr::TfToken value;
@@ -203,71 +231,91 @@ std::optional<MotionType> readMotionType(const pxr::UsdPrim& prim) {
                            prim.GetPath().GetString() + " must be 'static' or 'dynamic'");
 }
 
-usd_stage_runner::runtime::Vec3d readBoxHalfExtents(const pxr::UsdGeomCube& cube) {
-  double size = 2.0;
-  if (!cube.GetSizeAttr().Get(&size) || !std::isfinite(size) || size <= 0.0) {
-    throw std::runtime_error("physics Cube size must be finite and positive on " +
-                             cube.GetPath().GetString());
+usd_stage_runner::runtime::Vec3d readBoxHalfExtents(const pxr::UsdPrim& prim,
+                                                   const pxr::UsdGeomXformable& xformable) {
+  pxr::TfToken shape;
+  const auto shapeAttribute = prim.GetAttribute(physicsShapeAttribute);
+  if (!shapeAttribute || !shapeAttribute.Get(&shape)) {
+    throw std::runtime_error("could not read " + physicsShapeAttribute.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  if (shape != pxr::TfToken{"box"}) {
+    throw std::runtime_error(physicsShapeAttribute.GetString() + " on " +
+                             prim.GetPath().GetString() + " must be 'box'");
+  }
+
+  pxr::GfVec3d halfExtents;
+  const auto halfExtentsAttribute = prim.GetAttribute(physicsHalfExtentsAttribute);
+  if (!halfExtentsAttribute || !halfExtentsAttribute.Get(&halfExtents)) {
+    throw std::runtime_error("could not read " + physicsHalfExtentsAttribute.GetString() +
+                             " on " + prim.GetPath().GetString());
+  }
+  for (int axis = 0; axis < 3; ++axis) {
+    if (!std::isfinite(halfExtents[axis]) || halfExtents[axis] <= 0.0) {
+      throw std::runtime_error(physicsHalfExtentsAttribute.GetString() + " on " +
+                               prim.GetPath().GetString() +
+                               " must contain positive finite values");
+    }
   }
 
   pxr::GfVec3d scale{1.0};
   bool resetsStack = false;
-  for (const auto& operation : cube.GetOrderedXformOps(&resetsStack)) {
+  for (const auto& operation : xformable.GetOrderedXformOps(&resetsStack)) {
     if (operation.GetOpType() == pxr::UsdGeomXformOp::TypeTranslate) {
       continue;
     }
     if (operation.GetOpType() != pxr::UsdGeomXformOp::TypeScale) {
-      throw std::runtime_error("temporary physics import supports only translate and scale ops: " +
-                               cube.GetPath().GetString());
+      throw std::runtime_error("physics schema import supports only translate and scale ops: " +
+                               prim.GetPath().GetString());
     }
     pxr::GfVec3d operationScale;
     if (!operation.GetAs(&operationScale, pxr::UsdTimeCode::Default())) {
-      throw std::runtime_error("could not read scale op on " + cube.GetPath().GetString());
+      throw std::runtime_error("could not read scale op on " + prim.GetPath().GetString());
     }
     scale[0] *= operationScale[0];
     scale[1] *= operationScale[1];
     scale[2] *= operationScale[2];
   }
 
-  const double halfSize = size * 0.5;
-  return {std::abs(scale[0]) * halfSize, std::abs(scale[1]) * halfSize,
-          std::abs(scale[2]) * halfSize};
+  return {std::abs(scale[0]) * halfExtents[0], std::abs(scale[1]) * halfExtents[1],
+          std::abs(scale[2]) * halfExtents[2]};
 }
 
-void validatePhysicsTransform(const pxr::UsdGeomCube& cube) {
+void validatePhysicsTransform(const pxr::UsdPrim& prim,
+                              const pxr::UsdGeomXformable& xformable) {
   bool resetsStack = false;
-  const auto operations = cube.GetOrderedXformOps(&resetsStack);
+  const auto operations = xformable.GetOrderedXformOps(&resetsStack);
   if (operations.empty() || operations.front().IsInverseOp() ||
       operations.front().GetOpType() != pxr::UsdGeomXformOp::TypeTranslate) {
     throw std::runtime_error(
-        "temporary physics import requires one translate op before any scale ops: " +
-        cube.GetPath().GetString());
+        "physics schema import requires one translate op before any scale ops: " +
+        prim.GetPath().GetString());
   }
   pxr::GfVec3d translation;
   if (!operations.front().GetAs(&translation, pxr::UsdTimeCode::Default())) {
-    throw std::runtime_error("could not read translate op on " + cube.GetPath().GetString());
+    throw std::runtime_error("could not read translate op on " + prim.GetPath().GetString());
   }
   for (std::size_t index = 1; index < operations.size(); ++index) {
     if (operations[index].IsInverseOp() ||
         operations[index].GetOpType() != pxr::UsdGeomXformOp::TypeScale) {
       throw std::runtime_error(
-          "temporary physics import requires one translate op followed only by scale ops: " +
-          cube.GetPath().GetString());
+          "physics schema import requires one translate op followed only by scale ops: " +
+          prim.GetPath().GetString());
     }
   }
 
   if (resetsStack) {
     return;
   }
-  for (auto ancestor = cube.GetPrim().GetParent(); ancestor && !ancestor.IsPseudoRoot();
+  for (auto ancestor = prim.GetParent(); ancestor && !ancestor.IsPseudoRoot();
        ancestor = ancestor.GetParent()) {
     const pxr::UsdGeomXformable ancestorTransform(ancestor);
     if (ancestorTransform &&
         !pxr::GfIsClose(ancestorTransform.ComputeLocalToWorldTransform(pxr::UsdTimeCode::Default()),
                         pxr::GfMatrix4d{1.0}, 1e-9)) {
       throw std::runtime_error(
-          "temporary physics import requires identity parent transforms or resetXformStack: " +
-          cube.GetPath().GetString());
+          "physics schema import requires identity parent transforms or resetXformStack: " +
+          prim.GetPath().GetString());
     }
   }
 }
@@ -291,7 +339,26 @@ double readBodyMass(const pxr::UsdPrim& prim, MotionType motionType) {
 std::size_t physicsDeclarationCount(const pxr::UsdStageRefPtr& stage) {
   std::size_t count = 0;
   for (const auto& prim : stage->Traverse()) {
-    if (prim.GetAttribute(physicsMotionTypeAttribute)) {
+    const bool hasBodySchema = hasAppliedSchema(prim, physicsBodySchema);
+    const bool hasColliderSchema = hasAppliedSchema(prim, colliderSchema);
+    if (!hasBodySchema &&
+        (hasAuthoredAttribute(prim, physicsMotionTypeAttribute) ||
+         hasAuthoredAttribute(prim, physicsMassAttribute))) {
+      throw std::runtime_error("authored body attributes require RunnerPhysicsBodyAPI: " +
+                               prim.GetPath().GetString());
+    }
+    if (!hasColliderSchema &&
+        (hasAuthoredAttribute(prim, physicsShapeAttribute) ||
+         hasAuthoredAttribute(prim, physicsHalfExtentsAttribute))) {
+      throw std::runtime_error("authored collider attributes require RunnerColliderAPI: " +
+                               prim.GetPath().GetString());
+    }
+    if (hasBodySchema != hasColliderSchema) {
+      throw std::runtime_error("physics prim must apply both RunnerPhysicsBodyAPI and "
+                               "RunnerColliderAPI: " +
+                               prim.GetPath().GetString());
+    }
+    if (hasBodySchema || hasColliderSchema) {
       ++count;
     }
   }
@@ -301,28 +368,35 @@ std::size_t physicsDeclarationCount(const pxr::UsdStageRefPtr& stage) {
 PhysicsImportSummary importPhysicsBodies(StageContext& context, PhysicsWorld& physicsWorld,
                                          PhysicsRuntime& physicsRuntime) {
   if (pxr::UsdGeomGetStageUpAxis(context.stage) != pxr::UsdGeomTokens->y) {
-    throw std::runtime_error("temporary physics import requires a Y-up Stage");
+    throw std::runtime_error("physics schema import requires a Y-up Stage");
   }
   if (!pxr::UsdGeomLinearUnitsAre(pxr::UsdGeomGetStageMetersPerUnit(context.stage),
                                   pxr::UsdGeomLinearUnits::meters)) {
-    throw std::runtime_error("temporary physics import requires metersPerUnit = 1");
+    throw std::runtime_error("physics schema import requires metersPerUnit = 1");
   }
   PhysicsImportSummary summary;
   for (const auto& prim : context.stage->Traverse()) {
-    const auto motionType = readMotionType(prim);
-    if (!motionType.has_value()) {
+    const bool hasBodySchema = hasAppliedSchema(prim, physicsBodySchema);
+    const bool hasColliderSchema = hasAppliedSchema(prim, colliderSchema);
+    if (!hasBodySchema && !hasColliderSchema) {
       continue;
     }
-
-    const pxr::UsdGeomCube cube(prim);
-    if (!cube) {
-      throw std::runtime_error("temporary physics import supports only UsdGeomCube prims: " +
+    if (!hasBodySchema || !hasColliderSchema) {
+      throw std::runtime_error("physics prim must apply both RunnerPhysicsBodyAPI and "
+                               "RunnerColliderAPI: " +
                                prim.GetPath().GetString());
     }
-    validatePhysicsTransform(cube);
+    const auto motionType = readMotionType(prim);
+    const pxr::UsdGeomXformable xformable(prim);
+    if (!xformable) {
+      throw std::runtime_error("physics schema import requires an xformable prim: " +
+                               prim.GetPath().GetString());
+    }
+    validatePhysicsTransform(prim, xformable);
     const auto primId = prim.GetPath().GetString();
     const auto shape = physicsWorld.createShape(
-        ShapeDescriptor{usd_stage_runner::physics::ShapeType::box, readBoxHalfExtents(cube)});
+        ShapeDescriptor{usd_stage_runner::physics::ShapeType::box,
+                        readBoxHalfExtents(prim, xformable)});
     ++summary.shapeCount;
     const bool dynamic = *motionType == MotionType::dynamicBody;
     const auto body = physicsWorld.createBody(BodyDescriptor{

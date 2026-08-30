@@ -10,9 +10,14 @@ def Xform "World"
     double3 xformOp:translate = (5, 0, 0)
     uniform token[] xformOpOrder = ["xformOp:translate"]
 
-    def Cube "PlayerCube"
+    def Cube "PlayerCube" (
+        prepend apiSchemas = ["RunnerPhysicsBodyAPI", "RunnerColliderAPI"]
+    )
     {
-        custom token runner:physics:motionType = "dynamic"
+        uniform double3 runner:physics:halfExtents = (0.5, 0.5, 0.5)
+        uniform double runner:physics:mass = 1
+        uniform token runner:physics:motionType = "dynamic"
+        uniform token runner:physics:shape = "box"
         double3 xformOp:translate = (0, 3, 0)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
