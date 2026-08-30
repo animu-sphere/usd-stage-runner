@@ -6,4 +6,4 @@ branch. Planned modules and future behavior belong in [design/](../design/) and
 
 | Document | Purpose |
 | --- | --- |
-| [overview.md](overview.md) | Current implementation inventory, boundaries, and the intended mapping from planned directories to responsibilities. |
+| [overview.md](overview.md) | Current implementation inventory, runtime flow, dependencies, and verification coverage. |
