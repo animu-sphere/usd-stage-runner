@@ -74,12 +74,14 @@ When a Stage opens, the host traverses its prims and imports local translate ops
 for xformable prims. It also recognizes an explicitly temporary convention on
 `UsdGeomCube` prims: `runner:physics:motionType` selects `static` or `dynamic`,
 and `runner:physics:mass` optionally sets dynamic mass. Cube size and local
-scale ops determine box half extents. This convention is Y-up and supports only
-translate and scale ops on physics Cubes. The importer creates and binds
-backend bodies through `PhysicsRuntime`; a physics-declaring Stage is rejected
-when Jolt is unavailable. After each host frame, the host sets the USD translate
-op only for dirty runtime transforms. Stage writes remain outside the core
-libraries.
+scale ops determine box half extents. This convention requires a Y-up meter
+Stage, one translate op followed by scale ops, and identity ancestor transforms
+unless the Cube resets its transform stack. These restrictions keep the local
+USD translation identical to the Jolt world-space position until composed
+transform support lands. The importer creates and binds backend bodies through
+`PhysicsRuntime`; a physics-declaring Stage is rejected when Jolt is unavailable.
+After each host frame, the host sets the USD translate op only for dirty runtime
+transforms. Stage writes remain outside the core libraries.
 
 ## Input boundary
 

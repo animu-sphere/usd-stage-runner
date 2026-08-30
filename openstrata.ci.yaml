@@ -2,9 +2,10 @@ schema: 1
 
 # OpenStrata 0.22.x generates a plugin graph step for every workspace cell,
 # while `ost plugin test --workspace --graph-only` rejects a workspace with no
-# plugin bundles. After regeneration, retain the hashFiles guard in
-# .github/workflows/ost-source-ci.yml until an openstrata.plugin.yaml member is
-# added or the generator supports library/tool-only workspaces.
+# plugin bundles. The generator also cannot yet express the pinned Jolt checkout
+# plus root-CMake combined OpenUSD/Jolt test. After regeneration, retain both
+# adjustments in .github/workflows/ost-source-ci.yml until the matrix supports
+# these workspace-specific test prerequisites.
 
 bootstrap:
   ost:

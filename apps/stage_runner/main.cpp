@@ -9,6 +9,7 @@
 #include "usd_stage_runner/runtime/runtime_world.h"
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
+#include <pxr/base/gf/matrix4d.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec3h.h>
@@ -233,6 +234,44 @@ usd_stage_runner::runtime::Vec3d readBoxHalfExtents(const pxr::UsdGeomCube& cube
           std::abs(scale[2]) * halfSize};
 }
 
+void validatePhysicsTransform(const pxr::UsdGeomCube& cube) {
+  bool resetsStack = false;
+  const auto operations = cube.GetOrderedXformOps(&resetsStack);
+  if (operations.empty() || operations.front().IsInverseOp() ||
+      operations.front().GetOpType() != pxr::UsdGeomXformOp::TypeTranslate) {
+    throw std::runtime_error(
+        "temporary physics import requires one translate op before any scale ops: " +
+        cube.GetPath().GetString());
+  }
+  pxr::GfVec3d translation;
+  if (!operations.front().GetAs(&translation, pxr::UsdTimeCode::Default())) {
+    throw std::runtime_error("could not read translate op on " + cube.GetPath().GetString());
+  }
+  for (std::size_t index = 1; index < operations.size(); ++index) {
+    if (operations[index].IsInverseOp() ||
+        operations[index].GetOpType() != pxr::UsdGeomXformOp::TypeScale) {
+      throw std::runtime_error(
+          "temporary physics import requires one translate op followed only by scale ops: " +
+          cube.GetPath().GetString());
+    }
+  }
+
+  if (resetsStack) {
+    return;
+  }
+  for (auto ancestor = cube.GetPrim().GetParent(); ancestor && !ancestor.IsPseudoRoot();
+       ancestor = ancestor.GetParent()) {
+    const pxr::UsdGeomXformable ancestorTransform(ancestor);
+    if (ancestorTransform &&
+        !pxr::GfIsClose(ancestorTransform.ComputeLocalToWorldTransform(pxr::UsdTimeCode::Default()),
+                        pxr::GfMatrix4d{1.0}, 1e-9)) {
+      throw std::runtime_error(
+          "temporary physics import requires identity parent transforms or resetXformStack: " +
+          cube.GetPath().GetString());
+    }
+  }
+}
+
 double readBodyMass(const pxr::UsdPrim& prim, MotionType motionType) {
   if (motionType == MotionType::staticBody) {
     return 1.0;
@@ -264,6 +303,10 @@ PhysicsImportSummary importPhysicsBodies(StageContext& context, PhysicsWorld& ph
   if (pxr::UsdGeomGetStageUpAxis(context.stage) != pxr::UsdGeomTokens->y) {
     throw std::runtime_error("temporary physics import requires a Y-up Stage");
   }
+  if (!pxr::UsdGeomLinearUnitsAre(pxr::UsdGeomGetStageMetersPerUnit(context.stage),
+                                  pxr::UsdGeomLinearUnits::meters)) {
+    throw std::runtime_error("temporary physics import requires metersPerUnit = 1");
+  }
   PhysicsImportSummary summary;
   for (const auto& prim : context.stage->Traverse()) {
     const auto motionType = readMotionType(prim);
@@ -276,6 +319,7 @@ PhysicsImportSummary importPhysicsBodies(StageContext& context, PhysicsWorld& ph
       throw std::runtime_error("temporary physics import supports only UsdGeomCube prims: " +
                                prim.GetPath().GetString());
     }
+    validatePhysicsTransform(cube);
     const auto primId = prim.GetPath().GetString();
     const auto shape = physicsWorld.createShape(
         ShapeDescriptor{usd_stage_runner::physics::ShapeType::box, readBoxHalfExtents(cube)});

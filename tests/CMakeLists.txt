@@ -61,6 +61,28 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
       PASS_REGULAR_EXPRESSION
         "fixed_steps=90, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\([1-9][0-9.]*, 0\\.[0-9]+, 0\\), physics_shapes=2, physics_bodies=2, physics_body_updates=[1-9][0-9]*"
     )
+
+    add_test(
+      NAME stage_runner.rejects_non_meter_physics_stage
+      COMMAND ${CMAKE_COMMAND}
+        -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+        -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/physics_centimeters.usda
+        -DOPTION=--frames
+        -DVALUE=1
+        "-DEXPECTED=temporary physics import requires metersPerUnit = 1"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+    )
+
+    add_test(
+      NAME stage_runner.rejects_inherited_physics_transform
+      COMMAND ${CMAKE_COMMAND}
+        -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+        -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/physics_parent_transform.usda
+        -DOPTION=--frames
+        -DVALUE=1
+        "-DEXPECTED=temporary physics import requires identity parent transforms or resetXformStack"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+    )
   else()
     add_test(
       NAME stage_runner.rejects_physics_stage_without_jolt

@@ -103,9 +103,11 @@ Interactive runs use SDL keyboard and gamepad input.
 The temporary physics convention applies `runner:physics:motionType = "static"`
 or `"dynamic"` to a `UsdGeomCube`; dynamic bodies may also author
 `runner:physics:mass`. Cube size and scale determine box half extents. A Stage
-using these attributes must be Y-up, may use only translate and scale ops on
-physics Cubes, and requires a build with both OpenUSD and Jolt. The next schema
-milestone will replace this convention with applied API schemas.
+using these attributes must be Y-up with `metersPerUnit = 1`. Physics Cubes
+require one translate op followed only by scale ops, plus identity ancestor
+transforms unless they set `resetXformStack`. A build with both OpenUSD and Jolt
+is required. The next schema milestone will replace this convention with applied
+API schemas.
 
 ## License
 
