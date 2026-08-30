@@ -1,6 +1,6 @@
 # Milestone 1: Jolt Physics Vertical Slice
 
-Status: not started
+Status: in progress; `physicsCore` skeleton implemented
 
 The input-and-transform slice is implemented and recorded in the
 [architecture overview](../architecture/overview.md). This milestone replaces
@@ -51,8 +51,8 @@ to input through physics.
 
 ## Recommended PR sequence
 
-1. **`physicsCore` skeleton** — contracts, handles, descriptors, and mock-backed
-   deterministic tests.
+1. **`physicsCore` skeleton** — implemented: contracts, typed handles,
+   descriptors, validation, and mock-backed deterministic tests.
 2. **`physicsJolt` bootstrap** — initialization, one box body, a static floor,
    and fixed stepping.
 3. **Runtime physics integration** — prim/body mapping, transform extraction,

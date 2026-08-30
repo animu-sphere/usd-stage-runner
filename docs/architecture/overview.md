@@ -2,11 +2,12 @@
 
 ## Current state
 
-The repository implements the input-and-transform vertical slice. It contains
-backend-neutral runtime and input libraries, an SDL adapter, an OpenUSD-aware
-host executable, core/adapter/integration tests, and dual CMake/OpenStrata build
-configuration. Physics, OpenExec, camera, behavior, and vehicle targets do not
-exist yet.
+The repository implements the input-and-transform vertical slice and the
+backend-neutral foundation of the physics slice. It contains runtime, input,
+and physics core libraries, an SDL adapter, an OpenUSD-aware host executable,
+core/adapter/integration tests, and dual CMake/OpenStrata build configuration.
+The Jolt adapter and runtime physics integration do not exist yet; neither do
+OpenExec, camera, behavior, or vehicle targets.
 
 ## Implemented targets
 
@@ -14,12 +15,30 @@ exist yet.
 | --- | --- | --- | --- |
 | `runtimeCore` | `libs/runtimeCore` | Frame timing, bounded fixed stepping, prim identity, runtime components, runtime transforms, dirty transform queue, and Runtime World lifetime. | C++ standard library only. |
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
+| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, and changed-body extraction contracts. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, build runtime transforms, poll input, advance movement, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `inputSdl`; OpenUSD `usd` and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
-movement logic, physical-control mapping, host option validation, Stage loading,
-and the complete injected-input-to-USD synchronization path.
+movement logic, physics-core resource and deterministic-step contracts,
+physical-control mapping, host option validation, Stage loading, and the
+complete injected-input-to-USD synchronization path.
+
+## Physics boundary
+
+`physicsCore` defines distinct `ShapeHandle`, `BodyHandle`, and
+`ConstraintHandle` types so backend resources cannot be accidentally mixed.
+Descriptors currently cover box half extents, static or dynamic bodies, mass,
+collision layers, initial transforms, and fixed constraints. Shared validation
+rejects invalid dimensions, transforms, masses, handles, forces, velocities,
+and timesteps before they reach an SDK adapter.
+
+`PhysicsWorld` owns the backend-neutral lifetime and command boundary. A
+backend creates and destroys shapes, bodies, and constraints; accepts force and
+velocity commands; advances a positive fixed duration; and returns a draining
+list of changed `BodyState` values. `PhysicsBody` is a small handle component
+that can be attached to a prim in `RuntimeWorld`. The contract test uses a
+deterministic mock with gravity to verify this boundary without Jolt.
 
 ## Runtime World and transforms
 
@@ -74,7 +93,7 @@ exactly one fixed interval per host frame without sleeping.
 
 ## Build and verification
 
-The root CMake tree builds the three libraries, host, and CTest suite. Each
+The root CMake tree builds the four libraries, host, and CTest suite. Each
 library installs headers and an exported CMake package. OpenUSD and SDL discovery
 remain isolated to their adapter/host directories.
 
@@ -100,12 +119,12 @@ stage_runner -----> OpenUSD usd + usdGeom
       |                 |
       v                 v
  runtimeCore <----- inputCore
-      ^                 ^
-      |                 |
-      `------ tests ----'
+      ^
+      |
+ physicsCore <----- physics contract tests
 ```
 
-Neither `runtimeCore` nor `inputCore` includes OpenUSD or SDL. The complete
-intended model and forbidden edges remain in the
+The core targets include no OpenUSD, SDL, Jolt, or OpenExec headers. The
+complete intended model and forbidden edges remain in the
 [design specification](../design/spec.md). Delivery order is tracked in the
 [roadmap](../roadmap/).

@@ -21,6 +21,7 @@ endif()
 
 add_subdirectory(libs/runtimeCore)
 add_subdirectory(libs/inputCore)
+add_subdirectory(libs/physicsCore)
 add_subdirectory(backends/inputSdl)
 
 if(USD_STAGE_RUNNER_BUILD_APP)
