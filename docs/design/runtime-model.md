@@ -1,6 +1,7 @@
 # Runtime Model
 
-Status: intended contract; input and transform portions implemented
+Status: intended contract; input, transform, and backend-neutral physics
+synchronization portions implemented
 
 ## State ownership
 
@@ -78,9 +79,10 @@ Host and render frames may use variable time. Physics starts at 60 Hz
 (`dt = 1 / 60`) and uses the existing bounded accumulator. A controlled clock
 must be injectable so the same path can be tested without wall-clock sleeps.
 
-The current implementation stops after direct movement updates the runtime
-transform. The [Jolt milestone](../roadmap/current.md) replaces that temporary
-movement step with physics-driven motion.
+The current host implementation stops after direct movement updates the runtime
+transform. Backend-neutral body-to-prim synchronization is implemented, while
+the remaining [Jolt milestone](../roadmap/current.md) work replaces that
+temporary movement step with physics-driven motion.
 
 ## Domain systems
 

@@ -17,6 +17,7 @@ endif()
 
 add_library(physicsCore
   src/descriptors.cpp
+  src/physics_runtime.cpp
   src/physics_world.cpp
 )
 add_library(physicsCore::physicsCore ALIAS physicsCore)

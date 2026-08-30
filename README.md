@@ -3,8 +3,8 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; normalized input, incremental transform sync, and the first Jolt
-Physics adapter are implemented.
+slices; normalized input, incremental transform sync, runtime physics mapping,
+and the first Jolt Physics adapter are implemented.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -16,8 +16,8 @@ behavior are documented in [docs/README.md](docs/README.md).
   synchronization queue;
 - `inputCore`, with named action state and backend-neutral movement intent;
 - `physicsCore`, with typed backend-neutral resource handles, descriptors for
-  boxes, bodies, and fixed constraints, fixed-step commands, and changed-body
-  extraction contracts;
+  boxes, bodies, and fixed constraints, fixed-step commands, changed-body
+  extraction contracts, and prim/body runtime synchronization;
 - `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
   box shapes and static or dynamic bodies, advances fixed simulation steps, and
   extracts changed body state without exposing Jolt types publicly;
@@ -28,8 +28,9 @@ behavior are documented in [docs/README.md](docs/README.md).
 - a minimal USDA fixture and dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Runtime physics integration and Stage import are the current roadmap work.
-Character, camera, behavior, and OpenExec integration are later slices.
+Temporary physics Stage import and the full input-to-physics path are the
+current roadmap work. Character, camera, behavior, and OpenExec integration are
+later slices.
 
 ## Build with OpenStrata
 

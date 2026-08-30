@@ -3,11 +3,11 @@
 ## Current state
 
 The repository implements the input-and-transform vertical slice, the
-backend-neutral physics contracts, and the first Jolt adapter. It contains
-runtime, input, and physics core libraries, SDL and Jolt adapters, an
-OpenUSD-aware host executable, core/adapter/integration tests, and dual
-CMake/OpenStrata build configuration. Runtime physics integration does not
-exist yet; neither do OpenExec, camera, behavior, or vehicle targets.
+backend-neutral physics contracts and Runtime integration, and the first Jolt
+adapter. It contains runtime, input, and physics core libraries, SDL and Jolt
+adapters, an OpenUSD-aware host executable, core/adapter/integration tests, and
+dual CMake/OpenStrata build configuration. Physics Stage import does not exist
+yet; neither do OpenExec, camera, behavior, or vehicle targets.
 
 ## Implemented targets
 
@@ -15,15 +15,16 @@ exist yet; neither do OpenExec, camera, behavior, or vehicle targets.
 | --- | --- | --- | --- |
 | `runtimeCore` | `libs/runtimeCore` | Frame timing, bounded fixed stepping, prim identity, runtime components, runtime transforms, dirty transform queue, and Runtime World lifetime. | C++ standard library only. |
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
-| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, and changed-body extraction contracts. | `runtimeCore`. |
+| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, and changed-body extraction contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, and changed-body extraction behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, build runtime transforms, poll input, advance movement, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `inputSdl`; OpenUSD `usd` and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
-movement logic, physics-core resource and deterministic-step contracts,
-physical-control mapping, host option validation, Stage loading, and the
-complete injected-input-to-USD synchronization path.
+movement logic, physics-core resource, deterministic-step, prim/body mapping,
+and changed-transform synchronization contracts, physical-control mapping,
+host option validation, Stage loading, and the complete injected-input-to-USD
+synchronization path.
 
 ## Physics boundary
 
@@ -40,6 +41,12 @@ velocity commands; advances a positive fixed duration; and returns a draining
 list of changed `BodyState` values. `PhysicsBody` is a small handle component
 that can be attached to a prim in `RuntimeWorld`. The contract test uses a
 deterministic mock with gravity to verify this boundary without Jolt.
+
+`PhysicsRuntime` owns the one-to-one mapping between runtime prims and backend
+bodies. Its fixed-step boundary drains changed body states, updates only mapped
+`RuntimeTransform` values that actually changed, and marks only those prims
+dirty for USD synchronization. Missing or removed prims are safely discarded
+from extraction, and binding never exposes a backend-specific type.
 
 `physicsJolt` implements that contract behind a factory boundary: its public
 header exposes only `physicsCore` and standard-library types. The adapter maps
