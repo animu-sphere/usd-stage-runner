@@ -12,6 +12,7 @@ members = [
   "libs/inputCore",
   "libs/physicsCore",
   "backends/inputSdl",
+  "backends/physicsJolt",
   "apps/stage_runner",
 ]
 release_members = [
@@ -19,5 +20,6 @@ release_members = [
   "inputCore",
   "physicsCore",
   "inputSdl",
+  "physicsJolt",
   "stage_runner",
 ]

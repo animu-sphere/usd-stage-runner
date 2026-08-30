@@ -1,0 +1,4 @@
+add_executable(physics_jolt_tests physics_jolt_tests.cpp)
+target_compile_features(physics_jolt_tests PRIVATE cxx_std_17)
+target_link_libraries(physics_jolt_tests PRIVATE physicsJolt::physicsJolt physicsJolt_warnings)
+add_test(NAME physicsJolt.bootstrap COMMAND physics_jolt_tests)

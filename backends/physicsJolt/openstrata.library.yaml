@@ -1,0 +1,11 @@
+schema: openstrata.library/v1alpha1
+library:
+  id: physicsJolt
+  version: 0.1.0
+cmake:
+  package: physicsJolt
+  target: physicsJolt::physicsJolt
+requires:
+  libraries:
+    - id: physicsCore
+      version: ">=0.1,<0.2"
