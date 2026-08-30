@@ -1,6 +1,8 @@
 #pragma once
 
 #include "usd_stage_runner/runtime/component_registry.h"
+#include "usd_stage_runner/runtime/dirty_prim_queue.h"
+#include "usd_stage_runner/runtime/runtime_transform.h"
 
 #include <cstddef>
 #include <stdexcept>
@@ -20,6 +22,15 @@ public:
     return prims_.size();
   }
   [[nodiscard]] std::vector<PrimId> prims() const;
+
+  RuntimeTransform& emplaceTransform(const PrimId& prim, RuntimeTransform transform = {});
+  [[nodiscard]] RuntimeTransform* transform(const PrimId& prim) noexcept;
+  [[nodiscard]] const RuntimeTransform* transform(const PrimId& prim) const noexcept;
+  void markTransformDirty(const PrimId& prim);
+  [[nodiscard]] std::size_t dirtyTransformCount() const noexcept {
+    return dirtyTransforms_.size();
+  }
+  std::vector<PrimId> takeDirtyTransforms();
 
   template <typename Component, typename... Args>
   Component& emplaceComponent(const PrimId& prim, Args&&... args) {
@@ -45,6 +56,7 @@ public:
 private:
   std::unordered_set<PrimId> prims_;
   ComponentRegistry components_;
+  DirtyPrimQueue dirtyTransforms_;
 };
 
 } // namespace usd_stage_runner::runtime

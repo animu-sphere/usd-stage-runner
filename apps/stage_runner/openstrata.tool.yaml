@@ -9,3 +9,7 @@ requires:
   libraries:
     - id: runtimeCore
       version: ">=0.1,<0.2"
+    - id: inputCore
+      version: ">=0.1,<0.2"
+    - id: inputSdl
+      version: ">=0.1,<0.2"

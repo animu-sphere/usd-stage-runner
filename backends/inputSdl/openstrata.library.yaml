@@ -1,0 +1,11 @@
+schema: openstrata.library/v1alpha1
+library:
+  id: inputSdl
+  version: 0.1.0
+cmake:
+  package: inputSdl
+  target: inputSdl::inputSdl
+requires:
+  libraries:
+    - id: inputCore
+      version: ">=0.1,<0.2"

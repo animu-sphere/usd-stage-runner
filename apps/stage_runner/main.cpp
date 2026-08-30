@@ -1,10 +1,18 @@
 #include "usd_stage_runner/runtime/fixed_step_accumulator.h"
 #include "usd_stage_runner/runtime/frame_clock.h"
 #include "usd_stage_runner/runtime/runtime_world.h"
+#include "usd_stage_runner/input/action_state.h"
+#include "usd_stage_runner/input/movement_controller.h"
+#include "usd_stage_runner/input_sdl/physical_input.h"
+#include "usd_stage_runner/input_sdl/sdl_input_source.h"
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
+#include <pxr/base/gf/vec3d.h>
+#include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/xformOp.h>
+#include <pxr/usd/usdGeom/xformable.h>
 #endif
 
 #include <charconv>
@@ -14,6 +22,8 @@
 #include <exception>
 #include <filesystem>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -23,6 +33,11 @@ namespace {
 using usd_stage_runner::runtime::FixedStepAccumulator;
 using usd_stage_runner::runtime::FrameClock;
 using usd_stage_runner::runtime::RuntimeWorld;
+using usd_stage_runner::input::ActionState;
+using usd_stage_runner::input::applyMovementIntent;
+using usd_stage_runner::input::updateMovementIntent;
+
+constexpr const char* playerPrim = "/World/PlayerCube";
 
 struct Options {
   std::filesystem::path stagePath;
@@ -30,12 +45,24 @@ struct Options {
   double fixedDt{1.0 / 60.0};
   std::size_t maxFixedSteps{8};
   bool deterministic{false};
+  std::optional<double> moveX;
+  std::optional<double> moveY;
 };
 
 [[noreturn]] void usageError(const std::string& message) {
   throw std::invalid_argument(
       message + "\nusage: stage_runner <scene.usd[a|c]> [--frames N] [--fixed-dt SECONDS]"
-                " [--max-fixed-steps N] [--deterministic]");
+                " [--max-fixed-steps N] [--deterministic] [--move-x VALUE]"
+                " [--move-y VALUE]");
+}
+
+double parseUnitValue(const std::string& value, const std::string& option) {
+  std::size_t consumed = 0;
+  const double parsed = std::stod(value, &consumed);
+  if (consumed != value.size() || !std::isfinite(parsed) || parsed < -1.0 || parsed > 1.0) {
+    usageError(option + " requires a number from -1 to 1");
+  }
+  return parsed;
 }
 
 std::size_t parsePositiveSize(const std::string& value, const std::string& option) {
@@ -59,7 +86,8 @@ Options parseOptions(int argc, char** argv) {
     if (argument == "--deterministic") {
       options.deterministic = true;
     } else if (argument == "--frames" || argument == "--max-fixed-steps" ||
-               argument == "--fixed-dt") {
+               argument == "--fixed-dt" || argument == "--move-x" ||
+               argument == "--move-y") {
       if (++index >= argc) {
         usageError(argument + " requires a value");
       }
@@ -68,6 +96,10 @@ Options parseOptions(int argc, char** argv) {
         options.frameCount = parsePositiveSize(value, argument);
       } else if (argument == "--max-fixed-steps") {
         options.maxFixedSteps = parsePositiveSize(value, argument);
+      } else if (argument == "--move-x") {
+        options.moveX = parseUnitValue(value, argument);
+      } else if (argument == "--move-y") {
+        options.moveY = parseUnitValue(value, argument);
       } else {
         std::size_t consumed = 0;
         options.fixedDt = std::stod(value, &consumed);
@@ -83,7 +115,32 @@ Options parseOptions(int argc, char** argv) {
 }
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
-RuntimeWorld openWorld(const std::filesystem::path& stagePath) {
+struct StageContext {
+  pxr::UsdStageRefPtr stage;
+  RuntimeWorld world;
+};
+
+usd_stage_runner::runtime::RuntimeTransform readTransform(const pxr::UsdPrim& prim) {
+  usd_stage_runner::runtime::RuntimeTransform transform;
+  const pxr::UsdGeomXformable xformable(prim);
+  if (!xformable) {
+    return transform;
+  }
+  bool resetsStack = false;
+  for (const auto& operation : xformable.GetOrderedXformOps(&resetsStack)) {
+    if (operation.GetOpType() != pxr::UsdGeomXformOp::TypeTranslate) {
+      continue;
+    }
+    pxr::GfVec3d translation;
+    if (operation.Get(&translation)) {
+      transform.translation = {translation[0], translation[1], translation[2]};
+    }
+    break;
+  }
+  return transform;
+}
+
+StageContext openWorld(const std::filesystem::path& stagePath) {
   const auto stage = pxr::UsdStage::Open(stagePath.string());
   if (!stage) {
     throw std::runtime_error("could not open USD Stage: " + stagePath.string());
@@ -91,9 +148,42 @@ RuntimeWorld openWorld(const std::filesystem::path& stagePath) {
 
   RuntimeWorld world;
   for (const auto& prim : stage->Traverse()) {
-    world.addPrim(prim.GetPath().GetString());
+    const auto primId = prim.GetPath().GetString();
+    world.addPrim(primId);
+    if (pxr::UsdGeomXformable(prim)) {
+      world.emplaceTransform(primId, readTransform(prim));
+    }
   }
-  return world;
+  return {stage, std::move(world)};
+}
+
+std::size_t synchronizeDirtyTransforms(StageContext& context) {
+  std::size_t synchronized = 0;
+  for (const auto& primId : context.world.takeDirtyTransforms()) {
+    const auto* transform = context.world.transform(primId);
+    const pxr::UsdPrim prim = context.stage->GetPrimAtPath(pxr::SdfPath(primId));
+    pxr::UsdGeomXformable xformable(prim);
+    if (transform == nullptr || !xformable) {
+      continue;
+    }
+
+    pxr::UsdGeomXformOp translate;
+    bool resetsStack = false;
+    for (const auto& operation : xformable.GetOrderedXformOps(&resetsStack)) {
+      if (operation.GetOpType() == pxr::UsdGeomXformOp::TypeTranslate) {
+        translate = operation;
+        break;
+      }
+    }
+    if (!translate) {
+      translate = xformable.AddTranslateOp(pxr::UsdGeomXformOp::PrecisionDouble);
+    }
+    const auto& value = transform->translation;
+    if (translate && translate.Set(pxr::GfVec3d(value.x, value.y, value.z))) {
+      ++synchronized;
+    }
+  }
+  return synchronized;
 }
 #endif
 
@@ -104,16 +194,39 @@ int run(const Options& options) {
       "stage_runner was built without OpenUSD; configure with an OpenUSD SDK or an "
       "OpenStrata usd runtime");
 #else
-  RuntimeWorld world = openWorld(options.stagePath);
+  StageContext context = openWorld(options.stagePath);
   const FixedStepAccumulator::Duration fixedStep{options.fixedDt};
   FixedStepAccumulator accumulator(fixedStep, options.maxFixedSteps);
   FrameClock clock;
   std::size_t fixedSteps = 0;
   std::size_t droppedSteps = 0;
+  std::size_t synchronizedTransforms = 0;
+  std::size_t processedFrames = 0;
+  ActionState actions;
+  std::unique_ptr<usd_stage_runner::input_sdl::SdlInputSource> inputSource;
+  if (!options.deterministic) {
+    inputSource = std::make_unique<usd_stage_runner::input_sdl::SdlInputSource>();
+    if (!inputSource->available()) {
+      throw std::runtime_error("SDL input is unavailable: " + std::string(inputSource->error()));
+    }
+  }
 
   auto nextFrame = FrameClock::Clock::now();
   (void)clock.tick();
   for (std::size_t frame = 0; frame < options.frameCount; ++frame) {
+    if (inputSource && !inputSource->poll(actions)) {
+      break;
+    }
+    if (options.deterministic) {
+      usd_stage_runner::input_sdl::PhysicalInputState physical;
+      physical.gamepadMoveX = options.moveX.value_or(0.0);
+      physical.gamepadMoveY = options.moveY.value_or(0.0);
+      usd_stage_runner::input_sdl::mapPhysicalInput(physical, actions);
+    }
+    if (context.world.containsPrim(playerPrim) && context.world.transform(playerPrim) != nullptr) {
+      updateMovementIntent(context.world, playerPrim, actions);
+    }
+
     FrameClock::Duration frameTime;
     if (options.deterministic) {
       frameTime = fixedStep;
@@ -123,13 +236,27 @@ int run(const Options& options) {
       frameTime = clock.tick();
     }
 
-    const auto result = accumulator.advance(frameTime, [&](const auto) { ++fixedSteps; });
+    const auto result = accumulator.advance(frameTime, [&](const auto step) {
+      ++fixedSteps;
+      if (context.world.containsPrim(playerPrim)) {
+        applyMovementIntent(context.world, playerPrim, 3.0, step.count());
+      }
+    });
     droppedSteps += result.droppedSteps;
+    synchronizedTransforms += synchronizeDirtyTransforms(context);
+    ++processedFrames;
   }
 
-  std::cout << "opened " << options.stagePath.string() << " with " << world.primCount()
-            << " prims; frames=" << options.frameCount << ", fixed_steps=" << fixedSteps
-            << ", dropped_steps=" << droppedSteps << '\n';
+  std::cout << "opened " << options.stagePath.string() << " with " << context.world.primCount()
+            << " prims; frames=" << processedFrames << ", fixed_steps=" << fixedSteps
+            << ", dropped_steps=" << droppedSteps
+            << ", synchronized_transforms=" << synchronizedTransforms;
+  if (const auto* transform = context.world.transform(playerPrim)) {
+    const auto& value = transform->translation;
+    std::cout << ", player_translation=(" << value.x << ", " << value.y << ", " << value.z
+              << ')';
+  }
+  std::cout << '\n';
   return 0;
 #endif
 }

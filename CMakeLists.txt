@@ -20,6 +20,8 @@ else()
 endif()
 
 add_subdirectory(libs/runtimeCore)
+add_subdirectory(libs/inputCore)
+add_subdirectory(backends/inputSdl)
 
 if(USD_STAGE_RUNNER_BUILD_APP)
   add_subdirectory(apps/stage_runner)

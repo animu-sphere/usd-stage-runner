@@ -3,7 +3,7 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; the current slice establishes the backend-neutral runtime skeleton.
+slices; the current slice adds normalized input and incremental transform sync.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -11,14 +11,18 @@ behavior are documented in [docs/README.md](docs/README.md).
 ## Current capabilities
 
 - `runtimeCore`, with an injectable frame clock, bounded fixed-step accumulator,
-  prim-indexed component registry, and Runtime World;
+  prim-indexed component registry, Runtime World, runtime transforms, and a dirty
+  synchronization queue;
+- `inputCore`, with named action state and backend-neutral movement intent;
+- `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
+  `move.x` and `move.y` without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
-  frame bound for deterministic tests;
+  frame bound and synchronizes only dirty runtime transforms to USD;
 - a minimal USDA fixture and dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Input, physics, character, camera, behavior, and OpenExec integration are later
-roadmap slices and are not implemented yet.
+Physics, character, camera, behavior, and OpenExec integration are later roadmap
+slices and are not implemented yet.
 
 ## Build with OpenStrata
 
@@ -65,18 +69,24 @@ ctest --preset dev
 Without OpenUSD, the host still compiles but reports that Stage loading is
 unavailable; the backend-neutral unit tests remain buildable. Set
 `USD_STAGE_RUNNER_REQUIRE_OPENUSD=ON` when a missing SDK should be a configure
-error.
+error. Interactive input is enabled when CMake can find `SDL3::SDL3` or
+`SDL2::SDL2`; set `USD_STAGE_RUNNER_REQUIRE_SDL=ON` to require a real SDL-backed
+demo build. The OpenStrata `usd` profile does not currently bundle SDL, so pass
+an SDL package through `CMAKE_PREFIX_PATH` for interactive builds.
 
 ## Host usage
 
 ```text
 stage_runner <scene.usd[a|c]> [--frames N] [--fixed-dt SECONDS]
              [--max-fixed-steps N] [--deterministic]
+             [--move-x VALUE] [--move-y VALUE]
 ```
 
 The default loop runs 300 frames at a 60 Hz target. `--deterministic` injects
 one fixed interval per frame and does not sleep, making integration tests fast
-and repeatable.
+and repeatable. `--move-x` and `--move-y` accept normalized values from -1 to 1
+for deterministic adapter-to-Stage tests. Interactive runs use SDL keyboard and
+gamepad input.
 
 ## License
 

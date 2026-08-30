@@ -56,8 +56,23 @@ int main() {
   if (world.primCount() != 1 || world.component<Transform>("/World/Cube")->x != 3.0) {
     return fail("the Runtime World must index components by prim identity");
   }
+  world.emplaceTransform("/World/Cube", {{1.0, 2.0, 3.0}});
+  world.markTransformDirty("/World/Cube");
+  world.markTransformDirty("/World/Cube");
+  if (world.dirtyTransformCount() != 1 || world.transform("/World/Cube")->translation.y != 2.0) {
+    return fail("runtime transforms must be prim-indexed and dirtied at most once");
+  }
+  const auto dirtyTransforms = world.takeDirtyTransforms();
+  if (dirtyTransforms.size() != 1 || dirtyTransforms.front() != "/World/Cube" ||
+      world.dirtyTransformCount() != 0) {
+    return fail("taking dirty transforms must drain the synchronization queue");
+  }
+  world.markTransformDirty("/World/Cube");
   if (!world.removePrim("/World/Cube") || world.componentCount() != 0) {
     return fail("removing a prim must remove its runtime components");
+  }
+  if (world.dirtyTransformCount() != 0) {
+    return fail("removing a prim must remove it from dirty synchronization queues");
   }
 
   try {

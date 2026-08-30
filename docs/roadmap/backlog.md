@@ -5,16 +5,6 @@ Status: ⬜ not started unless noted otherwise
 Work is ordered as vertical slices. Each phase should result in a runnable,
 testable capability rather than only a collection of disconnected libraries.
 
-## Phase 2: Jolt physics
-
-- Add the minimal `physicsCore` interfaces and Jolt adapter.
-- Implement rigid bodies, colliders, fixed stepping, and transform extraction.
-- Synchronize simulated transforms to USD.
-- Connect input intent to force-based movement.
-
-Success: a cube falls onto a floor, then can be controlled through
-`input -> physics -> USD`.
-
 ## Phase 3: Character controller
 
 - Add desired velocity, ground state, jump state, and facing direction.
