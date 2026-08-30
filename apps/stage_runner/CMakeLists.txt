@@ -29,7 +29,8 @@ endif()
 add_executable(stage_runner main.cpp)
 target_compile_features(stage_runner PRIVATE cxx_std_17)
 target_link_libraries(stage_runner PRIVATE runtimeCore::runtimeCore inputCore::inputCore
-  inputSdl::inputSdl usd_stage_runner_warnings)
+  physicsCore::physicsCore physicsJolt::physicsJolt inputSdl::inputSdl
+  usd_stage_runner_warnings)
 
 if(USD_STAGE_RUNNER_OPENUSD_TARGET)
   target_compile_definitions(stage_runner PRIVATE USD_STAGE_RUNNER_HAS_OPENUSD=1)

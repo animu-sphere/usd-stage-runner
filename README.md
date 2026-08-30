@@ -3,8 +3,7 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; normalized input, incremental transform sync, runtime physics mapping,
-and the first Jolt Physics adapter are implemented.
+slices; the first input-to-Jolt-to-USD physics slice is implemented.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -24,13 +23,15 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y` without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
-  frame bound and synchronizes only dirty runtime transforms to USD;
-- a minimal USDA fixture and dependency-free unit tests; and
+  frame bound, imports the temporary physics convention, maps movement intent to
+  desired body velocity, advances Jolt, and synchronizes only dirty runtime
+  transforms to USD;
+- minimal transform and falling-cube USDA fixtures plus dependency-free unit
+  tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Temporary physics Stage import and the full input-to-physics path are the
-current roadmap work. Character, camera, behavior, and OpenExec integration are
-later slices.
+Formal physics API schemas are the next roadmap milestone. Character, camera,
+behavior, and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
@@ -98,6 +99,13 @@ one fixed interval per frame and does not sleep, making integration tests fast
 and repeatable. `--move-x` and `--move-y` accept normalized values from -1 to 1
 for deterministic adapter-to-Stage tests and require `--deterministic`.
 Interactive runs use SDL keyboard and gamepad input.
+
+The temporary physics convention applies `runner:physics:motionType = "static"`
+or `"dynamic"` to a `UsdGeomCube`; dynamic bodies may also author
+`runner:physics:mass`. Cube size and scale determine box half extents. A Stage
+using these attributes must be Y-up, may use only translate and scale ops on
+physics Cubes, and requires a build with both OpenUSD and Jolt. The next schema
+milestone will replace this convention with applied API schemas.
 
 ## License
 

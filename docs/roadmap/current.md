@@ -1,10 +1,9 @@
 # Milestone 1: Jolt Physics Vertical Slice
 
-Status: in progress
+Status: implemented
 
-The `physicsJolt` bootstrap and backend-neutral Runtime integration are
-implemented. Temporary Stage import and the complete input-to-physics path
-remain in progress.
+The `physicsJolt` bootstrap, backend-neutral Runtime integration, temporary
+Stage import, and complete input-to-physics path are implemented.
 
 The input-and-transform slice is implemented and recorded in the
 [architecture overview](../architecture/overview.md). This milestone replaces
@@ -52,10 +51,11 @@ to input through physics.
    static floor, fixed stepping, changed-state extraction, and adapter coverage.
 2. **Runtime physics integration** — implemented: prim/body mapping, transform
    extraction, and dirty synchronization.
-3. **Stage importer** — create bodies and colliders through an explicitly
-   temporary convention.
-4. **Full vertical slice** — connect input to physics and verify the complete
-   path through USD.
+3. **Stage importer** — implemented: bodies and colliders are created from an
+   explicitly temporary Cube attribute convention.
+4. **Full vertical slice** — implemented: input sets desired horizontal body
+   velocity before Jolt stepping, and changed transforms flow back through the
+   dirty USD synchronization queue.
 
 The following schema work is deliberately a separate milestone so the asset
 contract is based on a proven runtime path.

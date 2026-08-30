@@ -1,7 +1,8 @@
 # Testing Strategy
 
 Status: runtime, input, physics-core and runtime-integration contracts, SDL
-mapping, Jolt bootstrap, and input-to-USD integration coverage implemented
+mapping, Jolt bootstrap, input-to-USD, and conditional full physics vertical
+slice coverage implemented
 
 Deterministic testing is a design requirement. Each vertical slice must be
 testable with controlled time and input and should add a runnable Stage fixture.
@@ -27,7 +28,7 @@ empty promises.
 
 | Capability | Planned fixture |
 | --- | --- |
-| Physics | `falling_cube.usda` |
+| Physics | `falling_cube.usda` (implemented) |
 | Character | `character_walk.usda` |
 | Camera | `third_person_camera.usda` |
 | Vehicle | `four_wheel_vehicle.usda` |
