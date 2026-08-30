@@ -1,6 +1,10 @@
 set(USD_STAGE_RUNNER_OPENUSD_TARGET "")
 set(USD_STAGE_RUNNER_USDGEOM_TARGET "")
-find_package(pxr CONFIG QUIET)
+if(USD_STAGE_RUNNER_REQUIRE_OPENUSD)
+  find_package(pxr CONFIG REQUIRED)
+else()
+  find_package(pxr CONFIG QUIET)
+endif()
 
 foreach(candidate IN ITEMS usd pxr::usd)
   if(TARGET ${candidate})
