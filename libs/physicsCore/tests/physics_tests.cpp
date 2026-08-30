@@ -1,10 +1,12 @@
 #include "usd_stage_runner/physics/physics_world.h"
+#include "usd_stage_runner/physics/physics_runtime.h"
 #include "usd_stage_runner/runtime/runtime_world.h"
 
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -137,6 +139,13 @@ public:
     return result;
   }
 
+  void reportBodyChanged(physics::BodyHandle body) {
+    if (bodies_.find(body) == bodies_.end()) {
+      throw std::out_of_range("unknown body handle");
+    }
+    changed_.insert(body);
+  }
+
 private:
   struct BodyRecord {
     physics::BodyDescriptor descriptor;
@@ -176,10 +185,24 @@ template <typename Function> bool rejectsInvalidArgument(Function&& function) {
   return false;
 }
 
+template <typename Function> bool rejectsOutOfRange(Function&& function) {
+  try {
+    std::forward<Function>(function)();
+  } catch (const std::out_of_range&) {
+    return true;
+  }
+  return false;
+}
+
 } // namespace
 
 int main() {
   using namespace usd_stage_runner;
+
+  static_assert(!std::is_copy_constructible_v<physics::PhysicsRuntime>);
+  static_assert(!std::is_copy_assignable_v<physics::PhysicsRuntime>);
+  static_assert(!std::is_move_constructible_v<physics::PhysicsRuntime>);
+  static_assert(!std::is_move_assignable_v<physics::PhysicsRuntime>);
 
   DeterministicPhysicsWorld world;
   const auto box = world.createShape({physics::ShapeType::box, {0.5, 0.5, 0.5}});
@@ -215,11 +238,63 @@ int main() {
 
   runtime::RuntimeWorld runtimeWorld;
   runtimeWorld.addPrim("/World/PlayerCube");
-  runtimeWorld.emplaceComponent<physics::PhysicsBody>("/World/PlayerCube",
-                                                       physics::PhysicsBody{cube});
-  const auto* component = runtimeWorld.component<physics::PhysicsBody>("/World/PlayerCube");
-  if (component == nullptr || component->handle != cube) {
-    return fail("a PhysicsBody handle must be attachable to a prim in the Runtime World");
+  runtimeWorld.emplaceTransform("/World/PlayerCube", world.bodyState(cube).transform);
+  runtimeWorld.addPrim("/World/OtherCube");
+  runtimeWorld.emplaceTransform("/World/OtherCube");
+  runtimeWorld.addPrim("/World/MissingTransform");
+
+  physics::PhysicsRuntime physicsRuntime(world, runtimeWorld);
+  if (!physicsRuntime.bindBody("/World/PlayerCube", cube) ||
+      physicsRuntime.bindBody("/World/PlayerCube", cube) ||
+      physicsRuntime.bodyForPrim("/World/PlayerCube") != cube ||
+      physicsRuntime.primForBody(cube) != runtime::PrimId{"/World/PlayerCube"} ||
+      physicsRuntime.bodyCount() != 1) {
+    return fail("the physics runtime must maintain a stable prim-to-body mapping");
+  }
+  if (!rejectsInvalidArgument([&] {
+        physicsRuntime.bindBody("/World/OtherCube", cube);
+      })) {
+    return fail("a physics body must not be bound to more than one prim");
+  }
+  if (!rejectsOutOfRange([&] {
+        physicsRuntime.bindBody("/World/MissingTransform", cube);
+      })) {
+    return fail("physics bodies must be bound only to prims with runtime transforms");
+  }
+
+  world.applyForce(cube, {4.0, 0.0, 0.0});
+  if (physicsRuntime.step(physics::PhysicsWorld::Duration{0.5}) != 1) {
+    return fail("a physics step must synchronize changed mapped bodies");
+  }
+  const auto* simulatedTransform = runtimeWorld.transform("/World/PlayerCube");
+  if (simulatedTransform == nullptr || !near(simulatedTransform->translation.x, 1.5) ||
+      !near(simulatedTransform->translation.y, 2.5) ||
+      runtimeWorld.takeDirtyTransforms() !=
+          std::vector<runtime::PrimId>{"/World/PlayerCube"}) {
+    return fail("changed body transforms must update and dirty only their mapped prim");
+  }
+  if (physicsRuntime.synchronizeChangedBodyStates() != 0 ||
+      runtimeWorld.dirtyTransformCount() != 0) {
+    return fail("physics transform extraction and runtime dirty queues must drain");
+  }
+  world.reportBodyChanged(cube);
+  if (physicsRuntime.synchronizeChangedBodyStates() != 0 ||
+      runtimeWorld.dirtyTransformCount() != 0) {
+    return fail("unchanged body transforms must not be dirtied for USD synchronization");
+  }
+  if (!runtimeWorld.removePrim("/World/PlayerCube") || physicsRuntime.primForBody(cube) ||
+      physicsRuntime.bodyCount() != 0) {
+    return fail("removed prims must be discarded from physics body mappings immediately");
+  }
+
+  runtimeWorld.addPrim("/World/PlayerCube");
+  runtimeWorld.emplaceTransform("/World/PlayerCube", world.bodyState(floor).transform);
+  if (!physicsRuntime.bindBody("/World/PlayerCube", floor) ||
+      !runtimeWorld.removePrim("/World/PlayerCube") ||
+      !physicsRuntime.bindBody("/World/OtherCube", floor) ||
+      physicsRuntime.primForBody(floor) != runtime::PrimId{"/World/OtherCube"} ||
+      !physicsRuntime.unbindBody("/World/OtherCube") || physicsRuntime.bodyCount() != 0) {
+    return fail("removed static bodies must be reusable and unbind in both mapping directions");
   }
 
   if (!rejectsInvalidArgument([&] {
@@ -243,6 +318,9 @@ int main() {
       }) ||
       !rejectsInvalidArgument([&] {
         world.step(physics::PhysicsWorld::Duration{0.0});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        physicsRuntime.bindBody("/World/OtherCube", {});
       })) {
     return fail("backend-neutral descriptors and fixed steps must reject invalid values");
   }

@@ -49,6 +49,10 @@ public:
     return components_.get<Component>(prim);
   }
 
+  template <typename Component> bool removeComponent(const PrimId& prim) noexcept {
+    return components_.remove<Component>(prim);
+  }
+
   [[nodiscard]] std::size_t componentCount() const noexcept {
     return components_.componentCount();
   }
