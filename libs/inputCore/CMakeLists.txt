@@ -4,6 +4,10 @@ project(inputCore VERSION 0.1.0 LANGUAGES CXX)
 
 include(CTest)
 
+if(NOT TARGET runtimeCore::runtimeCore)
+  find_package(runtimeCore CONFIG REQUIRED)
+endif()
+
 add_library(inputCore_warnings INTERFACE)
 if(MSVC)
   target_compile_options(inputCore_warnings INTERFACE /W4 /permissive-)

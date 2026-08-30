@@ -4,6 +4,10 @@ project(inputSdl VERSION 0.1.0 LANGUAGES CXX)
 
 include(CTest)
 
+if(NOT TARGET inputCore::inputCore)
+  find_package(inputCore CONFIG REQUIRED)
+endif()
+
 option(USD_STAGE_RUNNER_REQUIRE_SDL "Fail configuration when SDL2 or SDL3 is unavailable" OFF)
 
 add_library(inputSdl_warnings INTERFACE)

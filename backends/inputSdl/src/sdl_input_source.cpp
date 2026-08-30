@@ -41,7 +41,7 @@ struct SdlInputSource::Impl {
   SDL_Gamepad* gamepad{nullptr};
 
   Impl() {
-    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+    if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
       errorMessage = SDL_GetError();
       return;
     }
@@ -61,7 +61,7 @@ struct SdlInputSource::Impl {
       SDL_DestroyWindow(window);
     }
     if (initialized) {
-      SDL_Quit();
+      SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
     }
   }
 
@@ -109,7 +109,7 @@ struct SdlInputSource::Impl {
   SDL_GameController* gamepad{nullptr};
 
   Impl() {
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
+    if (SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER) != 0) {
       errorMessage = SDL_GetError();
       return;
     }
@@ -129,7 +129,7 @@ struct SdlInputSource::Impl {
       SDL_DestroyWindow(window);
     }
     if (initialized) {
-      SDL_Quit();
+      SDL_QuitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
     }
   }
 

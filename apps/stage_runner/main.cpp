@@ -8,6 +8,8 @@
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
 #include <pxr/base/gf/vec3d.h>
+#include <pxr/base/gf/vec3f.h>
+#include <pxr/base/gf/vec3h.h>
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
@@ -111,6 +113,9 @@ Options parseOptions(int argc, char** argv) {
       usageError("unknown option: " + argument);
     }
   }
+  if (!options.deterministic && (options.moveX.has_value() || options.moveY.has_value())) {
+    usageError("--move-x and --move-y require --deterministic");
+  }
   return options;
 }
 
@@ -132,7 +137,7 @@ usd_stage_runner::runtime::RuntimeTransform readTransform(const pxr::UsdPrim& pr
       continue;
     }
     pxr::GfVec3d translation;
-    if (operation.Get(&translation)) {
+    if (operation.GetAs(&translation, pxr::UsdTimeCode::Default())) {
       transform.translation = {translation[0], translation[1], translation[2]};
     }
     break;
@@ -157,6 +162,21 @@ StageContext openWorld(const std::filesystem::path& stagePath) {
   return {stage, std::move(world)};
 }
 
+bool setTranslate(const pxr::UsdGeomXformOp& operation,
+                  const usd_stage_runner::runtime::RuntimeTransform& transform) {
+  const auto& value = transform.translation;
+  const pxr::GfVec3d translation(value.x, value.y, value.z);
+  switch (operation.GetPrecision()) {
+  case pxr::UsdGeomXformOp::PrecisionDouble:
+    return operation.Set(translation);
+  case pxr::UsdGeomXformOp::PrecisionFloat:
+    return operation.Set(pxr::GfVec3f(translation));
+  case pxr::UsdGeomXformOp::PrecisionHalf:
+    return operation.Set(pxr::GfVec3h(translation));
+  }
+  return false;
+}
+
 std::size_t synchronizeDirtyTransforms(StageContext& context) {
   std::size_t synchronized = 0;
   for (const auto& primId : context.world.takeDirtyTransforms()) {
@@ -164,6 +184,9 @@ std::size_t synchronizeDirtyTransforms(StageContext& context) {
     const pxr::UsdPrim prim = context.stage->GetPrimAtPath(pxr::SdfPath(primId));
     pxr::UsdGeomXformable xformable(prim);
     if (transform == nullptr || !xformable) {
+      if (transform != nullptr) {
+        context.world.markTransformDirty(primId);
+      }
       continue;
     }
 
@@ -178,9 +201,10 @@ std::size_t synchronizeDirtyTransforms(StageContext& context) {
     if (!translate) {
       translate = xformable.AddTranslateOp(pxr::UsdGeomXformOp::PrecisionDouble);
     }
-    const auto& value = transform->translation;
-    if (translate && translate.Set(pxr::GfVec3d(value.x, value.y, value.z))) {
+    if (translate && setTranslate(translate, *transform)) {
       ++synchronized;
+    } else {
+      context.world.markTransformDirty(primId);
     }
   }
   return synchronized;

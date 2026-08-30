@@ -86,7 +86,8 @@ SDL or physical devices.
 The committed `tests/fixtures/minimal.usda` Stage contains `/World/Ground`,
 `/World/PlayerCube`, and `/World/Camera`. The synchronization integration test
 injects `move.x = 1` for four 1/60-second frames at speed 3, verifies four dirty
-writes, and observes `/World/PlayerCube` move from X=0 to X=0.2.
+writes, and observes `/World/PlayerCube` move from X=0 to X=0.2. A second Stage
+fixture verifies the same path with a float-precision translate op.
 
 ## Dependency direction
 

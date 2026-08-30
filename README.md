@@ -85,8 +85,8 @@ stage_runner <scene.usd[a|c]> [--frames N] [--fixed-dt SECONDS]
 The default loop runs 300 frames at a 60 Hz target. `--deterministic` injects
 one fixed interval per frame and does not sleep, making integration tests fast
 and repeatable. `--move-x` and `--move-y` accept normalized values from -1 to 1
-for deterministic adapter-to-Stage tests. Interactive runs use SDL keyboard and
-gamepad input.
+for deterministic adapter-to-Stage tests and require `--deterministic`.
+Interactive runs use SDL keyboard and gamepad input.
 
 ## License
 
