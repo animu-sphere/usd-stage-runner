@@ -35,6 +35,15 @@ void validateBodyDescriptor(const BodyDescriptor& descriptor) {
     throw std::invalid_argument("a physics body requires a valid shape handle");
   }
   validatePhysicsVector(descriptor.initialTransform.translation, "body translation");
+
+  switch (descriptor.motionType) {
+  case MotionType::staticBody:
+  case MotionType::dynamicBody:
+    break;
+  default:
+    throw std::invalid_argument("body motion type is unsupported");
+  }
+
   if (!std::isfinite(descriptor.mass) ||
       (descriptor.motionType == MotionType::dynamicBody && descriptor.mass <= 0.0) ||
       (descriptor.motionType == MotionType::staticBody && descriptor.mass < 0.0)) {
@@ -43,6 +52,13 @@ void validateBodyDescriptor(const BodyDescriptor& descriptor) {
 }
 
 void validateConstraintDescriptor(const ConstraintDescriptor& descriptor) {
+  switch (descriptor.type) {
+  case ConstraintType::fixed:
+    break;
+  default:
+    throw std::invalid_argument("constraint type is unsupported");
+  }
+
   if (!descriptor.firstBody || !descriptor.secondBody) {
     throw std::invalid_argument("a physics constraint requires two valid body handles");
   }

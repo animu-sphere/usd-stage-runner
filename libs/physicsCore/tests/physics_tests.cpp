@@ -193,12 +193,6 @@ int main() {
     return fail("physics resources must receive valid typed handles");
   }
 
-  const auto constraint = world.createConstraint(
-      physics::ConstraintDescriptor{physics::ConstraintType::fixed, floor, cube});
-  if (!constraint) {
-    return fail("the world must create a constraint from backend-neutral body handles");
-  }
-
   if (!world.applyForce(cube, {4.0, 0.0, 0.0}) ||
       world.applyForce(floor, {4.0, 0.0, 0.0})) {
     return fail("force commands must apply only to known dynamic bodies");
@@ -236,13 +230,27 @@ int main() {
             physics::BodyDescriptor{{}, physics::MotionType::dynamicBody, {}, 1.0, 0});
       }) ||
       !rejectsInvalidArgument([&] {
+        world.createBody(physics::BodyDescriptor{
+            box, static_cast<physics::MotionType>(-1), {}, 1.0, 0});
+      }) ||
+      !rejectsInvalidArgument([&] {
         world.createConstraint(
             physics::ConstraintDescriptor{physics::ConstraintType::fixed, cube, cube});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        world.createConstraint(physics::ConstraintDescriptor{
+            static_cast<physics::ConstraintType>(-1), floor, cube});
       }) ||
       !rejectsInvalidArgument([&] {
         world.step(physics::PhysicsWorld::Duration{0.0});
       })) {
     return fail("backend-neutral descriptors and fixed steps must reject invalid values");
+  }
+
+  const auto constraint = world.createConstraint(
+      physics::ConstraintDescriptor{physics::ConstraintType::fixed, floor, cube});
+  if (!constraint) {
+    return fail("the world must create a constraint from backend-neutral body handles");
   }
 
   if (!world.destroyConstraint(constraint) || !world.destroyBody(cube) ||
