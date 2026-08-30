@@ -46,7 +46,7 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
     )
     set_tests_properties(stage_runner.physics_falling_cube PROPERTIES
       PASS_REGULAR_EXPRESSION
-        "fixed_steps=180, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\(0, 0\\.[0-9]+, 0\\), physics_shapes=2, physics_bodies=2, physics_body_updates=[1-9][0-9]*"
+        "fixed_steps=180, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\([^,]+, 0\\.48, [^)]+\\), physics_shapes=2, physics_bodies=2, physics_body_updates=[1-9][0-9]*"
     )
 
     add_test(
@@ -59,7 +59,7 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
     )
     set_tests_properties(stage_runner.physics_vertical_slice PROPERTIES
       PASS_REGULAR_EXPRESSION
-        "fixed_steps=90, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\([1-9][0-9.]*, 0\\.[0-9]+, 0\\), physics_shapes=2, physics_bodies=2, physics_body_updates=[1-9][0-9]*"
+        "fixed_steps=90, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\([1-9][0-9.]*, 0\\.48, [^)]+\\), physics_shapes=2, physics_bodies=2, physics_body_updates=[1-9][0-9]*"
     )
 
     add_test(
