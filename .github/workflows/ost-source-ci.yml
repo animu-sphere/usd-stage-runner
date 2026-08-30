@@ -229,7 +229,7 @@ jobs:
           cmake --build .ci/jolt-build --config Release --target Jolt
           cmake --install .ci/jolt-build --config Release
           "JOLT_PREFIX=$joltPrefix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Configure the combined OpenUSD and Jolt integration build
+      - name: Prepare the runtime for the combined integration build
         shell: pwsh
         run: |
           $runtime = (& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --json | ConvertFrom-Json).data
@@ -264,39 +264,34 @@ jobs:
             [System.IO.File]::WriteAllText($pxrTargets, $updatedTargets, [System.Text.UTF8Encoding]::new($false))
           }
 
-          Invoke-Expression ((& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --shell pwsh) -join "`n")
-          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$($runtime.prefix);$env:CMAKE_PREFIX_PATH"
-          cmake --debug-find-pkg=Python3 -S . -B build/vertical-slice -A x64 `
-            -DBUILD_TESTING=ON `
-            -DUSD_STAGE_RUNNER_BUILD_APP=ON `
-            -DUSD_STAGE_RUNNER_REQUIRE_OPENUSD=ON `
-            -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON `
-            "-Dpxr_DIR=$($runtime.prefix)" `
-            "-DJolt_DIR=$(Join-Path $env:JOLT_PREFIX 'lib/cmake/Jolt')" `
-            "-DPython3_EXECUTABLE=$pythonExecutable" `
-            "-DPython3_LIBRARY=$pythonLibrary" `
-            "-DPython3_INCLUDE_DIR=$pythonInclude" `
-            "-DMaterialX_DIR=$(Join-Path $runtime.prefix 'lib/cmake/MaterialX')" `
-            "-DOpenSubdiv_DIR=$(Join-Path $runtime.prefix 'lib/cmake/OpenSubdiv')" `
-            "-DTBB_DIR=$(Join-Path $runtime.prefix 'lib/cmake/TBB')"
-      - name: Build and test the combined physics vertical slice
-        shell: pwsh
-        run: |
-          Invoke-Expression ((& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --shell pwsh) -join "`n")
-          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
-          cmake --build build/vertical-slice --config Release
-          ctest --test-dir build/vertical-slice -C Release --output-on-failure -R "^stage_runner\.physics_|^stage_runner\.rejects_(non_meter|inherited)_physics"
       - name: Validate the workspace dependency graph
         if: ${{ hashFiles('**/openstrata.plugin.yaml') != '' }}
         shell: bash
         run: ost plugin test --workspace --graph-only --json
       - name: Build the workspace from source
-        shell: bash
-        run: ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+        shell: pwsh
+        run: |
+          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          $build = Get-ChildItem build -Directory |
+            Where-Object Name -Like "${{ matrix.platform }}-*-${{ matrix.profile }}" |
+            Select-Object -First 1
+          if (-not $build) {
+            throw "OpenStrata did not create the expected workspace build directory"
+          }
+          $testList = ctest --test-dir $build.FullName -N
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($testList -notmatch "stage_runner.physics_falling_cube") {
+            throw "The workspace configured without the real Jolt physics tests"
+          }
       - name: Run the workspace test suite
         if: ${{ matrix.verify == 'test' }}
-        shell: bash
-        run: ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+        shell: pwsh
+        run: |
+          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
       - name: Upload the build logs and CI evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
