@@ -283,7 +283,7 @@ jobs:
           }
           $testList = ctest --test-dir $build.FullName -N
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if ($testList -notmatch "stage_runner.physics_falling_cube") {
+          if (($testList -join "`n") -notmatch "stage_runner.physics_falling_cube") {
             throw "The workspace configured without the real Jolt physics tests"
           }
       - name: Run the workspace test suite
