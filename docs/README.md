@@ -10,6 +10,7 @@ matches the question you are trying to answer.
 | What exists on the default branch today? | [Architecture](architecture/) | [Current architecture](architecture/overview.md) |
 | What are the intended contracts and boundaries? | [Design](design/) | [Design specification](design/spec.md) |
 | What should be implemented next, and in what order? | [Roadmap](roadmap/) | [Current milestone](roadmap/current.md) |
+| What did dated toolchain verification actually observe? | [Reports](reports/) | [OpenStrata dogfooding](reports/ost/) |
 | How should contributors maintain these documents? | [Contributing](contributing/) | [Documentation guidelines](contributing/documentation.md) |
 
 ## Reading paths
@@ -37,9 +38,10 @@ open the focused contract for the area being changed:
 - The [roadmap](roadmap/) contains incomplete delivery work only. Once a
   milestone is implemented, remove its task detail from the roadmap and update
   architecture documentation.
+- The [reports](reports/) preserve dated observations. A later result adds a
+  follow-up rather than rewriting the original evidence.
 - Design rationale belongs in a focused design page or decision record rather
   than in milestone checklists.
 
-Task guides, generated API reference, release records, and validation reports
-will be added only when implemented behavior gives those categories real
-content.
+Task guides, generated API reference, and release records will be added only
+when implemented behavior gives those categories real content.
