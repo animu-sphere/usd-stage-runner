@@ -233,7 +233,7 @@ jobs:
         shell: pwsh
         run: |
           $runtime = (& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --json | ConvertFrom-Json).data
-          $pythonLibrary = Get-ChildItem (Join-Path $env:Python_ROOT_DIR "libs") -Filter "python3*.lib" | Select-Object -First 1 -ExpandProperty FullName
+          $pythonLibrary = Get-ChildItem (Join-Path $env:Python_ROOT_DIR "libs") -Filter "python3??.lib" | Select-Object -First 1 -ExpandProperty FullName
           Invoke-Expression ((& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --shell pwsh) -join "`n")
           $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$($runtime.prefix);$env:CMAKE_PREFIX_PATH"
           cmake -S . -B build/vertical-slice -A x64 `
@@ -245,6 +245,7 @@ jobs:
             "-DJolt_DIR=$(Join-Path $env:JOLT_PREFIX 'lib/cmake/Jolt')" `
             "-DPython3_EXECUTABLE=$(Join-Path $env:Python_ROOT_DIR 'python.exe')" `
             "-DPython3_LIBRARY=$pythonLibrary" `
+            "-DPython3_LIBRARY_RELEASE=$pythonLibrary" `
             "-DPython3_INCLUDE_DIR=$(Join-Path $env:Python_ROOT_DIR 'include')" `
             "-DMaterialX_DIR=$(Join-Path $runtime.prefix 'lib/cmake/MaterialX')" `
             "-DOpenSubdiv_DIR=$(Join-Path $runtime.prefix 'lib/cmake/OpenSubdiv')" `
