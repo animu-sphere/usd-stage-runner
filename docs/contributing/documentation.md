@@ -45,5 +45,6 @@ Before merging a documentation change:
 4. Update [architecture/](../architecture/) with implementation changes.
 5. Remove completed work from [roadmap/](../roadmap/) rather than maintaining a
    second changelog there.
-6. Keep the canonical [design specification](../design/spec.md) and focused
-   decisions consistent; call out intentional differences explicitly.
+6. Keep the [design specification](../design/spec.md), its focused contract
+   pages, and decision records consistent; call out intentional differences
+   explicitly.

@@ -48,4 +48,6 @@ Move this decision to `accepted/` only when the repository contains:
 - tests that exercise the core without the adapter SDK; and
 - a build-time or CI check for forbidden dependency edges.
 
-The detailed target design is in [../spec.md](../spec.md).
+The complete direction is indexed by the [design specification](../spec.md).
+The ownership model and dependency rules are expanded in
+[runtime-model.md](../runtime-model.md) and [modules.md](../modules.md).

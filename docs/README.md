@@ -1,33 +1,45 @@
 # usd-stage-runner Documentation
 
-This documentation is organized by responsibility. Each category answers one
-primary kind of question, and planned behavior is kept separate from behavior
-that is already implemented.
+The documentation separates the implemented repository from the intended
+runtime and from the work required to get there. Start with the category that
+matches the question you are trying to answer.
 
-| Category | Answers | Start here |
+| Question | Source of truth | Start here |
 | --- | --- | --- |
-| [concepts/](concepts/) | What `usd-stage-runner` is and which ideas define it. | [overview.md](concepts/overview.md) |
-| [architecture/](architecture/) | How the repository and runtime are structured on the default branch today. | [overview.md](architecture/overview.md) |
-| [design/](design/) | What is being designed and why, including proposed and accepted decisions. | [spec.md](design/spec.md) |
-| [roadmap/](roadmap/) | What is incomplete and in which order it should be delivered. | [current.md](roadmap/current.md) |
-| [contributing/](contributing/) | How contributors should keep documentation accurate and navigable. | [documentation.md](contributing/documentation.md) |
+| What is this project and which ideas define it? | [Concepts](concepts/) | [Project overview](concepts/overview.md) |
+| What exists on the default branch today? | [Architecture](architecture/) | [Current architecture](architecture/overview.md) |
+| What are the intended contracts and boundaries? | [Design](design/) | [Design specification](design/spec.md) |
+| What should be implemented next, and in what order? | [Roadmap](roadmap/) | [Current milestone](roadmap/current.md) |
+| How should contributors maintain these documents? | [Contributing](contributing/) | [Documentation guidelines](contributing/documentation.md) |
+
+## Reading paths
+
+For an implementation overview, read the
+[current architecture](architecture/overview.md), then the
+[current Jolt milestone](roadmap/current.md).
+
+For design work, begin with the [design specification](design/spec.md) and then
+open the focused contract for the area being changed:
+
+- [runtime model](design/runtime-model.md);
+- [module and dependency boundaries](design/modules.md);
+- [USD declarations and synchronization](design/usd-integration.md);
+- [host integration](design/hosts.md); and
+- [testing strategy](design/testing.md).
 
 ## Source-of-truth policy
 
-[design/spec.md](design/spec.md) is the canonical specification for the intended
-runtime. It describes the destination, not a claim that every subsystem exists.
-
-[architecture/](architecture/) is the source of truth for the repository as it
-is implemented. When code lands, architecture pages must be updated in the same
-change. If an architecture page and the code disagree, the code is authoritative
-and the page is a documentation bug.
-
-[roadmap/](roadmap/) contains only incomplete work. Completed milestones should
-be removed from the roadmap and reflected in architecture documentation and,
-once releases exist, immutable release records.
-
-## Categories not created yet
+- Code is authoritative for implemented behavior. The
+  [architecture documentation](architecture/) records that behavior and must be
+  updated with implementation changes.
+- The [design documentation](design/) defines intended contracts. It may
+  describe systems that do not exist yet, but must label that status clearly.
+- The [roadmap](roadmap/) contains incomplete delivery work only. Once a
+  milestone is implemented, remove its task detail from the roadmap and update
+  architecture documentation.
+- Design rationale belongs in a focused design page or decision record rather
+  than in milestone checklists.
 
 Task guides, generated API reference, release records, and validation reports
-will be added when there is implemented behavior to document. Empty categories
-are intentionally avoided.
+will be added only when implemented behavior gives those categories real
+content.

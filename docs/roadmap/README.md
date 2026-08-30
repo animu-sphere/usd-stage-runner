@@ -1,28 +1,35 @@
 # Roadmap
 
-The roadmap contains only incomplete work. Design rationale belongs in
-[design/](../design/), while implemented behavior belongs in
-[architecture/](../architecture/).
+Updated: 2026-08-30
 
-Legend: 🚧 in progress · ⬜ not started
+The roadmap contains incomplete delivery work only. Design rationale and
+contracts belong in [design](../design/); implemented behavior belongs in
+[architecture](../architecture/).
 
 | Document | Contents |
 | --- | --- |
-| [current.md](current.md) | The next milestone and its completion criteria. |
-| [backlog.md](backlog.md) | Ordered vertical slices after the current milestone and unscheduled work. |
+| [current.md](current.md) | The Jolt Physics vertical slice, completion criteria, and recommended PR sequence. |
+| [milestones.md](milestones.md) | Ordered milestones after physics, platform integration tracks, and cross-cutting follow-up work. |
 
-When a milestone is completed, remove its task detail from the roadmap, update
-the architecture pages, and retain historical detail in a release record once a
-release process exists.
+Status vocabulary: **in progress** or **not started**. A milestone is complete
+only when its runnable vertical slice and required tests exist.
+
+## Delivery policy
+
+- Deliver small vertical slices rather than disconnected framework skeletons.
+- Keep a Stage runnable and inspectable at every completed milestone.
+- Introduce schemas and directories with the slice that consumes them.
+- Remove completed task detail from the roadmap and update architecture pages.
+- Preserve direct CMake builds while OpenStrata owns reproducible environment,
+  packaging, and CI workflows.
 
 ## Quality bar
 
-Every phase should preserve these properties:
+Every phase must preserve these properties:
 
-- core logic is testable without OpenUSD, OpenExec, or concrete backends;
-- runtime/backend dependency boundaries are explicit and checked;
-- fixed-step behavior is deterministic under a controlled clock where practical;
-- Stage fixtures are minimal and reproducible;
-- CMake remains usable directly while OpenStrata owns reproducible workspace and
-  distribution workflows; and
+- core logic is testable without OpenUSD, OpenExec, or concrete backend SDKs;
+- backend and runtime dependency boundaries are explicit and checkable;
+- fixed-step behavior is deterministic under a controlled clock;
+- Runtime-to-USD writes are incremental;
+- representative Stage fixtures are minimal and reproducible; and
 - documentation distinguishes implemented behavior from planned behavior.
