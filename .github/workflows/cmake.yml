@@ -19,3 +19,42 @@ jobs:
         run: cmake --build build --config Debug
       - name: Test
         run: ctest --test-dir build -C Debug --output-on-failure
+
+  physics-jolt:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out Jolt Physics 5.5.0
+        uses: actions/checkout@v4
+        with:
+          repository: jrouwe/JoltPhysics
+          ref: 23dadd0e603f1b321142d4c74df07fce85064989
+          path: jolt
+      - name: Build and install Jolt Physics
+        run: >-
+          cmake -S jolt/Build -B jolt-build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/jolt-install
+          -DINTERPROCEDURAL_OPTIMIZATION=OFF
+          -DENABLE_ALL_WARNINGS=OFF
+          -DGENERATE_DEBUG_SYMBOLS=OFF
+          -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=OFF
+          -DPROFILER_IN_DEBUG_AND_RELEASE=OFF
+          -DTARGET_UNIT_TESTS=OFF
+          -DTARGET_HELLO_WORLD=OFF
+          -DTARGET_PERFORMANCE_TEST=OFF
+          -DTARGET_SAMPLES=OFF
+          -DTARGET_VIEWER=OFF
+      - run: cmake --build jolt-build --config Release --target Jolt
+      - run: cmake --install jolt-build --config Release
+      - name: Configure with required Jolt Physics
+        run: >-
+          cmake -S . -B build-jolt
+          -DBUILD_TESTING=ON
+          -DUSD_STAGE_RUNNER_BUILD_APP=OFF
+          -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON
+          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/jolt-install
+      - name: Build
+        run: cmake --build build-jolt --config Debug
+      - name: Test
+        run: ctest --test-dir build-jolt -C Debug --output-on-failure

@@ -28,12 +28,23 @@ int main() {
   auto world = physics_jolt::createJoltPhysicsWorld();
   const auto floorShape = world->createShape({physics::ShapeType::box, {5.0, 0.5, 5.0}});
   const auto cubeShape = world->createShape({physics::ShapeType::box, {0.5, 0.5, 0.5}});
+
+  try {
+    static_cast<void>(world->createBody(physics::BodyDescriptor{
+        cubeShape, physics::MotionType::dynamicBody, {}, 1.0,
+        physics_jolt::nonMovingCollisionLayer}));
+    return fail("dynamic Jolt bodies must reject the non-moving collision layer");
+  } catch (const std::invalid_argument&) {
+  }
+
   const auto floor = world->createBody(physics::BodyDescriptor{
       floorShape, physics::MotionType::staticBody,
-      runtime::RuntimeTransform{{0.0, -0.5, 0.0}}, 0.0, 0});
+      runtime::RuntimeTransform{{0.0, -0.5, 0.0}}, 0.0,
+      physics_jolt::nonMovingCollisionLayer});
   const auto cube = world->createBody(physics::BodyDescriptor{
       cubeShape, physics::MotionType::dynamicBody,
-      runtime::RuntimeTransform{{0.0, 3.0, 0.0}}, 1.0, 1});
+      runtime::RuntimeTransform{{0.0, 3.0, 0.0}}, 1.0,
+      physics_jolt::movingCollisionLayer});
 
   for (int step = 0; step < 240; ++step) {
     world->step(physics::PhysicsWorld::Duration{1.0 / 60.0});

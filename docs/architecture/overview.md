@@ -43,13 +43,15 @@ deterministic mock with gravity to verify this boundary without Jolt.
 
 `physicsJolt` implements that contract behind a factory boundary: its public
 header exposes only `physicsCore` and standard-library types. The adapter maps
-static and dynamic bodies to separate non-moving and moving broad-phase layers,
-owns Jolt's process-wide type registration while adapter worlds exist, and
-drains changed dynamic body state after fixed steps. Its focused adapter test
-drops a cube onto a static floor and verifies settling and explicit resource
-cleanup. When no Jolt CMake package is available, a small unavailable
-implementation preserves backend-neutral builds; requiring Jolt is an explicit
-configure option.
+static bodies to collision layer 0 (`nonMovingCollisionLayer`) and dynamic
+bodies to collision layer 1 (`movingCollisionLayer`), rejecting mismatched
+descriptors. It owns Jolt's process-wide type registration while adapter worlds
+exist and drains changed dynamic body state after fixed steps. Jolt update
+capacity failures are surfaced rather than silently accepting dropped
+contacts. Its focused adapter test drops a cube onto a static floor and verifies
+settling and explicit resource cleanup. When no Jolt CMake package is available,
+a small unavailable implementation preserves backend-neutral builds; requiring
+Jolt is an explicit configure option.
 
 ## Runtime World and transforms
 

@@ -27,8 +27,8 @@ namespace usd_stage_runner::physics_jolt {
 namespace {
 
 namespace ObjectLayers {
-constexpr JPH::ObjectLayer nonMoving = 0;
-constexpr JPH::ObjectLayer moving = 1;
+constexpr JPH::ObjectLayer nonMoving = nonMovingCollisionLayer;
+constexpr JPH::ObjectLayer moving = movingCollisionLayer;
 constexpr JPH::ObjectLayer count = 2;
 } // namespace ObjectLayers
 
@@ -187,10 +187,17 @@ public:
     }
 
     const bool dynamic = descriptor.motionType == physics::MotionType::dynamicBody;
+    const physics::CollisionLayer expectedLayer =
+        dynamic ? movingCollisionLayer : nonMovingCollisionLayer;
+    if (descriptor.collisionLayer != expectedLayer) {
+      throw std::invalid_argument(dynamic
+                                      ? "dynamic Jolt bodies require the moving collision layer"
+                                      : "static Jolt bodies require the non-moving collision layer");
+    }
     JPH::BodyCreationSettings settings(
         shape->second.shape, toJoltPosition(descriptor.initialTransform.translation),
         JPH::Quat::sIdentity(), dynamic ? JPH::EMotionType::Dynamic : JPH::EMotionType::Static,
-        dynamic ? ObjectLayers::moving : ObjectLayers::nonMoving);
+        static_cast<JPH::ObjectLayer>(descriptor.collisionLayer));
     if (dynamic) {
       settings.mOverrideMassProperties = JPH::EOverrideMassProperties::CalculateInertia;
       settings.mMassPropertiesOverride.mMass = static_cast<float>(descriptor.mass);
@@ -294,8 +301,11 @@ public:
 
   void step(Duration fixedStep) override {
     physics::validatePhysicsStep(fixedStep);
-    physicsSystem_.Update(static_cast<float>(fixedStep.count()), 1, &tempAllocator_,
-                          &jobSystem_);
+    const JPH::EPhysicsUpdateError updateError = physicsSystem_.Update(
+        static_cast<float>(fixedStep.count()), 1, &tempAllocator_, &jobSystem_);
+    if (updateError != JPH::EPhysicsUpdateError::None) {
+      throw std::runtime_error("Jolt physics update exhausted collision capacity");
+    }
     for (auto& entry : bodies_) {
       if (entry.second.motionType != physics::MotionType::dynamicBody) {
         continue;
