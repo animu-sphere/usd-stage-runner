@@ -102,7 +102,7 @@ bool CharacterController::update(const CharacterIntent& intent, Duration fixedSt
 
   runtime::Vec3d velocity{intent.desiredVelocity.x, bodyState.linearVelocity.y,
                           intent.desiredVelocity.z};
-  if (walkableGround && velocity.y <= 0.0) {
+  if (walkableGround) {
     velocity = movementOnGround(intent.desiredVelocity, groundNormal);
   }
 

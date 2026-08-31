@@ -158,8 +158,16 @@ int main() {
   }
   if (!controller.update({{2.0, 0.0, 0.0}, {}, false},
                          character::CharacterController::Duration{1.0 / 60.0}) ||
-      !controller.state().grounded) {
-    return fail("uphill velocity must remain grounded on the following fixed step");
+      !controller.state().grounded ||
+      !near(controller.state().velocity.x, std::sqrt(2.0)) ||
+      !near(controller.state().velocity.y, std::sqrt(2.0))) {
+    return fail("uphill velocity must remain projected on the following fixed step");
+  }
+  if (!controller.update({}, character::CharacterController::Duration{1.0 / 60.0}) ||
+      !controller.state().grounded || !near(controller.state().velocity.x, 0.0) ||
+      !near(controller.state().velocity.y, 0.0) ||
+      !near(controller.state().velocity.z, 0.0)) {
+    return fail("releasing movement uphill must stop without retaining vertical velocity");
   }
 
   physicsWorld.setVelocity(characterBody, {});
