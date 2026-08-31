@@ -1,5 +1,6 @@
 #include "usd_stage_runner/character/character_controller.h"
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 
@@ -17,6 +18,14 @@ runtime::Vec3d normalized(runtime::Vec3d value) {
 
 double dot(runtime::Vec3d left, runtime::Vec3d right) noexcept {
   return left.x * right.x + left.y * right.y + left.z * right.z;
+}
+
+bool movingAwayFromGround(runtime::Vec3d velocity, runtime::Vec3d groundNormal) noexcept {
+  // Backends may round-trip velocities through single precision.
+  constexpr double relativeTolerance = 1.0e-6;
+  const double velocityScale =
+      std::max({1.0, std::abs(velocity.x), std::abs(velocity.y), std::abs(velocity.z)});
+  return dot(velocity, groundNormal) > relativeTolerance * velocityScale;
 }
 
 runtime::Vec3d movementOnGround(runtime::Vec3d desiredVelocity,
@@ -95,8 +104,9 @@ bool CharacterController::update(const CharacterIntent& intent, Duration fixedSt
       throw std::invalid_argument("ground contact exceeds the requested probe distance");
     }
     groundNormal = normalized(contact->normal);
-    const bool movingAwayFromGround = dot(bodyState.linearVelocity, groundNormal) > 1.0e-9;
-    walkableGround = !movingAwayFromGround &&
+    const bool separatesFromGround =
+        movingAwayFromGround(bodyState.linearVelocity, groundNormal);
+    walkableGround = !separatesFromGround &&
                      groundNormal.y >= std::cos(config_.maximumSlopeAngleRadians);
   }
 
