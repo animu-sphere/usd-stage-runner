@@ -1,7 +1,9 @@
 # Overview
 
-`usd-stage-runner` is an experimental runtime for treating an OpenUSD Stage as
-an interactive, real-time space rather than only as a scene to inspect.
+`usd-stage-runner` is an experimental, thin runtime for treating an OpenUSD
+Stage as an interactive, real-time space rather than only as a scene to
+inspect. It executes a Stage; it does not convert the Stage into a separate
+game-engine scene.
 
 The project aims to make it possible to:
 
@@ -28,9 +30,9 @@ Physics backend collision, constraints, and physical simulation
 
 The USD Stage remains authoritative for what exists and how it is composed. A
 Runtime World is derived from that description and owns fast-changing state.
-OpenExec evaluates graphs over runtime-facing interfaces. A physics backend,
-initially expected to be Jolt Physics, performs physical simulation behind a
-backend-neutral boundary.
+OpenExec is an optional execution surface over runtime-facing interfaces, not
+the runtime's foundation. A physics backend, initially Jolt Physics, performs
+physical simulation behind a backend-neutral boundary.
 
 ## Prim and component vocabulary
 
@@ -53,6 +55,10 @@ The initial users are developers exploring interactive OpenUSD runtimes and
 contributors building reusable runtime, physics, input, camera, behavior, and
 OpenExec integration libraries.
 
+`stage_runner` is the first host and proof harness, not the runtime itself. The
+same libraries are intended to run from the standalone host, usdview, and OST
+Plugin View.
+
 ## Non-goals for the initial phases
 
 - a custom renderer;
@@ -65,3 +71,9 @@ OpenExec integration libraries.
 The first proof is intentionally small: open a Stage containing a ground plane,
 a controllable cube, and a camera; then carry input through runtime logic and
 physics back to a visible USD transform.
+
+The representative product demo grows that proof into a Stage-declared
+character controlled by a keyboard or gamepad, moved through Jolt, followed by
+a third-person camera, and updated live in any supported host. VRM can supply a
+character's visual representation, but it does not define the character runtime
+contract.

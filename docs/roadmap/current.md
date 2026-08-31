@@ -29,7 +29,8 @@ same intent boundary.
 - Add `CharacterIntent` with desired velocity, facing direction, and jump.
 - Track velocity, grounded state, jump state, facing, and support body.
 - Implement ground detection, movement, basic slope handling, and jumping
-  through backend-neutral `physicsCore` contracts.
+  through backend-neutral `physicsCore` contracts, with Jolt-specific character
+  support confined to `physicsJolt`.
 - Keep controller logic testable without Jolt or OpenUSD.
 
 ### Runtime and Stage integration
@@ -38,23 +39,28 @@ same intent boundary.
 - Import character declarations into prim-indexed runtime components.
 - Feed both movement input and deterministic injected intent through the same
   controller path.
+- Map keyboard and gamepad controls to named actions; character code must not
+  inspect SDL identifiers or button enums.
 - Preserve fixed-step ordering and dirty-only USD synchronization.
 - Add `character_walk.usda` as the runnable golden scenario.
 
 ## Recommended PR sequence
 
-1. **Character contracts** — intent, state, and isolated controller tests using
-   a deterministic physics test double.
-2. **Physics integration** — grounding, desired motion, slope limits, and jump
-   commands through `physicsCore`.
+1. **Character core bootstrap** — intent, state, and isolated controller tests
+   using a deterministic physics test double.
+2. **Jolt character adapter** — add only the `physicsCore` capabilities needed
+   for grounding, desired motion, slope limits, and jumping, then implement
+   them in `physicsJolt`.
 3. **Schema and importer** — `RunnerCharacterAPI` plus Stage-to-runtime mapping.
-4. **Full vertical slice** — input and injected intent drive the character in
+4. **Gamepad vertical slice** — SDL and injected actions drive the character in
    `character_walk.usda`, with runtime transforms synchronized incrementally.
 
 ## Completion criteria
 
-- A character walks, grounds, and jumps without direct transform movement.
+- A Stage-declared character walks, grounds, and jumps without direct transform
+  movement.
 - Human input and deterministic injected intent share one contract.
+- Keyboard and the first supported gamepad share named gameplay actions.
 - Core tests require neither OpenUSD nor Jolt.
 - Fixed-step results are repeatable under a controlled clock.
 - Runtime-to-USD writes contain only dirty simulated transforms.
@@ -62,6 +68,7 @@ same intent boundary.
 
 The relevant long-term contracts are documented in the
 [runtime model](../design/runtime-model.md),
+[input actions and intent](../design/input.md),
 [module boundaries](../design/modules.md),
 [USD integration](../design/usd-integration.md), and
 [testing strategy](../design/testing.md).
