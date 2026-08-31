@@ -8,6 +8,10 @@ project(
 )
 
 include(CTest)
+include(GNUInstallDirs)
+
+set(USD_STAGE_RUNNER_SCHEMA_INSTALL_DIR
+  "${CMAKE_INSTALL_DATADIR}/usd-stage-runner/runnerSchema")
 
 option(USD_STAGE_RUNNER_BUILD_APP "Build the stage_runner host" ON)
 option(USD_STAGE_RUNNER_REQUIRE_OPENUSD "Fail configuration when OpenUSD is unavailable" OFF)

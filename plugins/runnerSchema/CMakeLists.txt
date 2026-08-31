@@ -14,7 +14,7 @@ endif()
 install(FILES
   "${_schema_resources}/plugInfo.json"
   "${_schema_resources}/generatedSchema.usda"
-  DESTINATION share/usd-stage-runner/runnerSchema
+  DESTINATION "${USD_STAGE_RUNNER_SCHEMA_INSTALL_DIR}"
 )
 
 find_program(USD_GEN_SCHEMA usdGenSchema)

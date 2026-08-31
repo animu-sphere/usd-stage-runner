@@ -85,6 +85,17 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
     )
 
     add_test(
+      NAME stage_runner.installed_physics_schema_defaults
+      COMMAND ${CMAKE_COMMAND}
+        -DBUILD_DIR=${CMAKE_BINARY_DIR}
+        -DINSTALL_DIR=${CMAKE_BINARY_DIR}/tests/install-smoke
+        -DCONFIG=$<CONFIG>
+        -DEXECUTABLE_RELATIVE_PATH=${CMAKE_INSTALL_BINDIR}/stage_runner${CMAKE_EXECUTABLE_SUFFIX}
+        -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/falling_cube.usda
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_installed_stage_runner.cmake
+    )
+
+    add_test(
       NAME stage_runner.rejects_non_meter_physics_stage
       COMMAND ${CMAKE_COMMAND}
         -DEXECUTABLE=$<TARGET_FILE:stage_runner>

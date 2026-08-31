@@ -24,6 +24,13 @@
 #include <pxr/usd/usdGeom/xformable.h>
 #endif
 
+#if USD_STAGE_RUNNER_HAS_OPENUSD && defined(_WIN32)
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include <algorithm>
 #include <charconv>
 #include <chrono>
@@ -63,6 +70,7 @@ const pxr::TfToken physicsHalfExtentsAttribute{"runner:physics:halfExtents"};
 #endif
 
 struct Options {
+  std::filesystem::path executablePath;
   std::filesystem::path stagePath;
   std::size_t frameCount{300};
   double fixedDt{1.0 / 60.0};
@@ -103,6 +111,7 @@ Options parseOptions(int argc, char** argv) {
   }
 
   Options options;
+  options.executablePath = argv[0];
   options.stagePath = argv[1];
   for (int index = 2; index < argc; ++index) {
     const std::string argument = argv[index];
@@ -150,10 +159,44 @@ struct PhysicsImportSummary {
   std::size_t bodyCount{0};
 };
 
-void registerRunnerSchemas() {
-#ifdef USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH
-  (void)pxr::PlugRegistry::GetInstance().RegisterPlugins(
-      std::string{USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH});
+std::filesystem::path executableDirectory(const std::filesystem::path& invocation) {
+#ifdef _WIN32
+  std::wstring buffer(32768, L'\0');
+  const auto length =
+      GetModuleFileNameW(nullptr, buffer.data(), static_cast<DWORD>(buffer.size()));
+  if (length != 0 && length < static_cast<DWORD>(buffer.size())) {
+    buffer.resize(length);
+    return std::filesystem::path{buffer}.parent_path();
+  }
+#elif defined(__linux__)
+  std::error_code processError;
+  const auto processPath = std::filesystem::read_symlink("/proc/self/exe", processError);
+  if (!processError) {
+    return processPath.parent_path();
+  }
+#endif
+
+  std::error_code error;
+  if (invocation.is_absolute() || invocation.has_parent_path()) {
+    const auto absolutePath = std::filesystem::absolute(invocation, error);
+    if (!error) {
+      return absolutePath.parent_path();
+    }
+  }
+
+  throw std::runtime_error("could not resolve the stage_runner executable path: " +
+                           invocation.string());
+}
+
+void registerRunnerSchemas(const std::filesystem::path& executablePath) {
+#ifdef USD_STAGE_RUNNER_SCHEMA_RESOURCE_RELATIVE_PATH
+  const auto resourcePath = executableDirectory(executablePath) /
+                            USD_STAGE_RUNNER_SCHEMA_RESOURCE_RELATIVE_PATH;
+  if (!std::filesystem::is_regular_file(resourcePath / "plugInfo.json")) {
+    throw std::runtime_error("runnerSchema resources were not found at " +
+                             resourcePath.lexically_normal().string());
+  }
+  (void)pxr::PlugRegistry::GetInstance().RegisterPlugins(resourcePath.string());
 #endif
 }
 
@@ -187,8 +230,9 @@ usd_stage_runner::runtime::RuntimeTransform readTransform(const pxr::UsdPrim& pr
   return transform;
 }
 
-StageContext openWorld(const std::filesystem::path& stagePath) {
-  registerRunnerSchemas();
+StageContext openWorld(const std::filesystem::path& stagePath,
+                       const std::filesystem::path& executablePath) {
+  registerRunnerSchemas(executablePath);
   const auto stage = pxr::UsdStage::Open(stagePath.string());
   if (!stage) {
     throw std::runtime_error("could not open USD Stage: " + stagePath.string());
@@ -478,7 +522,7 @@ int run(const Options& options) {
       "stage_runner was built without OpenUSD; configure with an OpenUSD SDK or an "
       "OpenStrata usd runtime");
 #else
-  StageContext context = openWorld(options.stagePath);
+  StageContext context = openWorld(options.stagePath, options.executablePath);
   std::unique_ptr<PhysicsWorld> physicsWorld;
   std::unique_ptr<PhysicsRuntime> physicsRuntime;
   PhysicsImportSummary physicsImport;
