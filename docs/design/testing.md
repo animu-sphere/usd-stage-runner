@@ -1,8 +1,9 @@
 # Testing Strategy
 
-Status: runtime, input, physics-core and runtime-integration contracts, SDL
-mapping, Jolt bootstrap, schema registration and round-trip, input-to-USD, and
-conditional full physics vertical-slice coverage implemented
+Status: runtime, input, physics-core, character-core bootstrap, and
+runtime-integration contracts, SDL mapping, Jolt bootstrap, schema registration
+and round-trip, input-to-USD, and conditional full physics vertical-slice
+coverage implemented
 
 Deterministic testing is a design requirement. Each vertical slice must be
 testable with controlled time and input and should add a runnable Stage fixture.

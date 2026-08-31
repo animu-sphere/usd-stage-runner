@@ -1,5 +1,6 @@
-#include "usd_stage_runner/physics/physics_world.h"
+#include "usd_stage_runner/physics/ground_query.h"
 #include "usd_stage_runner/physics/physics_runtime.h"
+#include "usd_stage_runner/physics/physics_world.h"
 #include "usd_stage_runner/runtime/runtime_world.h"
 
 #include <algorithm>
@@ -321,6 +322,15 @@ int main() {
       }) ||
       !rejectsInvalidArgument([&] {
         physicsRuntime.bindBody("/World/OtherCube", {});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        physics::validateGroundContact({{}, {0.0, 1.0, 0.0}, 0.0});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        physics::validateGroundContact({floor, {0.0, 0.0, 0.0}, 0.0});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        physics::validateGroundContact({floor, {0.0, 1.0, 0.0}, -0.1});
       })) {
     return fail("backend-neutral descriptors and fixed steps must reject invalid values");
   }

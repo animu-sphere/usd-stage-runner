@@ -1,6 +1,6 @@
 # Milestone 3: Character Controller
 
-Status: not started
+Status: in progress
 
 The physics schemas and complete input-to-physics-to-USD path are implemented.
 This milestone adds a backend-neutral character contract that moves, grounds,
@@ -21,6 +21,18 @@ input or AI
 The representative Stage adds a character that can walk, ground, and jump in a
 small deterministic scenario. Human input and later behavior systems use the
 same intent boundary.
+
+## Implemented foundation
+
+The first recommended change is complete. `characterCore` now defines
+`CharacterIntent`, controller configuration and live state, walkable-ground
+and slope evaluation, desired velocity, normalized facing, jump-edge handling,
+and rising/falling transitions. It uses `PhysicsWorld` plus a small
+backend-neutral `GroundQuery` extension and is covered by deterministic tests
+without Jolt or OpenUSD.
+
+The next change is the Jolt implementation of that ground-query boundary and
+the character-specific motion behavior needed by the vertical slice.
 
 ## Scope
 
@@ -46,8 +58,8 @@ same intent boundary.
 
 ## Recommended PR sequence
 
-1. **Character core bootstrap** — intent, state, and isolated controller tests
-   using a deterministic physics test double.
+1. **Character core bootstrap (implemented)** — intent, state, and isolated
+   controller tests using a deterministic physics test double.
 2. **Jolt character adapter** — add only the `physicsCore` capabilities needed
    for grounding, desired motion, slope limits, and jumping, then implement
    them in `physicsJolt`.

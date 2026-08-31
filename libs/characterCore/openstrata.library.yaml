@@ -1,0 +1,13 @@
+schema: openstrata.library/v1alpha1
+library:
+  id: characterCore
+  version: 0.1.0
+cmake:
+  package: characterCore
+  target: characterCore::characterCore
+requires:
+  libraries:
+    - id: runtimeCore
+      version: ">=0.1,<0.2"
+    - id: physicsCore
+      version: ">=0.1,<0.2"

@@ -1,7 +1,8 @@
 # Input Actions and Intent
 
-Status: scalar movement actions and SDL mapping implemented; typed action
-values and character/vehicle intent planned
+Status: scalar movement actions, SDL mapping, and backend-neutral character
+intent implemented; typed action values, action-to-character conversion, and
+vehicle intent planned
 
 Input crosses three boundaries before it affects simulation:
 
