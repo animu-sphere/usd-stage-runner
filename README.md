@@ -22,8 +22,9 @@ behavior are documented in [docs/README.md](docs/README.md).
   walkable-ground and slope evaluation, desired motion, facing, jump-edge
   handling, and deterministic tests against a physics test double;
 - `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
-  box shapes and static or dynamic bodies, advances fixed simulation steps, and
-  extracts changed body state without exposing Jolt types publicly;
+  box shapes and static or dynamic bodies, advances fixed simulation steps,
+  extracts changed body state, and implements character ground shape casts
+  without exposing Jolt types publicly;
 - `runnerSchema`, a codeless OpenUSD plugin defining the single-apply
   `RunnerPhysicsBodyAPI` and `RunnerColliderAPI` declaration contracts;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
@@ -36,9 +37,10 @@ behavior are documented in [docs/README.md](docs/README.md).
   tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Character control is the current roadmap milestone. Its core bootstrap is
-implemented; Jolt character support, schema import, and the runnable Stage
-slice remain. Camera, behavior, and OpenExec integration are later slices.
+Character control is the current roadmap milestone. Its core bootstrap and
+Jolt ground-query adapter are implemented; schema import and the runnable
+Stage slice remain. Camera, behavior, and OpenExec integration are later
+slices.
 
 ## Build with OpenStrata
 

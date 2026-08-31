@@ -31,8 +31,13 @@ and rising/falling transitions. It uses `PhysicsWorld` plus a small
 backend-neutral `GroundQuery` extension and is covered by deterministic tests
 without Jolt or OpenUSD.
 
-The next change is the Jolt implementation of that ground-query boundary and
-the character-specific motion behavior needed by the vertical slice.
+The Jolt implementation of that ground-query boundary is also complete. The
+adapter performs a downward shape cast, excludes the character body, and
+returns backend-neutral support identity, distance, and normal. Existing
+physics velocity commands carry desired planar and jump motion.
+
+The next change is the schema and importer slice that declares characters in
+USD and constructs their runtime controller components.
 
 ## Scope
 
@@ -60,9 +65,9 @@ the character-specific motion behavior needed by the vertical slice.
 
 1. **Character core bootstrap (implemented)** — intent, state, and isolated
    controller tests using a deterministic physics test double.
-2. **Jolt character adapter** — add only the `physicsCore` capabilities needed
-   for grounding, desired motion, slope limits, and jumping, then implement
-   them in `physicsJolt`.
+2. **Jolt character adapter (implemented)** — implement grounding through the
+   optional `GroundQuery`; desired motion, slope evaluation, and jumping reuse
+   the existing backend-neutral velocity and contact contracts.
 3. **Schema and importer** — `RunnerCharacterAPI` plus Stage-to-runtime mapping.
 4. **Gamepad vertical slice** — SDL and injected actions drive the character in
    `character_walk.usda`, with runtime transforms synchronized incrementally.

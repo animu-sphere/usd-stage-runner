@@ -1,12 +1,18 @@
 #include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
 
+#include "usd_stage_runner/physics/ground_query.h"
+
 #include <Jolt/Jolt.h>
 
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/JobSystemThreadPool.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
+#include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
 #include <Jolt/Physics/PhysicsSystem.h>
@@ -15,8 +21,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <thread>
 #include <unordered_map>
@@ -142,7 +150,8 @@ bool stateChanged(const physics::BodyState& previous, const physics::BodyState& 
          previous.linearVelocity.z != current.linearVelocity.z;
 }
 
-class JoltPhysicsWorld final : public physics::PhysicsWorld {
+class JoltPhysicsWorld final : public physics::PhysicsWorld,
+                               public physics::GroundQuery {
 public:
   JoltPhysicsWorld()
       : jobSystem_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, workerThreadCount()) {
@@ -299,6 +308,71 @@ public:
     return readBodyState(body, found->second);
   }
 
+  std::optional<physics::GroundContact>
+  groundContact(physics::BodyHandle body, double maxDistance) const override {
+    if (!std::isfinite(maxDistance) || maxDistance < 0.0 ||
+        maxDistance > static_cast<double>(std::numeric_limits<float>::max())) {
+      throw std::invalid_argument(
+          "Jolt ground probe distance must be finite and non-negative");
+    }
+    const auto found = bodies_.find(body);
+    if (found == bodies_.end()) {
+      throw std::out_of_range("unknown Jolt body handle");
+    }
+
+    const auto& bodyInterface = physicsSystem_.GetBodyInterface();
+    const auto shape = shapes_.find(found->second.shape);
+    if (shape == shapes_.end()) {
+      throw std::logic_error("Jolt body references a missing shape");
+    }
+
+    const JPH::RShapeCast cast{
+        shape->second.shape, JPH::Vec3::sOne(),
+        bodyInterface.GetCenterOfMassTransform(found->second.id),
+        JPH::Vec3{0.0f, -static_cast<float>(maxDistance), 0.0f}};
+    JPH::ShapeCastSettings settings;
+    settings.mReturnDeepestPoint = true;
+    JPH::AllHitCollisionCollector<JPH::CastShapeCollector> collector;
+    const JPH::IgnoreSingleBodyFilter ignoreCharacter{found->second.id};
+    physicsSystem_.GetNarrowPhaseQuery().CastShape(
+        cast, settings, cast.mCenterOfMassStart.GetTranslation(), collector, {}, {},
+        ignoreCharacter);
+    if (!collector.HadHit()) {
+      return std::nullopt;
+    }
+
+    const JPH::ShapeCastResult* groundHit = nullptr;
+    JPH::Vec3 groundNormal;
+    double groundDistance = 0.0;
+    for (const auto& hit : collector.mHits) {
+      const JPH::Vec3 normal =
+          -hit.mPenetrationAxis.NormalizedOr(-JPH::Vec3::sAxisY());
+      if (normal.GetY() <= 0.0f) {
+        continue;
+      }
+      const double distance =
+          std::max(0.0, static_cast<double>(hit.mFraction) * maxDistance);
+      if (groundHit == nullptr || normal.GetY() > groundNormal.GetY() ||
+          (normal.GetY() == groundNormal.GetY() && distance < groundDistance)) {
+        groundHit = &hit;
+        groundNormal = normal;
+        groundDistance = distance;
+      }
+    }
+    if (groundHit == nullptr) {
+      return std::nullopt;
+    }
+
+    const auto support = bodyHandle(groundHit->mBodyID2);
+    if (!support) {
+      throw std::logic_error("Jolt ground query returned an untracked body");
+    }
+    physics::GroundContact contact{support, toRuntimeVector(groundNormal),
+                                   groundDistance};
+    physics::validateGroundContact(contact);
+    return contact;
+  }
+
   void step(Duration fixedStep) override {
     physics::validatePhysicsStep(fixedStep);
     const JPH::EPhysicsUpdateError updateError = physicsSystem_.Update(
@@ -362,6 +436,15 @@ private:
             runtime::RuntimeTransform{
                 toRuntimePosition(bodyInterface.GetPosition(record.id))},
             toRuntimeVector(bodyInterface.GetLinearVelocity(record.id))};
+  }
+
+  physics::BodyHandle bodyHandle(JPH::BodyID id) const noexcept {
+    for (const auto& entry : bodies_) {
+      if (entry.second.id == id) {
+        return entry.first;
+      }
+    }
+    return {};
   }
 
   JoltRuntime runtime_;

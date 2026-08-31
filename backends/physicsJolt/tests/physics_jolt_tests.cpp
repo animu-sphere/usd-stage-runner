@@ -1,7 +1,10 @@
 #include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
 
+#include "usd_stage_runner/physics/ground_query.h"
+
 #include <cmath>
 #include <iostream>
+#include <limits>
 #include <stdexcept>
 
 namespace {
@@ -26,8 +29,13 @@ int main() {
   }
 
   auto world = physics_jolt::createJoltPhysicsWorld();
+  auto* groundQuery = dynamic_cast<physics::GroundQuery*>(world.get());
+  if (groundQuery == nullptr) {
+    return fail("the Jolt world must expose the optional ground-query capability");
+  }
   const auto floorShape = world->createShape({physics::ShapeType::box, {5.0, 0.5, 5.0}});
   const auto cubeShape = world->createShape({physics::ShapeType::box, {0.5, 0.5, 0.5}});
+  const auto wallShape = world->createShape({physics::ShapeType::box, {0.5, 2.0, 0.5}});
 
   try {
     static_cast<void>(world->createBody(physics::BodyDescriptor{
@@ -41,6 +49,38 @@ int main() {
       floorShape, physics::MotionType::staticBody,
       runtime::RuntimeTransform{{0.0, -0.5, 0.0}}, 0.0,
       physics_jolt::nonMovingCollisionLayer});
+  const auto wall = world->createBody(physics::BodyDescriptor{
+      wallShape, physics::MotionType::staticBody,
+      runtime::RuntimeTransform{{2.9, 2.0, 0.0}}, 0.0,
+      physics_jolt::nonMovingCollisionLayer});
+  const auto probeBody = world->createBody(physics::BodyDescriptor{
+      cubeShape, physics::MotionType::dynamicBody,
+      runtime::RuntimeTransform{{2.0, 0.65, 0.0}}, 1.0,
+      physics_jolt::movingCollisionLayer});
+  const auto elevatedContact = groundQuery->groundContact(probeBody, 0.2);
+  if (!elevatedContact || elevatedContact->supportBody != floor ||
+      std::abs(elevatedContact->distance - 0.15) > 0.01 ||
+      elevatedContact->normal.y < 0.99) {
+    return fail("the Jolt ground query must prefer upward support over a deeper wall hit");
+  }
+  if (groundQuery->groundContact(probeBody, 0.1)) {
+    return fail("the Jolt ground query must honor the requested probe distance");
+  }
+  try {
+    static_cast<void>(groundQuery->groundContact(
+        probeBody, std::numeric_limits<double>::quiet_NaN()));
+    return fail("the Jolt ground query must reject invalid probe distances");
+  } catch (const std::invalid_argument&) {
+  }
+  try {
+    static_cast<void>(groundQuery->groundContact(physics::BodyHandle{9999}, 0.2));
+    return fail("the Jolt ground query must reject unknown bodies");
+  } catch (const std::out_of_range&) {
+  }
+  if (!world->destroyBody(probeBody) || !world->destroyBody(wall) ||
+      !world->destroyShape(wallShape)) {
+    return fail("probed Jolt resources must retain ordinary handle-based lifetime");
+  }
   const auto cube = world->createBody(physics::BodyDescriptor{
       cubeShape, physics::MotionType::dynamicBody,
       runtime::RuntimeTransform{{0.0, 3.0, 0.0}}, 1.0,
@@ -54,6 +94,11 @@ int main() {
   if (std::abs(settled.transform.translation.y - 0.5) > 0.03 ||
       std::abs(settled.linearVelocity.y) > 0.05) {
     return fail("the Jolt cube must fall and settle on the static floor");
+  }
+  const auto settledContact = groundQuery->groundContact(cube, 0.1);
+  if (!settledContact || settledContact->supportBody != floor ||
+      settledContact->distance > 0.02 || settledContact->normal.y < 0.99) {
+    return fail("a settled Jolt body must be grounded on its supporting body");
   }
   const auto changed = world->takeChangedBodyStates();
   if (changed.size() != 1 || changed.front().body != cube) {

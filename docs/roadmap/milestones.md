@@ -2,8 +2,9 @@
 
 Status: not started unless noted otherwise
 
-Milestone 3 is in progress; its backend-neutral character-core bootstrap is
-implemented. The remaining milestones have not started.
+Milestone 3 is in progress; its backend-neutral character core and Jolt
+ground-query adapter are implemented. The remaining milestones have not
+started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
 [character-controller vertical slice](current.md) is the current milestone.
