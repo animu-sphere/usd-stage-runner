@@ -4,9 +4,12 @@
 )
 
 def Cube "Body" (
-    prepend apiSchemas = ["RunnerPhysicsBodyAPI", "RunnerColliderAPI"]
+    prepend apiSchemas = ["RunnerPhysicsBodyAPI", "RunnerColliderAPI", "RunnerCharacterAPI"]
 )
 {
+    uniform double runner:character:groundProbeDistance = 0.15
+    uniform double runner:character:jumpSpeed = 6
+    uniform double runner:character:maximumSlopeAngleRadians = 0.6
     uniform double3 runner:physics:halfExtents = (0.5, 0.5, 0.5)
     uniform double runner:physics:mass = 2
     uniform token runner:physics:motionType = "dynamic"

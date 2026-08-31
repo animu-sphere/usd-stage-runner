@@ -26,21 +26,21 @@ behavior are documented in [docs/README.md](docs/README.md).
   extracts changed body state, and implements character ground shape casts
   without exposing Jolt types publicly;
 - `runnerSchema`, a codeless OpenUSD plugin defining the single-apply
-  `RunnerPhysicsBodyAPI` and `RunnerColliderAPI` declaration contracts;
+  `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, and `RunnerCharacterAPI`
+  declaration contracts;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y` without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
-  frame bound, imports physics API schemas, maps movement intent to
+  frame bound, imports physics and character API schemas, maps movement intent to
   desired body velocity, advances Jolt, and synchronizes only dirty runtime
   transforms to USD;
-- minimal transform and falling-cube USDA fixtures plus dependency-free unit
-  tests; and
+- minimal transform, falling-cube, and character-import USDA fixtures plus
+  dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Character control is the current roadmap milestone. Its core bootstrap and
-Jolt ground-query adapter are implemented; schema import and the runnable
-Stage slice remain. Camera, behavior, and OpenExec integration are later
-slices.
+Character control is the current roadmap milestone. Its core bootstrap, Jolt
+ground-query adapter, and schema importer are implemented; the runnable input
+slice remains. Camera, behavior, and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
@@ -119,6 +119,13 @@ require one translate op followed only by scale ops, plus identity ancestor
 transforms unless they set `resetXformStack`. A build with both OpenUSD and Jolt
 is required to simulate the declarations. Authored `runner:physics:*`
 attributes without their owning API schema are rejected as legacy data.
+
+Character prims additionally apply `RunnerCharacterAPI` to the same dynamic
+physics prim. `runner:character:groundProbeDistance`,
+`runner:character:maximumSlopeAngleRadians`, and
+`runner:character:jumpSpeed` configure the prim-indexed runtime controller.
+Character attributes without `RunnerCharacterAPI`, characters without both
+physics APIs, and static character bodies are rejected.
 
 ## License
 

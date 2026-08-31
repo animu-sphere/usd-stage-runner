@@ -1,0 +1,27 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Cube "PlayerCube" (
+        prepend apiSchemas = [
+            "RunnerPhysicsBodyAPI",
+            "RunnerColliderAPI",
+            "RunnerCharacterAPI"
+        ]
+    )
+    {
+        uniform double runner:character:groundProbeDistance = 0.2
+        uniform double runner:character:jumpSpeed = 6
+        uniform double runner:character:maximumSlopeAngleRadians = 0.6
+        uniform double3 runner:physics:halfExtents = (0.5, 1, 0.5)
+        uniform double runner:physics:mass = 70
+        uniform token runner:physics:motionType = "dynamic"
+        double3 xformOp:translate = (0, 2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

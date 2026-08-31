@@ -58,7 +58,52 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
       -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
   )
 
+  add_test(
+    NAME stage_runner.rejects_legacy_character_attributes
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/legacy_character_attributes.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=authored character attributes require RunnerCharacterAPI"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_incomplete_character_schema
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/incomplete_character_schema.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=character prim must apply RunnerPhysicsBodyAPI and RunnerColliderAPI"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_static_character
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/static_character.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=RunnerCharacterAPI requires a dynamic physics body"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
   if(USD_STAGE_RUNNER_JOLT_AVAILABLE)
+    add_test(
+      NAME stage_runner.character_schema_import
+      COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/character_import.usda
+        --frames 1
+        --deterministic
+    )
+    set_tests_properties(stage_runner.character_schema_import PROPERTIES
+      PASS_REGULAR_EXPRESSION
+        "physics_shapes=1, physics_bodies=1, physics_body_updates=[0-9]+, character_controllers=1"
+    )
+
     add_test(
       NAME stage_runner.physics_falling_cube
       COMMAND stage_runner

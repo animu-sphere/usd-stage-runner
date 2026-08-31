@@ -36,8 +36,14 @@ adapter performs a downward shape cast, excludes the character body, and
 returns backend-neutral support identity, distance, and normal. Existing
 physics velocity commands carry desired planar and jump motion.
 
-The next change is the schema and importer slice that declares characters in
-USD and constructs their runtime controller components.
+The schema and importer slice is also complete. `RunnerCharacterAPI` declares
+ground-probe distance, maximum walkable slope, and jump speed. The host requires
+the API on a dynamic physics prim and constructs a prim-indexed
+`CharacterController` bound to its imported body and backend ground query.
+
+The next change is the gamepad and deterministic-input vertical slice that
+updates the imported controller and proves walking, grounding, and jumping on
+the runnable Stage.
 
 ## Scope
 
@@ -68,7 +74,8 @@ USD and constructs their runtime controller components.
 2. **Jolt character adapter (implemented)** — implement grounding through the
    optional `GroundQuery`; desired motion, slope evaluation, and jumping reuse
    the existing backend-neutral velocity and contact contracts.
-3. **Schema and importer** — `RunnerCharacterAPI` plus Stage-to-runtime mapping.
+3. **Schema and importer (implemented)** — `RunnerCharacterAPI` plus
+   Stage-to-runtime mapping.
 4. **Gamepad vertical slice** — SDL and injected actions drive the character in
    `character_walk.usda`, with runtime transforms synchronized incrementally.
 

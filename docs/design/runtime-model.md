@@ -1,7 +1,8 @@
 # Runtime Model
 
 Status: intended contract; first input, transform, and Jolt physics vertical
-slice plus the character-core bootstrap implemented
+slice plus the character core, ground-query adapter, and schema importer
+implemented
 
 ## State ownership
 

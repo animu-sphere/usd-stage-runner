@@ -1,3 +1,4 @@
+#include "usd_stage_runner/character/character_controller.h"
 #include "usd_stage_runner/input/action_state.h"
 #include "usd_stage_runner/input/movement_controller.h"
 #include "usd_stage_runner/input_sdl/physical_input.h"
@@ -63,10 +64,14 @@ constexpr const char* playerPrim = "/World/PlayerCube";
 #if USD_STAGE_RUNNER_HAS_OPENUSD
 const pxr::TfToken physicsBodySchema{"RunnerPhysicsBodyAPI"};
 const pxr::TfToken colliderSchema{"RunnerColliderAPI"};
+const pxr::TfToken characterSchema{"RunnerCharacterAPI"};
 const pxr::TfToken physicsMotionTypeAttribute{"runner:physics:motionType"};
 const pxr::TfToken physicsMassAttribute{"runner:physics:mass"};
 const pxr::TfToken physicsShapeAttribute{"runner:physics:shape"};
 const pxr::TfToken physicsHalfExtentsAttribute{"runner:physics:halfExtents"};
+const pxr::TfToken characterGroundProbeDistanceAttribute{"runner:character:groundProbeDistance"};
+const pxr::TfToken characterMaximumSlopeAngleAttribute{"runner:character:maximumSlopeAngleRadians"};
+const pxr::TfToken characterJumpSpeedAttribute{"runner:character:jumpSpeed"};
 #endif
 
 struct Options {
@@ -157,6 +162,10 @@ struct StageContext {
 struct PhysicsImportSummary {
   std::size_t shapeCount{0};
   std::size_t bodyCount{0};
+};
+
+struct CharacterImportSummary {
+  std::size_t controllerCount{0};
 };
 
 std::filesystem::path executableDirectory(const std::filesystem::path& invocation) {
@@ -380,11 +389,12 @@ double readBodyMass(const pxr::UsdPrim& prim, MotionType motionType) {
   return mass;
 }
 
-std::size_t physicsDeclarationCount(const pxr::UsdStageRefPtr& stage) {
+std::size_t validateDeclarationsAndCountPhysicsBodies(const pxr::UsdStageRefPtr& stage) {
   std::size_t count = 0;
   for (const auto& prim : stage->Traverse()) {
     const bool hasBodySchema = hasAppliedSchema(prim, physicsBodySchema);
     const bool hasColliderSchema = hasAppliedSchema(prim, colliderSchema);
+    const bool hasCharacterSchema = hasAppliedSchema(prim, characterSchema);
     if (!hasBodySchema &&
         (hasAuthoredAttribute(prim, physicsMotionTypeAttribute) ||
          hasAuthoredAttribute(prim, physicsMassAttribute))) {
@@ -402,11 +412,36 @@ std::size_t physicsDeclarationCount(const pxr::UsdStageRefPtr& stage) {
                                "RunnerColliderAPI: " +
                                prim.GetPath().GetString());
     }
+    if (!hasCharacterSchema && (hasAuthoredAttribute(prim, characterGroundProbeDistanceAttribute) ||
+                                hasAuthoredAttribute(prim, characterMaximumSlopeAngleAttribute) ||
+                                hasAuthoredAttribute(prim, characterJumpSpeedAttribute))) {
+      throw std::runtime_error("authored character attributes require RunnerCharacterAPI: " +
+                               prim.GetPath().GetString());
+    }
+    if (hasCharacterSchema && (!hasBodySchema || !hasColliderSchema)) {
+      throw std::runtime_error(
+          "character prim must apply RunnerPhysicsBodyAPI and RunnerColliderAPI: " +
+          prim.GetPath().GetString());
+    }
+    if (hasCharacterSchema && readMotionType(prim) != MotionType::dynamicBody) {
+      throw std::runtime_error("RunnerCharacterAPI requires a dynamic physics body: " +
+                               prim.GetPath().GetString());
+    }
     if (hasBodySchema || hasColliderSchema) {
       ++count;
     }
   }
   return count;
+}
+
+double readCharacterAttribute(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
+  const auto attribute = prim.GetAttribute(name);
+  double value = 0.0;
+  if (!attribute || !attribute.Get(&value)) {
+    throw std::runtime_error("could not read " + name.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  return value;
 }
 
 PhysicsImportSummary importPhysicsBodies(StageContext& context, PhysicsWorld& physicsWorld,
@@ -449,6 +484,36 @@ PhysicsImportSummary importPhysicsBodies(StageContext& context, PhysicsWorld& ph
                 : usd_stage_runner::physics_jolt::nonMovingCollisionLayer});
     physicsRuntime.bindBody(primId, body);
     ++summary.bodyCount;
+  }
+  return summary;
+}
+
+CharacterImportSummary importCharacters(StageContext& context, PhysicsWorld& physicsWorld,
+                                        PhysicsRuntime& physicsRuntime) {
+  CharacterImportSummary summary;
+  const auto* groundQuery =
+      dynamic_cast<const usd_stage_runner::physics::GroundQuery*>(&physicsWorld);
+  for (const auto& prim : context.stage->Traverse()) {
+    if (!hasAppliedSchema(prim, characterSchema)) {
+      continue;
+    }
+    if (groundQuery == nullptr) {
+      throw std::runtime_error("character schema import requires a physics ground query");
+    }
+
+    const auto primId = prim.GetPath().GetString();
+    const auto body = physicsRuntime.bodyForPrim(primId);
+    if (!body) {
+      throw std::runtime_error("character schema import requires an imported physics body: " +
+                               primId);
+    }
+    const usd_stage_runner::character::CharacterControllerConfig config{
+        readCharacterAttribute(prim, characterGroundProbeDistanceAttribute),
+        readCharacterAttribute(prim, characterMaximumSlopeAngleAttribute),
+        readCharacterAttribute(prim, characterJumpSpeedAttribute)};
+    context.world.emplaceComponent<usd_stage_runner::character::CharacterController>(
+        primId, body, physicsWorld, *groundQuery, config);
+    ++summary.controllerCount;
   }
   return summary;
 }
@@ -526,7 +591,9 @@ int run(const Options& options) {
   std::unique_ptr<PhysicsWorld> physicsWorld;
   std::unique_ptr<PhysicsRuntime> physicsRuntime;
   PhysicsImportSummary physicsImport;
-  const std::size_t declaredPhysicsBodies = physicsDeclarationCount(context.stage);
+  CharacterImportSummary characterImport;
+  const std::size_t declaredPhysicsBodies =
+      validateDeclarationsAndCountPhysicsBodies(context.stage);
   if (declaredPhysicsBodies != 0) {
     if (!usd_stage_runner::physics_jolt::isJoltPhysicsAvailable()) {
       throw std::runtime_error("Stage declares physics bodies, but Jolt Physics is unavailable "
@@ -535,6 +602,7 @@ int run(const Options& options) {
     physicsWorld = usd_stage_runner::physics_jolt::createJoltPhysicsWorld();
     physicsRuntime = std::make_unique<PhysicsRuntime>(*physicsWorld, context.world);
     physicsImport = importPhysicsBodies(context, *physicsWorld, *physicsRuntime);
+    characterImport = importCharacters(context, *physicsWorld, *physicsRuntime);
   }
   const FixedStepAccumulator::Duration fixedStep{options.fixedDt};
   FixedStepAccumulator accumulator(fixedStep, options.maxFixedSteps);
@@ -609,7 +677,8 @@ int run(const Options& options) {
   }
   std::cout << ", physics_shapes=" << physicsImport.shapeCount
             << ", physics_bodies=" << physicsImport.bodyCount
-            << ", physics_body_updates=" << synchronizedPhysicsBodies;
+            << ", physics_body_updates=" << synchronizedPhysicsBodies
+            << ", character_controllers=" << characterImport.controllerCount;
   std::cout << '\n';
   return 0;
 #endif

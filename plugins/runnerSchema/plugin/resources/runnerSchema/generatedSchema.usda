@@ -41,3 +41,26 @@ class "RunnerColliderAPI" (
     )
 }
 
+class "RunnerCharacterAPI" (
+    customData = {
+        string userDocBrief = "Declares a dynamic physics body as a runtime character controller."
+    }
+)
+{
+    uniform double runner:character:groundProbeDistance = 0.1 (
+        customData = {
+            string userDocBrief = "Non-negative downward ground probe distance in Stage meters."
+        }
+    )
+    uniform double runner:character:jumpSpeed = 5 (
+        customData = {
+            string userDocBrief = "Positive upward jump speed in Stage meters per second."
+        }
+    )
+    uniform double runner:character:maximumSlopeAngleRadians = 0.7853981633974483 (
+        customData = {
+            string userDocBrief = "Maximum walkable slope angle in radians."
+        }
+    )
+}
+

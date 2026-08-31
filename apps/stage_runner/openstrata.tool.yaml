@@ -17,3 +17,5 @@ requires:
       version: ">=0.1,<0.2"
     - id: physicsJolt
       version: ">=0.1,<0.2"
+    - id: characterCore
+      version: ">=0.1,<0.2"
