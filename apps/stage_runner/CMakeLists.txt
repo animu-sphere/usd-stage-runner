@@ -45,7 +45,7 @@ if(TARGET runnerSchema_schema)
 endif()
 target_compile_features(stage_runner PRIVATE cxx_std_17)
 target_link_libraries(stage_runner PRIVATE runtimeCore::runtimeCore inputCore::inputCore
-  physicsCore::physicsCore physicsJolt::physicsJolt inputSdl::inputSdl
+  physicsCore::physicsCore characterCore::characterCore physicsJolt::physicsJolt inputSdl::inputSdl
   usd_stage_runner_warnings)
 
 if(USD_STAGE_RUNNER_OPENUSD_TARGET)

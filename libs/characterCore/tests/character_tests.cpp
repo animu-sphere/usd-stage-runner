@@ -52,6 +52,11 @@ public:
     if (found == states_.end()) {
       return false;
     }
+    if (quantizeVelocitiesToFloat_) {
+      velocity = {static_cast<double>(static_cast<float>(velocity.x)),
+                  static_cast<double>(static_cast<float>(velocity.y)),
+                  static_cast<double>(static_cast<float>(velocity.z))};
+    }
     found->second.linearVelocity = velocity;
     return true;
   }
@@ -87,6 +92,10 @@ public:
     states_.at(body).linearVelocity = velocity;
   }
 
+  void quantizeVelocitiesToFloat(bool enabled) noexcept {
+    quantizeVelocitiesToFloat_ = enabled;
+  }
+
   [[nodiscard]] double lastProbeDistance() const noexcept {
     return lastProbeDistance_;
   }
@@ -98,6 +107,7 @@ private:
       states_;
   std::optional<physics::GroundContact> contact_;
   mutable double lastProbeDistance_{-1.0};
+  bool quantizeVelocitiesToFloat_{false};
 };
 
 int fail(const char* message) {
@@ -169,6 +179,22 @@ int main() {
       !near(controller.state().velocity.z, 0.0)) {
     return fail("releasing movement uphill must stop without retaining vertical velocity");
   }
+
+  physicsWorld.setVelocity(characterBody, {});
+  // This walkable normal leaves a small positive normal component after the
+  // projected velocity round-trips through single precision, as Jolt does.
+  physicsWorld.setContact(physics::GroundContact{
+      support, {0.6904103446105211, 0.7234179677439464, 0.0}, 0.01});
+  physicsWorld.quantizeVelocitiesToFloat(true);
+  const character::CharacterIntent quantizedSlopeMotion{{2.0, 0.0, 0.0}, {}, false};
+  if (!controller.update(quantizedSlopeMotion,
+                         character::CharacterController::Duration{1.0 / 60.0}) ||
+      !controller.update(quantizedSlopeMotion,
+                         character::CharacterController::Duration{1.0 / 60.0}) ||
+      !controller.state().grounded) {
+    return fail("float-rounded tangent velocity must remain grounded on the following step");
+  }
+  physicsWorld.quantizeVelocitiesToFloat(false);
 
   physicsWorld.setVelocity(characterBody, {});
   physicsWorld.setContact(physics::GroundContact{support, {1.0, 0.0, 0.0}, 0.01});

@@ -1,8 +1,8 @@
 #usda 1.0
 (
     """
-    Authored physics declarations for usd-stage-runner. This is the source of
-    truth for the codeless RunnerPhysicsBodyAPI and RunnerColliderAPI schemas.
+    Authored runtime declarations for usd-stage-runner. This is the source of
+    truth for the codeless physics, collider, and character API schemas.
     """
     subLayers = [
         @usd/schema.usda@
@@ -52,5 +52,24 @@ class "RunnerColliderAPI" (
     )
     uniform double3 runner:physics:halfExtents = (1, 1, 1) (
         doc = "Positive local-space box half extents, before xform scale ops."
+    )
+}
+
+class "RunnerCharacterAPI" (
+    inherits = </APISchemaBase>
+    customData = {
+        token apiSchemaType = "singleApply"
+    }
+    doc = "Declares a dynamic physics body as a runtime character controller."
+)
+{
+    uniform double runner:character:groundProbeDistance = 0.1 (
+        doc = "Non-negative downward ground probe distance in Stage meters."
+    )
+    uniform double runner:character:maximumSlopeAngleRadians = 0.7853981633974483 (
+        doc = "Maximum walkable slope angle in radians. Must be in the range [0, pi / 2)."
+    )
+    uniform double runner:character:jumpSpeed = 5 (
+        doc = "Positive upward jump speed in Stage meters per second."
     )
 }

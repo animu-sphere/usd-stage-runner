@@ -1,0 +1,11 @@
+#usda 1.0
+
+def Xform "World"
+{
+    def Cube "PlayerCube"
+    {
+        uniform double runner:character:jumpSpeed = 6
+        double3 xformOp:translate = (0, 1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}

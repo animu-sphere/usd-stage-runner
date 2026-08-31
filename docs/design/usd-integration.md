@@ -1,7 +1,8 @@
 # USD Integration
 
-Status: physics schemas, transform import, and dirty write-back implemented;
-later domain schemas and incremental Stage notices planned
+Status: physics and character schemas, transform and controller import, and
+dirty write-back implemented; later domain schemas and incremental Stage
+notices planned
 
 ## Runtime declarations
 
@@ -53,6 +54,15 @@ unless `resetXformStack` is set. These restrictions keep local USD translation
 identical to the Jolt world-space position until composed transform support
 lands. The importer creates and binds backend bodies through `PhysicsRuntime`;
 a physics-declaring Stage is rejected when Jolt is unavailable.
+
+The implemented `RunnerCharacterAPI` declares
+`runner:character:groundProbeDistance`,
+`runner:character:maximumSlopeAngleRadians`, and
+`runner:character:jumpSpeed`. It must be applied with both physics APIs to the
+same dynamic body prim. After physics import, the host binds a prim-indexed
+runtime `CharacterController` to that body and the backend-neutral ground-query
+capability. The schema importer does not itself choose or update player intent;
+that runnable input slice follows separately.
 
 ## Runtime to USD
 
