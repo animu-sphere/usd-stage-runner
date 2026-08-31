@@ -36,6 +36,28 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
       "fixed_steps=4, dropped_steps=0, synchronized_transforms=4, player_translation=\\(1.2, 1, 0\\)"
   )
 
+  add_test(
+    NAME stage_runner.rejects_legacy_physics_attributes
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/legacy_physics_attributes.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=authored body attributes require RunnerPhysicsBodyAPI"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_incomplete_physics_schemas
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/incomplete_physics_schemas.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=physics prim must apply both RunnerPhysicsBodyAPI and RunnerColliderAPI"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
   if(USD_STAGE_RUNNER_JOLT_AVAILABLE)
     add_test(
       NAME stage_runner.physics_falling_cube
@@ -63,13 +85,24 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
     )
 
     add_test(
+      NAME stage_runner.installed_physics_schema_defaults
+      COMMAND ${CMAKE_COMMAND}
+        -DBUILD_DIR=${CMAKE_BINARY_DIR}
+        -DINSTALL_DIR=${CMAKE_BINARY_DIR}/tests/install-smoke
+        -DCONFIG=$<CONFIG>
+        -DEXECUTABLE_RELATIVE_PATH=${CMAKE_INSTALL_BINDIR}/stage_runner${CMAKE_EXECUTABLE_SUFFIX}
+        -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/falling_cube.usda
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/run_installed_stage_runner.cmake
+    )
+
+    add_test(
       NAME stage_runner.rejects_non_meter_physics_stage
       COMMAND ${CMAKE_COMMAND}
         -DEXECUTABLE=$<TARGET_FILE:stage_runner>
         -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/physics_centimeters.usda
         -DOPTION=--frames
         -DVALUE=1
-        "-DEXPECTED=temporary physics import requires metersPerUnit = 1"
+        "-DEXPECTED=physics schema import requires metersPerUnit = 1"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
     )
 
@@ -80,7 +113,7 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
         -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/physics_parent_transform.usda
         -DOPTION=--frames
         -DVALUE=1
-        "-DEXPECTED=temporary physics import requires identity parent transforms or resetXformStack"
+        "-DEXPECTED=physics schema import requires identity parent transforms or resetXformStack"
         -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
     )
   else()

@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-08-30
+Updated: 2026-08-31
 
 The roadmap contains incomplete delivery work only. Design rationale and
 contracts belong in [design](../design/); implemented behavior belongs in
@@ -8,8 +8,8 @@ contracts belong in [design](../design/); implemented behavior belongs in
 
 | Document | Contents |
 | --- | --- |
-| [current.md](current.md) | The Jolt Physics vertical slice, completion criteria, and recommended PR sequence. |
-| [milestones.md](milestones.md) | Ordered milestones after physics, platform integration tracks, and cross-cutting follow-up work. |
+| [current.md](current.md) | The character-controller vertical slice, completion criteria, and recommended PR sequence. |
+| [milestones.md](milestones.md) | Ordered milestones after schemas, platform integration tracks, and cross-cutting follow-up work. |
 
 Status vocabulary: **in progress** or **not started**. A milestone is complete
 only when its runnable vertical slice and required tests exist.

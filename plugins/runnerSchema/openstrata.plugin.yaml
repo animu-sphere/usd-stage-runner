@@ -1,0 +1,19 @@
+manifest:
+  schema: openstrata.plugin/v1alpha1
+plugin:
+  name: runnerSchema
+  version: 0.1.0
+  kind: usd-schema
+license: Apache-2.0
+runtime:
+  openusd: ">=25.05,<27.0"
+schema:
+  codeless: true
+  contract: 1
+provides:
+  - usd-schema:RunnerPhysicsBodyAPI
+  - usd-schema:RunnerColliderAPI
+usd:
+  plug_info: plugin/resources/runnerSchema/plugInfo.json
+tests:
+  smoke: [tests/fixtures/basic.usda]

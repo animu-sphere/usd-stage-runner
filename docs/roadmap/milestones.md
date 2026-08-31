@@ -3,30 +3,17 @@
 Status: not started unless noted otherwise
 
 Work is ordered so every milestone adds a runnable, testable capability. The
-[Jolt Physics vertical slice](current.md) is Milestone 1.
+[character-controller vertical slice](current.md) is the current milestone.
 
 ## Delivery order
 
 | Milestone | Capability | Proof |
 | --- | --- | --- |
-| 2 | Physics API schemas | Stage declarations replace temporary body and collider conventions. |
 | 3 | Character controller | A character moves, grounds, and jumps through physics. |
 | 4 | Camera rigs | First- and third-person modes follow a runtime target. |
 | 5 | Vehicle composition | A USD-composed four-wheel vehicle is drivable without a four-wheel-only runtime contract. |
 | 6 | Behavior runtime | An AI character produces the same intent contract as a player. |
 | 7 | OpenExec integration | Small Exec nodes read runtime state and set intent through core interfaces. |
-
-## Milestone 2: Physics API schemas
-
-Targets: `plugins/runnerSchema`
-
-- Add applied `RunnerPhysicsBodyAPI` and `RunnerColliderAPI` schemas.
-- Define initial motion type, mass, shape, and collider parameters.
-- Import declarations through the same core contracts proven in Milestone 1.
-- Remove the temporary physics Stage convention.
-
-Success: the physics fixture creates its ground and dynamic cube exclusively
-from documented schema declarations.
 
 ## Milestone 3: Character controller
 

@@ -1,7 +1,7 @@
 # USD Integration
 
-Status: intended contract; temporary physics import, transform import, and
-dirty write-back implemented
+Status: physics schemas, transform import, and dirty write-back implemented;
+later domain schemas and incremental Stage notices planned
 
 ## Runtime declarations
 
@@ -11,7 +11,7 @@ not contain simulation implementations or expose private backend state.
 Applied API schemas are preferred over a large typed-schema hierarchy because
 they compose with existing assets, references, vehicles, and characters.
 
-Candidate contracts, introduced only when their runtime slice exists, are:
+Domain contracts are introduced only when their runtime slice exists:
 
 | Slice | Applied API schemas |
 | --- | --- |
@@ -30,21 +30,25 @@ def Xform "Player"
 )
 {
     token runner:physics:motionType = "dynamic"
-    float runner:physics:mass = 70
+    double runner:physics:mass = 70
+    token runner:physics:shape = "box"
+    double3 runner:physics:halfExtents = (0.5, 1, 0.5)
 }
 ```
 
-Temporary conventions are acceptable while proving a vertical slice, but the
-schema milestone must replace them before they become a public asset contract.
+The implemented `runnerSchema` bundle is codeless: `schema.usda` defines the
+authored contract and generated plugin resources register it without adding a
+C++ ABI. A physics prim must apply both APIs. Motion accepts `static` or
+`dynamic`; mass and all three half extents must be positive and finite; and the
+initial shape contract accepts only `box`. Half extents are local-space values
+multiplied by ordered scale ops.
 
-The implemented temporary convention is limited to `UsdGeomCube` prims. It
-uses custom `runner:physics:motionType` token values `static` and `dynamic`, plus
-an optional `runner:physics:mass` double for dynamic bodies. Cube size and local
-scale ops determine the box half extents. Physics Cubes currently require a
-Y-up Stage with `metersPerUnit = 1`, one translate op followed only by scale
-ops, and identity ancestor transforms unless `resetXformStack` is set. These
-names deliberately mirror the candidate schema namespace, but they are not yet
-a stable asset contract.
+Physics prims currently require a Y-up Stage with `metersPerUnit = 1`, one
+translate op followed only by scale ops, and identity ancestor transforms
+unless `resetXformStack` is set. These restrictions keep local USD translation
+identical to the Jolt world-space position until composed transform support
+lands. The importer creates and binds backend bodies through `PhysicsRuntime`;
+a physics-declaring Stage is rejected when Jolt is unavailable.
 
 ## Runtime to USD
 
