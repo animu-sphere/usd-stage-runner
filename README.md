@@ -16,7 +16,11 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `inputCore`, with named action state and backend-neutral movement intent;
 - `physicsCore`, with typed backend-neutral resource handles, descriptors for
   boxes, bodies, and fixed constraints, fixed-step commands, changed-body
-  extraction contracts, and prim/body runtime synchronization;
+  extraction contracts, a character ground-query extension, and prim/body
+  runtime synchronization;
+- `characterCore`, with backend-neutral character intent and controller state,
+  walkable-ground and slope evaluation, desired motion, facing, jump-edge
+  handling, and deterministic tests against a physics test double;
 - `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
   box shapes and static or dynamic bodies, advances fixed simulation steps, and
   extracts changed body state without exposing Jolt types publicly;
@@ -32,8 +36,9 @@ behavior are documented in [docs/README.md](docs/README.md).
   tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Character control is the next roadmap milestone. Camera, behavior, and OpenExec
-integration are later slices.
+Character control is the current roadmap milestone. Its core bootstrap is
+implemented; Jolt character support, schema import, and the runnable Stage
+slice remain. Camera, behavior, and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 

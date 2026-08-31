@@ -1,0 +1,6 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(runtimeCore CONFIG)
+find_dependency(physicsCore CONFIG)
+include("${CMAKE_CURRENT_LIST_DIR}/characterCoreTargets.cmake")

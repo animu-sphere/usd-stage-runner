@@ -1,0 +1,7 @@
+add_executable(character_core_tests character_tests.cpp)
+target_compile_features(character_core_tests PRIVATE cxx_std_17)
+target_link_libraries(character_core_tests PRIVATE
+  characterCore::characterCore
+  characterCore_warnings
+)
+add_test(NAME characterCore.contracts COMMAND character_core_tests)

@@ -3,11 +3,12 @@
 ## Current state
 
 The repository implements the input-to-physics-to-USD vertical slice and its
-formal authored-data contract. It contains runtime, input, and physics core
-libraries, SDL and Jolt adapters, a codeless OpenUSD physics-schema plugin, an
-OpenUSD-aware host executable, core/adapter/integration tests, and dual
-CMake/OpenStrata build configuration. Character, OpenExec, camera, behavior,
-and vehicle targets do not exist yet.
+formal authored-data contract, plus the backend-neutral character-controller
+bootstrap. It contains runtime, input, physics, and character core libraries,
+SDL and Jolt adapters, a codeless OpenUSD physics-schema plugin, an OpenUSD-aware
+host executable, core/adapter/integration tests, and dual CMake/OpenStrata build
+configuration. Character-to-Jolt and Stage integration remain roadmap work;
+OpenExec, camera, behavior, and vehicle targets do not exist yet.
 
 ## Implemented targets
 
@@ -15,7 +16,8 @@ and vehicle targets do not exist yet.
 | --- | --- | --- | --- |
 | `runtimeCore` | `libs/runtimeCore` | Frame timing, bounded fixed stepping, prim identity, runtime components, runtime transforms, dirty transform queue, and Runtime World lifetime. | C++ standard library only. |
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
-| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, and changed-body extraction contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
+| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, and character ground-query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
+| `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, and changed-body extraction behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI` and `RunnerColliderAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
@@ -23,7 +25,8 @@ and vehicle targets do not exist yet.
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
 movement logic, physics-core resource, deterministic-step, prim/body mapping,
-and changed-transform synchronization contracts, physical-control mapping,
+changed-transform synchronization, isolated character controller contracts,
+physical-control mapping,
 host option validation, Stage loading, and the complete injected-input-to-USD
 synchronization path. `ost plugin test plugins/runnerSchema` additionally
 verifies schema registration and authored-attribute flatten round-tripping.
@@ -43,6 +46,13 @@ velocity commands; advances a positive fixed duration; and returns a draining
 list of changed `BodyState` values. `PhysicsBody` is a small handle component
 that can be attached to a prim in `RuntimeWorld`. The contract test uses a
 deterministic mock with gravity to verify this boundary without Jolt.
+
+`GroundQuery` is a separate optional physics capability introduced by the
+character slice. It reports a support body, contact normal, and distance
+without adding a backend type to the public contract. `characterCore` combines
+that query with `PhysicsWorld` state and velocity commands, so a deterministic
+test double can exercise grounding, slope projection, facing, and edge-triggered
+jumping. The Jolt implementation of this capability is not implemented yet.
 
 `PhysicsRuntime` owns the one-to-one mapping between runtime prims and backend
 bodies. Its fixed-step boundary drains changed body states, updates only mapped
@@ -128,7 +138,7 @@ exactly one fixed interval per host frame without sleeping.
 
 ## Build and verification
 
-The root CMake tree builds the five compiled libraries, codeless schema plugin,
+The root CMake tree builds the six compiled libraries, codeless schema plugin,
 host, and CTest suite. Each library installs headers and an exported CMake
 package. OpenUSD, SDL, and Jolt discovery remain isolated to schema,
 adapter, and host directories.
@@ -158,16 +168,16 @@ runnerSchema -----> OpenUSD resource-plugin registry
       ^
       |
 stage_runner -----> OpenUSD plug + usd + usdGeom
-      |  \
-      |   `-------> inputSdl -----> SDL2 or SDL3 (optional at configure time)
-      |                 |
-      v                 v
- runtimeCore <----- inputCore
+      |  |  \
+      |  |   `------> inputSdl -----> SDL2 or SDL3 (optional at configure time)
+      |  `----------> inputCore
+      v
+ runtimeCore
       ^
       |
- physicsCore <----- physics contract tests
-      ^                 ^
-      |                 |
+ physicsCore <----- characterCore
+      ^
+      |
  physicsJolt <----- stage_runner
       |
       `------------> Jolt (optional at configure time)
