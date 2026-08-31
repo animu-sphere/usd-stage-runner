@@ -332,7 +332,7 @@ public:
         JPH::Vec3{0.0f, -static_cast<float>(maxDistance), 0.0f}};
     JPH::ShapeCastSettings settings;
     settings.mReturnDeepestPoint = true;
-    JPH::ClosestHitCollisionCollector<JPH::CastShapeCollector> collector;
+    JPH::AllHitCollisionCollector<JPH::CastShapeCollector> collector;
     const JPH::IgnoreSingleBodyFilter ignoreCharacter{found->second.id};
     physicsSystem_.GetNarrowPhaseQuery().CastShape(
         cast, settings, cast.mCenterOfMassStart.GetTranslation(), collector, {}, {},
@@ -341,15 +341,34 @@ public:
       return std::nullopt;
     }
 
-    const auto support = bodyHandle(collector.mHit.mBodyID2);
+    const JPH::ShapeCastResult* groundHit = nullptr;
+    JPH::Vec3 groundNormal;
+    double groundDistance = 0.0;
+    for (const auto& hit : collector.mHits) {
+      const JPH::Vec3 normal =
+          -hit.mPenetrationAxis.NormalizedOr(-JPH::Vec3::sAxisY());
+      if (normal.GetY() <= 0.0f) {
+        continue;
+      }
+      const double distance =
+          std::max(0.0, static_cast<double>(hit.mFraction) * maxDistance);
+      if (groundHit == nullptr || normal.GetY() > groundNormal.GetY() ||
+          (normal.GetY() == groundNormal.GetY() && distance < groundDistance)) {
+        groundHit = &hit;
+        groundNormal = normal;
+        groundDistance = distance;
+      }
+    }
+    if (groundHit == nullptr) {
+      return std::nullopt;
+    }
+
+    const auto support = bodyHandle(groundHit->mBodyID2);
     if (!support) {
       throw std::logic_error("Jolt ground query returned an untracked body");
     }
-    const JPH::Vec3 normal = -collector.mHit.mPenetrationAxis.NormalizedOr(
-        -JPH::Vec3::sAxisY());
-    physics::GroundContact contact{
-        support, toRuntimeVector(normal),
-        std::max(0.0, static_cast<double>(collector.mHit.mFraction) * maxDistance)};
+    physics::GroundContact contact{support, toRuntimeVector(groundNormal),
+                                   groundDistance};
     physics::validateGroundContact(contact);
     return contact;
   }

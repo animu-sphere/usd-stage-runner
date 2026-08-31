@@ -35,6 +35,7 @@ int main() {
   }
   const auto floorShape = world->createShape({physics::ShapeType::box, {5.0, 0.5, 5.0}});
   const auto cubeShape = world->createShape({physics::ShapeType::box, {0.5, 0.5, 0.5}});
+  const auto wallShape = world->createShape({physics::ShapeType::box, {0.5, 2.0, 0.5}});
 
   try {
     static_cast<void>(world->createBody(physics::BodyDescriptor{
@@ -48,6 +49,10 @@ int main() {
       floorShape, physics::MotionType::staticBody,
       runtime::RuntimeTransform{{0.0, -0.5, 0.0}}, 0.0,
       physics_jolt::nonMovingCollisionLayer});
+  const auto wall = world->createBody(physics::BodyDescriptor{
+      wallShape, physics::MotionType::staticBody,
+      runtime::RuntimeTransform{{2.9, 2.0, 0.0}}, 0.0,
+      physics_jolt::nonMovingCollisionLayer});
   const auto probeBody = world->createBody(physics::BodyDescriptor{
       cubeShape, physics::MotionType::dynamicBody,
       runtime::RuntimeTransform{{2.0, 0.65, 0.0}}, 1.0,
@@ -56,7 +61,7 @@ int main() {
   if (!elevatedContact || elevatedContact->supportBody != floor ||
       std::abs(elevatedContact->distance - 0.15) > 0.01 ||
       elevatedContact->normal.y < 0.99) {
-    return fail("the Jolt ground query must report support, distance, and upward normal");
+    return fail("the Jolt ground query must prefer upward support over a deeper wall hit");
   }
   if (groundQuery->groundContact(probeBody, 0.1)) {
     return fail("the Jolt ground query must honor the requested probe distance");
@@ -72,8 +77,9 @@ int main() {
     return fail("the Jolt ground query must reject unknown bodies");
   } catch (const std::out_of_range&) {
   }
-  if (!world->destroyBody(probeBody)) {
-    return fail("a probed Jolt body must retain ordinary body lifetime");
+  if (!world->destroyBody(probeBody) || !world->destroyBody(wall) ||
+      !world->destroyShape(wallShape)) {
+    return fail("probed Jolt resources must retain ordinary handle-based lifetime");
   }
   const auto cube = world->createBody(physics::BodyDescriptor{
       cubeShape, physics::MotionType::dynamicBody,
