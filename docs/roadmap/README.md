@@ -9,7 +9,7 @@ contracts belong in [design](../design/); implemented behavior belongs in
 | Document | Contents |
 | --- | --- |
 | [current.md](current.md) | The character-controller vertical slice, completion criteria, and recommended PR sequence. |
-| [milestones.md](milestones.md) | Ordered milestones after schemas, platform integration tracks, and cross-cutting follow-up work. |
+| [milestones.md](milestones.md) | Ordered Character-through-Tooling milestones, host integration, the representative demo, and cross-cutting follow-up work. |
 
 Status vocabulary: **in progress** or **not started**. A milestone is complete
 only when its runnable vertical slice and required tests exist.
@@ -19,6 +19,8 @@ only when its runnable vertical slice and required tests exist.
 - Deliver small vertical slices rather than disconnected framework skeletons.
 - Keep a Stage runnable and inspectable at every completed milestone.
 - Introduce schemas and directories with the slice that consumes them.
+- Follow the direct Character -> Camera -> Host path before expanding into
+  vehicle, behavior, and execution adapters.
 - Remove completed task detail from the roadmap and update architecture pages.
 - Preserve direct CMake builds while OpenStrata owns reproducible environment,
   packaging, and CI workflows.

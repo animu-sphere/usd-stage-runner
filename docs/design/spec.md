@@ -38,6 +38,8 @@ The focused specifications are:
 
 - [Runtime model](runtime-model.md): ownership, identity, fixed stepping, and
   execution order.
+- [Input actions and intent](input.md): device normalization, action value
+  types, and the boundary between input and gameplay intent.
 - [Modules and dependencies](modules.md): reusable library boundaries, backend
   adapters, plugins, and intended repository topology.
 - [USD integration](usd-integration.md): schema declarations, bidirectional
@@ -63,6 +65,7 @@ The focused specifications are:
 8. Physics advances with a deterministic, bounded fixed timestep.
 9. USD composition, references, and variants provide prefab-like composition.
 10. Standalone, usdview, and OST hosts reuse the same runtime libraries.
+11. New abstraction follows a working vertical slice rather than preceding it.
 
 Any proposal or implementation that breaks an invariant requires an explicit
 design decision explaining the replacement.

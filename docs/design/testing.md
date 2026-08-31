@@ -31,11 +31,14 @@ empty promises.
 | Physics | `falling_cube.usda` (implemented) |
 | Character | `character_walk.usda` |
 | Camera | `third_person_camera.usda` |
+| Host play session | `character_walk.usda` and `third_person_camera.usda` (reused) |
 | Vehicle | `four_wheel_vehicle.usda` |
 | Behavior | `behavior_chase.usda` |
 
 Each fixture should remain small, reproducible, and useful from both automated
-tests and an interactive host.
+tests and an interactive host. Host tests should reuse the representative
+character and camera Stages and verify session-layer discard and reset
+semantics instead of introducing a host-specific scene.
 
 ## Per-milestone verification
 

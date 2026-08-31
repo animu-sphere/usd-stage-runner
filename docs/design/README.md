@@ -10,6 +10,7 @@ implementation inventory.
 | --- | --- |
 | [spec.md](spec.md) | Entry point, system map, invariants, and links to the focused contracts below. |
 | [runtime-model.md](runtime-model.md) | State ownership, prim identity, frame execution, and intent flow. |
+| [input.md](input.md) | Physical input, named actions, action value types, and gameplay intent. |
 | [modules.md](modules.md) | Target topology, core/adapter boundaries, and allowed dependencies. |
 | [usd-integration.md](usd-integration.md) | Applied API schemas, incremental synchronization, and play-session layers. |
 | [hosts.md](hosts.md) | Responsibilities of `stage_runner`, usdview, OST Plugin View, and OpenStrata. |

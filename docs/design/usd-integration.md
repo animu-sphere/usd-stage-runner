@@ -21,6 +21,10 @@ Domain contracts are introduced only when their runtime slice exists:
 | Vehicle | `RunnerVehicleAPI`, `RunnerWheelAPI`, followed by focused suspension, steering, and drivetrain APIs as needed |
 | Behavior | `RunnerBehaviorAPI` |
 
+Schema values are declarations that are parsed into prim-indexed runtime
+components. A schema instance is not itself the runtime object, and applying an
+API schema never transfers simulation ownership to USD.
+
 Example physics declaration:
 
 ```usda

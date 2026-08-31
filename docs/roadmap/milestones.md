@@ -4,112 +4,169 @@ Status: not started unless noted otherwise
 
 Work is ordered so every milestone adds a runnable, testable capability. The
 [character-controller vertical slice](current.md) is the current milestone.
+Physics and the initial Runner physics schemas are already implemented and are
+recorded in the [current architecture](../architecture/overview.md), not as
+open roadmap work.
 
 ## Delivery order
 
 | Milestone | Capability | Proof |
 | --- | --- | --- |
-| 3 | Character controller | A character moves, grounds, and jumps through physics. |
-| 4 | Camera rigs | First- and third-person modes follow a runtime target. |
-| 5 | Vehicle composition | A USD-composed four-wheel vehicle is drivable without a four-wheel-only runtime contract. |
-| 6 | Behavior runtime | An AI character produces the same intent contract as a player. |
-| 7 | OpenExec integration | Small Exec nodes read runtime state and set intent through core interfaces. |
+| 3 | Character controller | A Stage-declared character moves, grounds, and jumps through physics. |
+| 4 | Camera rigs | First- and third-person modes follow the controlled character. |
+| 5 | Host integration | The same Stage can play safely through `stage_runner`, usdview, and OST Plugin View. |
+| 6 | Vehicle composition | A USD-composed four-wheel vehicle is drivable without a four-wheel-only runtime contract. |
+| 7 | Behavior runtime | An AI character produces the same intent contract as a player. |
+| 8 | OpenExec integration | Small Exec nodes invoke operations already exposed by core libraries. |
+| 9 | Animation integration | Runtime motion drives a USD Skeleton and animation state without redefining character control around one asset format. |
+| 10 | Runtime tooling | Hosts can inspect, debug, profile, and explicitly bake runtime state. |
+
+Character and camera form the next uninterrupted implementation path. Host
+integration then proves that those systems are reusable libraries rather than
+features embedded in the standalone executable.
 
 ## Milestone 3: Character controller
 
-Targets: `libs/characterCore`, followed by `RunnerCharacterAPI`
+Targets: `libs/characterCore`, `RunnerCharacterAPI`, and required
+backend-neutral character capabilities in `physicsCore`
 
 - Add `CharacterIntent` with desired velocity, facing direction, and jump.
 - Track velocity, grounded state, jump state, facing, and support body.
 - Implement ground detection, movement, basic slope handling, and jumping
-  through `physicsCore`.
-- Accept the same intent contract from human input and AI.
+  through `physicsCore`, with Jolt-specific code confined to `physicsJolt`.
+- Accept the same intent contract from human input, injected tests, and later
+  AI systems.
+- Map keyboard and gamepad actions through `inputSdl` rather than reading
+  device buttons in character code.
 - Add a deterministic `character_walk.usda` scenario.
 
-Success: a character can walk and jump in a small Stage without direct
-transform edits.
+Success: a Stage-declared character can walk, ground, and jump without direct
+transform edits or a dependency on a particular visual representation.
 
 ## Milestone 4: Camera rigs
 
 Targets: `libs/cameraCore`, followed by `RunnerCameraRigAPI`
 
-- Refer to targets and optional anchors by prim path.
-- Implement free, first-person, third-person, and orbit modes.
-- Add runtime smoothing, spring, and damping state.
-- Add collision avoidance incrementally.
-- Synchronize the result to a USD Camera prim.
+- Refer to a target and optional anchor by prim identity.
+- Define rig mode, offset, distance, pitch, yaw, damping, and collision-probe
+  configuration as declarations.
+- Implement free, first-person, third-person, and orbit modes in reusable
+  runtime code.
+- Calculate the desired transform, perform an optional physics probe, smooth
+  the result, and synchronize it to a `UsdGeomCamera`.
+- Add collision avoidance incrementally without coupling `cameraCore` to Jolt.
 - Add a `third_person_camera.usda` scenario.
 
 Success: first- and third-person modes can be switched while following the
-controlled character.
+controlled character, with repeatable behavior under a controlled clock.
 
-## Milestone 5: Vehicle composition
+## Milestone 5: Host integration
+
+Targets: `plugins/usdviewStageRunner` and OST Plugin View integration
+
+- Reuse the same Runtime World and subsystem libraries as `stage_runner`.
+- Keep host adapters limited to lifecycle, frame driving, UI, rendering hooks,
+  and Stage access.
+- Provide play, pause, single-step, and reset controls first.
+- Put simulated values in a discardable session/runtime layer.
+- Discard the layer on reset or stop; defer authored-layer persistence to an
+  explicit bake or commit operation.
+- Verify equivalent fixed-step and synchronization semantics in each host.
+
+Success: a Stage that runs through `stage_runner` can be played in usdview and
+OST Plugin View without duplicating simulation logic or contaminating its root
+layer.
+
+At this point the representative demo is:
+
+```text
+open a USD Stage
+    -> press Play
+    -> control a character with keyboard or gamepad
+    -> move and collide through Jolt
+    -> follow it with a third-person camera
+    -> observe live Stage updates in the selected host
+```
+
+## Milestone 6: Vehicle composition
 
 Targets: `libs/vehicleCore`, then focused schema declarations
 
-- Compose chassis, wheels, suspension, steering, drivetrain, and braking.
+- Compose chassis, wheels, suspension, steering, powertrain, and braking rather
+  than introducing a monolithic car object.
 - Add `VehicleIntent` for throttle, brake, steering, and handbrake.
 - Begin with `RunnerVehicleAPI` and `RunnerWheelAPI`; add narrower APIs when the
   implementation needs them.
-- Reuse USD hierarchy, references, and variants for vehicle assembly.
+- Reuse USD hierarchy, references, payloads, inheritance, and variants for
+  vehicle assembly.
+- Keep the runtime compatible with other wheel counts and layouts.
 - Add a deterministic `four_wheel_vehicle.usda` scenario.
 
-Success: a USD-composed vehicle is drivable with normalized input, while the
-runtime design remains compatible with other wheel counts and layouts.
+Success: a USD-composed four-wheel vehicle is drivable with normalized input,
+while its controller and physics path remain reusable by other vehicle forms.
 
-## Milestone 6: Behavior runtime
+## Milestone 7: Behavior runtime
 
-Targets: `libs/behaviorCore`
+Targets: `libs/behaviorCore`, followed by `RunnerBehaviorAPI`
 
-- Add stateful `Sequence`, `Selector`, `Condition`, and `Action` nodes.
-- Keep behavior state in the Runtime World.
+- Add stateful `Sequence`, `Selector`, `Condition`, `Action`, and `Decorator`
+  nodes.
+- Keep `BehaviorInstance`, blackboard values, and node state in the Runtime
+  World rather than forcing them into the USD prim hierarchy.
+- Let USD declarations refer to behavior assets without making the behavior
+  tree mirror the scene hierarchy.
 - Produce the same character and vehicle intent contracts used by human input.
-- Add a chase or wander scenario in `behavior_chase.usda`.
+- Add a chase, guard, or wander scenario in `behavior_chase.usda`.
 
 Success: an AI-controlled character moves autonomously through the same
 controller and physics path as a player.
 
-## Milestone 7: OpenExec integration
+## Milestone 8: OpenExec integration
 
-Targets: `plugins/execRunner`, `execPhysics`, `execBehavior`, and `execVehicle`
-as required by proven use cases
+Targets: `plugins/execRunner`, `execPhysics`, `execCharacter`, `execVehicle`,
+and `execBehavior` as required by proven use cases
 
-- Start with small nodes such as `ReadInputAction`, `ReadRuntimeTransform`,
-  `ReadVelocity`, `SetCharacterIntent`, `SetVehicleIntent`, `ApplyForce`, and
-  `ReadGroundState`.
+- Start with thin nodes such as `ReadInputAction`, `ReadRuntimeTransform`,
+  `ReadVelocity`, `MoveCharacter`, `ApplyForce`, `SetCameraTarget`,
+  `DriveVehicle`, and `TickBehavior`.
 - Route every node through a documented core interface.
 - Keep host orchestration, behavior state, and domain algorithms outside node
   implementations.
+- Preserve C++, Python, host UI, and test access to the same operations without
+  requiring OpenExec.
 
-Success: OpenExec evaluation reads runtime state and changes an intent or
-component through the same public boundary used by non-Exec code.
+Success: OpenExec evaluation reads runtime state and changes intent or invokes
+an operation through the same public boundary used by non-Exec code.
 
-## Platform integration tracks
+## Milestone 9: Animation integration
 
-These tracks reuse the runtime milestones rather than introducing alternate
-implementations.
+Targets are selected only after the character and host slices expose a concrete
+animation use case.
 
-### usdview prototype and plugin
+- Connect character state to USD Skeleton and animation playback.
+- Add the smallest useful locomotion-state and blending contract.
+- Keep retargeting, IK, facial expression, and format-specific features out of
+  the initial slice.
+- Treat VRM as one visual representation rather than the identity of the
+  character runtime.
 
-- A minimal prototype may be scheduled after physics to prove host independence.
-- Full integration adds play, pause, stop, frame tick, camera selection, runtime
-  settings, and debug visualization.
-- Simulation values must use a discardable session/runtime layer before the
-  plugin is treated as an authoring-safe workflow.
+Success: the representative character visibly reflects its runtime locomotion
+state without coupling `characterCore` to one asset format.
 
-### OST Plugin View
+## Milestone 10: Runtime tooling
 
-- Keep OpenStrata responsible for environment, dependency pinning, build, test,
-  packaging, CI, and host integration.
-- Load the ordinary runtime libraries from OST Plugin View without introducing
-  OpenStrata APIs into core targets.
+- Inspect prim-indexed runtime components and subsystem state.
+- Visualize colliders, contacts, velocity, grounded state, suspension, camera
+  probes, and behavior state through host-rendered diagnostics.
+- Add bounded timing and profiling data without putting UI in core libraries.
+- Add explicit simulation bake and selected-property commit workflows.
+
+Success: a developer can explain a running Stage's state, locate subsystem
+costs, and deliberately persist selected results.
 
 ## Cross-cutting follow-up
 
 - Incremental USD-to-runtime updates using Stage change notices.
-- Play-session discard, bake, and selected-property commit workflows.
-- Host-rendered diagnostics for colliders, contacts, velocity, ground state,
-  suspension, cameras, and behavior.
 - CI checks for forbidden dependency edges.
 - Additional input and physics backends.
 - Richer camera collision, rig blending, and cinematic modes.

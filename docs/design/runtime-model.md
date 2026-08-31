@@ -40,7 +40,10 @@ remain the only scene hierarchy.
 ## Input and intent
 
 Physical devices are normalized into named actions before controller logic
-creates domain intent.
+creates domain intent. The runtime consumes names such as `move`, `look`,
+`jump`, `interact`, `accelerate`, and `brake`; it does not consume SDL device
+identifiers or button enums. The complete contract is defined in
+[Input Actions and Intent](input.md).
 
 ```text
 keyboard / gamepad                  behavior / AI
@@ -70,8 +73,8 @@ poll devices
     -> advance zero or more bounded fixed physics steps
     -> extract simulation transforms
     -> mark runtime components dirty
+    -> evaluate camera rigs and mark camera transforms dirty
     -> synchronize dirty state to USD
-    -> evaluate camera rigs
     -> render
 ```
 
@@ -91,7 +94,9 @@ declarations or an unbound player prim.
 
 Characters translate `CharacterIntent` into physics operations. Their runtime
 state includes velocity, grounded state, jump state, facing, and support body.
-They do not move by directly editing authored transforms.
+They do not move by directly editing authored transforms. The contract is
+independent of a visual representation: a USD Skeleton, VRM asset, robot, or
+arbitrary composed asset can all represent the same runtime character.
 
 ### Camera rigs
 
@@ -122,3 +127,8 @@ and unusual vehicles without hard-coding a four-wheel layout.
 `Selector`, `Condition`, and `Action` nodes. OpenExec provides dependency and
 calculation graphs over runtime-facing interfaces. Neither OpenExec evaluation
 state nor an Exec node replaces behavior state or domain implementations.
+
+OpenExec nodes are therefore thin adapters such as `ExecApplyForce`,
+`ExecMoveCharacter`, `ExecSetCameraTarget`, `ExecDriveVehicle`, or
+`ExecTickBehavior`. The operations they expose remain callable from C++, host
+UI, Python, and other adapters without evaluating an OpenExec graph.

@@ -23,6 +23,7 @@ For design work, begin with the [design specification](design/spec.md) and then
 open the focused contract for the area being changed:
 
 - [runtime model](design/runtime-model.md);
+- [input actions and intent](design/input.md);
 - [module and dependency boundaries](design/modules.md);
 - [USD declarations and synchronization](design/usd-integration.md);
 - [host integration](design/hosts.md); and

@@ -11,9 +11,10 @@ code lives in adapters or plugins.
 ```text
 inputCore    <- inputSdl
 physicsCore  <- physicsJolt
-cameraCore   <- host / execRunner
-behaviorCore <- host / execBehavior
-vehicleCore  <- physicsCore / execVehicle
+characterCore <- host / execCharacter
+cameraCore    <- host / execRunner
+behaviorCore  <- host / execBehavior
+vehicleCore   <- host / execVehicle
 ```
 
 Public core APIs must not expose SDL, Jolt, OpenExec, or unnecessary OpenUSD
@@ -98,6 +99,7 @@ usd-stage-runner/
 |  |- runnerSchema/
 |  |- execRunner/
 |  |- execPhysics/
+|  |- execCharacter/
 |  |- execBehavior/
 |  |- execVehicle/
 |  `- usdviewStageRunner/
