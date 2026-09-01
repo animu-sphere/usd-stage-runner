@@ -97,9 +97,11 @@ struct SdlInputSource::Impl {
     physical.moveRight = keys[SDL_SCANCODE_D] || keys[SDL_SCANCODE_RIGHT];
     physical.moveForward = keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP];
     physical.moveBackward = keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN];
+    physical.keyboardJump = keys[SDL_SCANCODE_SPACE];
     if (gamepad != nullptr) {
       physical.gamepadMoveX = normalizeAxis(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX));
       physical.gamepadMoveY = -normalizeAxis(SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY));
+      physical.gamepadJump = SDL_GetGamepadButton(gamepad, SDL_GAMEPAD_BUTTON_SOUTH);
     }
     mapPhysicalInput(physical, actions);
     return true;
@@ -165,11 +167,14 @@ struct SdlInputSource::Impl {
     physical.moveRight = keys[SDL_SCANCODE_D] || keys[SDL_SCANCODE_RIGHT];
     physical.moveForward = keys[SDL_SCANCODE_W] || keys[SDL_SCANCODE_UP];
     physical.moveBackward = keys[SDL_SCANCODE_S] || keys[SDL_SCANCODE_DOWN];
+    physical.keyboardJump = keys[SDL_SCANCODE_SPACE] != 0;
     if (gamepad != nullptr) {
       physical.gamepadMoveX =
           normalizeAxis(SDL_GameControllerGetAxis(gamepad, SDL_CONTROLLER_AXIS_LEFTX));
       physical.gamepadMoveY =
           -normalizeAxis(SDL_GameControllerGetAxis(gamepad, SDL_CONTROLLER_AXIS_LEFTY));
+      physical.gamepadJump =
+          SDL_GameControllerGetButton(gamepad, SDL_CONTROLLER_BUTTON_A) != 0;
     }
     mapPhysicalInput(physical, actions);
     return true;

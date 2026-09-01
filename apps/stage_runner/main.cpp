@@ -83,13 +83,14 @@ struct Options {
   bool deterministic{false};
   std::optional<double> moveX;
   std::optional<double> moveY;
+  bool jump{false};
 };
 
 [[noreturn]] void usageError(const std::string& message) {
   throw std::invalid_argument(
       message + "\nusage: stage_runner <scene.usd[a|c]> [--frames N] [--fixed-dt SECONDS]"
                 " [--max-fixed-steps N] [--deterministic] [--move-x VALUE]"
-                " [--move-y VALUE]");
+                " [--move-y VALUE] [--jump]");
 }
 
 double parseUnitValue(const std::string& value, const std::string& option) {
@@ -122,6 +123,8 @@ Options parseOptions(int argc, char** argv) {
     const std::string argument = argv[index];
     if (argument == "--deterministic") {
       options.deterministic = true;
+    } else if (argument == "--jump") {
+      options.jump = true;
     } else if (argument == "--frames" || argument == "--max-fixed-steps" ||
                argument == "--fixed-dt" || argument == "--move-x" || argument == "--move-y") {
       if (++index >= argc) {
@@ -149,6 +152,9 @@ Options parseOptions(int argc, char** argv) {
   }
   if (!options.deterministic && (options.moveX.has_value() || options.moveY.has_value())) {
     usageError("--move-x and --move-y require --deterministic");
+  }
+  if (!options.deterministic && options.jump) {
+    usageError("--jump requires --deterministic");
   }
   return options;
 }
@@ -531,6 +537,38 @@ bool applyMovementIntentToPhysics(RuntimeWorld& world, const std::string& prim,
       body, {intent->x * speed, state.linearVelocity.y, intent->y * speed});
 }
 
+bool applyCharacterIntent(RuntimeWorld& world, const std::string& prim,
+                          const ActionState& actions,
+                          usd_stage_runner::character::CharacterController::Duration fixedStep,
+                          double speed) {
+  auto* controller =
+      world.component<usd_stage_runner::character::CharacterController>(prim);
+  const auto* movement = world.component<usd_stage_runner::input::MovementIntent>(prim);
+  if (controller == nullptr || movement == nullptr) {
+    return false;
+  }
+
+  const usd_stage_runner::runtime::Vec3d desiredVelocity{movement->x * speed, 0.0,
+                                                         movement->y * speed};
+  return controller->update(
+      usd_stage_runner::character::CharacterIntent{
+          desiredVelocity, {desiredVelocity.x, 0.0, desiredVelocity.z},
+          actions.value(usd_stage_runner::input::actions::jump) > 0.5},
+      fixedStep);
+}
+
+const char* jumpStateName(usd_stage_runner::character::JumpState state) noexcept {
+  switch (state) {
+  case usd_stage_runner::character::JumpState::grounded:
+    return "grounded";
+  case usd_stage_runner::character::JumpState::rising:
+    return "rising";
+  case usd_stage_runner::character::JumpState::falling:
+    return "falling";
+  }
+  return "unknown";
+}
+
 bool setTranslate(const pxr::UsdGeomXformOp& operation,
                   const usd_stage_runner::runtime::RuntimeTransform& transform) {
   const auto& value = transform.translation;
@@ -631,6 +669,7 @@ int run(const Options& options) {
       usd_stage_runner::input_sdl::PhysicalInputState physical;
       physical.gamepadMoveX = options.moveX.value_or(0.0);
       physical.gamepadMoveY = options.moveY.value_or(0.0);
+      physical.gamepadJump = options.jump;
       usd_stage_runner::input_sdl::mapPhysicalInput(physical, actions);
     }
     if (context.world.containsPrim(playerPrim) && context.world.transform(playerPrim) != nullptr) {
@@ -652,8 +691,15 @@ int run(const Options& options) {
         const bool playerHasPhysicsBody =
             static_cast<bool>(physicsRuntime->bodyForPrim(playerPrim));
         if (playerHasPhysicsBody) {
-          (void)applyMovementIntentToPhysics(context.world, playerPrim, *physicsWorld,
-                                             *physicsRuntime, 3.0);
+          const bool playerHasCharacter =
+              context.world.component<usd_stage_runner::character::CharacterController>(
+                  playerPrim) != nullptr;
+          if (playerHasCharacter) {
+            (void)applyCharacterIntent(context.world, playerPrim, actions, step, 3.0);
+          } else {
+            (void)applyMovementIntentToPhysics(context.world, playerPrim, *physicsWorld,
+                                               *physicsRuntime, 3.0);
+          }
         } else if (context.world.containsPrim(playerPrim)) {
           applyMovementIntent(context.world, playerPrim, 3.0, step.count());
         }
@@ -679,6 +725,12 @@ int run(const Options& options) {
             << ", physics_bodies=" << physicsImport.bodyCount
             << ", physics_body_updates=" << synchronizedPhysicsBodies
             << ", character_controllers=" << characterImport.controllerCount;
+  if (const auto* controller =
+          context.world.component<usd_stage_runner::character::CharacterController>(playerPrim)) {
+    std::cout << ", character_grounded="
+              << (controller->state().grounded ? "true" : "false")
+              << ", character_jump_state=" << jumpStateName(controller->state().jumpState);
+  }
   std::cout << '\n';
   return 0;
 #endif

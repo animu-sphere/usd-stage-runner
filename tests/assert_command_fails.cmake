@@ -1,10 +1,15 @@
 if(NOT DEFINED EXECUTABLE OR NOT DEFINED STAGE OR NOT DEFINED OPTION OR
-   NOT DEFINED VALUE OR NOT DEFINED EXPECTED)
+   NOT DEFINED EXPECTED)
   message(FATAL_ERROR "assert_command_fails.cmake is missing a required argument")
 endif()
 
+set(command "${EXECUTABLE}" "${STAGE}" "${OPTION}")
+if(DEFINED VALUE)
+  list(APPEND command "${VALUE}")
+endif()
+
 execute_process(
-  COMMAND "${EXECUTABLE}" "${STAGE}" "${OPTION}" "${VALUE}"
+  COMMAND ${command}
   RESULT_VARIABLE result
   OUTPUT_VARIABLE stdout
   ERROR_VARIABLE stderr

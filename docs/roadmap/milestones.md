@@ -2,12 +2,12 @@
 
 Status: not started unless noted otherwise
 
-Milestone 3 is in progress; its backend-neutral character core, Jolt
-ground-query adapter, and schema importer are implemented. The remaining
-milestones have not started.
+Milestone 3 is implemented and recorded in the
+[current architecture](../architecture/overview.md). The remaining milestones
+have not started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
-[character-controller vertical slice](current.md) is the current milestone.
+[camera-rig vertical slice](current.md) is the current milestone.
 Physics and the initial Runner physics schemas are already implemented and are
 recorded in the [current architecture](../architecture/overview.md), not as
 open roadmap work.
@@ -16,7 +16,6 @@ open roadmap work.
 
 | Milestone | Capability | Proof |
 | --- | --- | --- |
-| 3 | Character controller | A Stage-declared character moves, grounds, and jumps through physics. |
 | 4 | Camera rigs | First- and third-person modes follow the controlled character. |
 | 5 | Host integration | The same Stage can play safely through `stage_runner`, usdview, and OST Plugin View. |
 | 6 | Vehicle composition | A USD-composed four-wheel vehicle is drivable without a four-wheel-only runtime contract. |
@@ -25,27 +24,9 @@ open roadmap work.
 | 9 | Animation integration | Runtime motion drives a USD Skeleton and animation state without redefining character control around one asset format. |
 | 10 | Runtime tooling | Hosts can inspect, debug, profile, and explicitly bake runtime state. |
 
-Character and camera form the next uninterrupted implementation path. Host
-integration then proves that those systems are reusable libraries rather than
-features embedded in the standalone executable.
-
-## Milestone 3: Character controller
-
-Targets: `libs/characterCore`, `RunnerCharacterAPI`, and required
-backend-neutral character capabilities in `physicsCore`
-
-- Add `CharacterIntent` with desired velocity, facing direction, and jump.
-- Track velocity, grounded state, jump state, facing, and support body.
-- Implement ground detection, movement, basic slope handling, and jumping
-  through `physicsCore`, with Jolt-specific code confined to `physicsJolt`.
-- Accept the same intent contract from human input, injected tests, and later
-  AI systems.
-- Map keyboard and gamepad actions through `inputSdl` rather than reading
-  device buttons in character code.
-- Add a deterministic `character_walk.usda` scenario.
-
-Success: a Stage-declared character can walk, ground, and jump without direct
-transform edits or a dependency on a particular visual representation.
+Camera and host integration form the next uninterrupted implementation path.
+Host integration then proves that character and camera systems are reusable
+libraries rather than features embedded in the standalone executable.
 
 ## Milestone 4: Camera rigs
 

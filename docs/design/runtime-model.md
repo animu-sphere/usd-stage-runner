@@ -1,8 +1,7 @@
 # Runtime Model
 
-Status: intended contract; first input, transform, and Jolt physics vertical
-slice plus the character core, ground-query adapter, and schema importer
-implemented
+Status: intended contract; input, transform, Jolt physics, and complete
+character-control vertical slices implemented
 
 ## State ownership
 
@@ -83,11 +82,13 @@ Host and render frames may use variable time. Physics starts at 60 Hz
 (`dt = 1 / 60`) and uses the existing bounded accumulator. A controlled clock
 must be injectable so the same path can be tested without wall-clock sleeps.
 
-The current host maps player movement intent to desired horizontal body
-velocity, preserves vertical velocity, advances Jolt through the bounded fixed
-step, and synchronizes changed bodies through the dirty transform queue. Direct
-movement remains only as compatibility behavior for a Stage without physics
-declarations or an unbound player prim.
+The current host maps player movement and jump actions to `CharacterIntent` for
+an imported character controller. The controller owns desired horizontal and
+jump velocity, advances Jolt through the bounded fixed step, and synchronizes
+changed bodies through the dirty transform queue. Non-character physics bodies
+retain the earlier direct velocity adapter, while direct transform movement is
+only compatibility behavior for a Stage without physics declarations or an
+unbound player prim.
 
 ## Domain systems
 
