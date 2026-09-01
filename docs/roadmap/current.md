@@ -2,10 +2,10 @@
 
 Status: in progress
 
-The character-control vertical slice and the backend-neutral camera core are
-implemented. This milestone next connects those camera rigs to authored USD
-declarations and the runnable Stage without putting camera behavior in the
-standalone host.
+The character-control vertical slice, backend-neutral camera core, and camera
+schema importer are implemented. This milestone next evaluates those imported
+rigs in the runnable Stage without putting camera behavior in the standalone
+host.
 
 ## Outcome
 
@@ -36,8 +36,8 @@ makes following and smoothing deterministic.
 
 ## Recommended PR sequence
 
-1. **Schema and importer** — `RunnerCameraRigAPI` plus prim-reference and
-   authored-configuration validation.
+1. **Schema and importer (implemented)** — `RunnerCameraRigAPI` plus
+   prim-reference and authored-configuration validation.
 2. **Runnable follow slice** — first- and third-person modes follow the
    character and synchronize incrementally in `third_person_camera.usda`.
 3. **Collision probe** — add the smallest backend-neutral physics query needed

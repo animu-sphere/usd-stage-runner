@@ -2,9 +2,10 @@
 
 Status: Milestone 4 in progress; later milestones not started
 
-Milestone 3 and the camera-core bootstrap are implemented and recorded in the
-[current architecture](../architecture/overview.md). Camera schema and Stage
-integration are the current work; later milestones have not started.
+Milestone 3, the camera-core bootstrap, and the camera schema/importer are
+implemented and recorded in the [current architecture](../architecture/overview.md).
+Runnable camera evaluation and Stage synchronization are the current work;
+later milestones have not started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
 [camera-rig vertical slice](current.md) is the current milestone.

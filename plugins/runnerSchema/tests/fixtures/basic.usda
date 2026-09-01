@@ -15,3 +15,21 @@ def Cube "Body" (
     uniform token runner:physics:motionType = "dynamic"
     uniform token runner:physics:shape = "box"
 }
+
+def Xform "CameraTarget"
+{
+}
+
+def Camera "Camera" (
+    prepend apiSchemas = ["RunnerCameraRigAPI"]
+)
+{
+    rel runner:camera:anchor = </CameraTarget>
+    uniform double runner:camera:damping = 8
+    uniform double runner:camera:distance = 5
+    uniform token runner:camera:mode = "thirdPerson"
+    uniform double3 runner:camera:offset = (0, 1.5, 0)
+    uniform double runner:camera:pitchRadians = -0.2
+    rel runner:camera:target = </Body>
+    uniform double runner:camera:yawRadians = 0.4
+}
