@@ -1,5 +1,6 @@
 #include "usd_stage_runner/camera/camera_rig.h"
 
+#include <algorithm>
 #include <cmath>
 #include <stdexcept>
 #include <utility>
@@ -31,6 +32,10 @@ double lengthSquared(const runtime::Vec3d& value) noexcept {
   return value.x * value.x + value.y * value.y + value.z * value.z;
 }
 
+double dot(const runtime::Vec3d& left, const runtime::Vec3d& right) noexcept {
+  return left.x * right.x + left.y * right.y + left.z * right.z;
+}
+
 runtime::Vec3d normalized(const runtime::Vec3d& value) {
   const double squared = lengthSquared(value);
   if (!std::isfinite(squared) || squared <= vectorEpsilonSquared) {
@@ -46,6 +51,48 @@ bool same(const runtime::Vec3d& left, const runtime::Vec3d& right) noexcept {
 runtime::Vec3d lerp(const runtime::Vec3d& from, const runtime::Vec3d& to,
                     double amount) noexcept {
   return add(from, multiply(subtract(to, from), amount));
+}
+
+runtime::Vec3d deterministicPerpendicular(const runtime::Vec3d& direction) {
+  runtime::Vec3d axis;
+  const double absoluteX = std::abs(direction.x);
+  const double absoluteY = std::abs(direction.y);
+  const double absoluteZ = std::abs(direction.z);
+  if (absoluteX <= absoluteY && absoluteX <= absoluteZ) {
+    axis = {1.0, 0.0, 0.0};
+  } else if (absoluteY <= absoluteZ) {
+    axis = {0.0, 1.0, 0.0};
+  } else {
+    axis = {0.0, 0.0, 1.0};
+  }
+  return normalized(subtract(axis, multiply(direction, dot(axis, direction))));
+}
+
+runtime::Vec3d interpolateDirection(const runtime::Vec3d& from,
+                                    const runtime::Vec3d& to, double amount) {
+  const runtime::Vec3d start = normalized(from);
+  const runtime::Vec3d end = normalized(to);
+  if (amount <= 0.0) {
+    return start;
+  }
+  if (amount >= 1.0) {
+    return end;
+  }
+
+  const double cosine = std::clamp(dot(start, end), -1.0, 1.0);
+  if (cosine > 0.9995) {
+    return normalized(lerp(start, end, amount));
+  }
+
+  runtime::Vec3d tangent = subtract(end, multiply(start, cosine));
+  if (lengthSquared(tangent) <= vectorEpsilonSquared) {
+    tangent = deterministicPerpendicular(start);
+  } else {
+    tangent = normalized(tangent);
+  }
+  const double angle = std::acos(cosine) * amount;
+  return normalized(add(multiply(start, std::cos(angle)),
+                        multiply(tangent, std::sin(angle))));
 }
 
 runtime::Vec3d viewDirection(double yaw, double pitch) noexcept {
@@ -141,7 +188,7 @@ bool CameraRig::update(const runtime::RuntimeWorld& world,
     const double response = -std::expm1(-config_.damping * seconds);
     state_.current.position = lerp(state_.current.position, desired.position, response);
     state_.current.forward =
-        normalized(lerp(state_.current.forward, desired.forward, response));
+        interpolateDirection(state_.current.forward, desired.forward, response);
   }
 
   return !wasInitialized || !same(previous.position, state_.current.position) ||

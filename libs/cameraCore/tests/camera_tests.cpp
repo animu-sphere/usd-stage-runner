@@ -148,6 +148,25 @@ int main() {
     return fail("a zero elapsed update must retain initialized smoothing state without dirtying");
   }
 
+  camera::CameraRig oppositeTurn({camera::CameraRigMode::firstPerson,
+                                  "/World/Player",
+                                  std::nullopt,
+                                  {},
+                                  0.0,
+                                  0.0,
+                                  0.0,
+                                  std::log(2.0)});
+  oppositeTurn.update(world, *world.transform("/World/Camera"),
+                      camera::CameraRig::Duration{1.0});
+  auto oppositeConfig = oppositeTurn.config();
+  oppositeConfig.yawRadians = 3.14159265358979323846;
+  oppositeTurn.setConfig(oppositeConfig);
+  if (!oppositeTurn.update(world, *world.transform("/World/Camera"),
+                           camera::CameraRig::Duration{1.0}) ||
+      !near(oppositeTurn.state().current.forward, {1.0, 0.0, 0.0})) {
+    return fail("smoothing must turn deterministically between opposite directions");
+  }
+
   auto* attachedRig = world.component<camera::CameraRig>("/World/Camera");
   const auto beforeSwitch = attachedRig->state().current;
   auto switchedConfig = attachedRig->config();
