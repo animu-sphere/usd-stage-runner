@@ -45,7 +45,10 @@ void PlaySession::reset() {
 
 FixedStepAccumulator::AdvanceResult PlaySession::advance(Duration frameTime) {
   if (state_ != State::playing) {
-    return {};
+    FixedStepAccumulator::AdvanceResult result;
+    result.interpolationAlpha =
+        accumulator_.remainder().count() / accumulator_.fixedStep().count();
+    return result;
   }
   const auto result = accumulator_.advance(frameTime, callbacks_.fixedStep);
   callbacks_.synchronize();

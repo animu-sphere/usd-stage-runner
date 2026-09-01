@@ -52,6 +52,15 @@ int main() {
       synchronizations != 1) {
     return fail("a playing session must retain a partial step and synchronize its frame");
   }
+
+  session.pause();
+  const auto pausedWithRemainder = session.advance(PlaySession::Duration{1.0});
+  if (pausedWithRemainder.steps != 0 ||
+      !near(pausedWithRemainder.interpolationAlpha, 0.5) || steps != 0 ||
+      synchronizations != 1) {
+    return fail("a paused session must report but not advance its retained remainder");
+  }
+  session.play();
   const auto bounded = session.advance(PlaySession::Duration{0.04});
   if (bounded.steps != 2 || bounded.droppedSteps != 2 || steps != 2 ||
       synchronizations != 2 || !near(value, 10.02)) {
