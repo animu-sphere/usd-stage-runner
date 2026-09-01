@@ -3,7 +3,8 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; the first input-to-Jolt-to-USD physics slice is implemented.
+slices; physics and character control are implemented, and the backend-neutral
+camera-rig foundation is in progress.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -21,6 +22,10 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `characterCore`, with backend-neutral character intent and controller state,
   walkable-ground and slope evaluation, desired motion, facing, jump-edge
   handling, and deterministic tests against a physics test double;
+- `cameraCore`, with prim-indexed target and optional anchor identities, free,
+  first-person, third-person, and orbit modes, deterministic target following,
+  live pose state, exponential smoothing, and dirty Runtime World translation
+  updates without OpenUSD, Jolt, or a renderer;
 - `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
   box shapes and static or dynamic bodies, advances fixed simulation steps,
   extracts changed body state, and implements character ground shape casts
@@ -41,8 +46,9 @@ behavior are documented in [docs/README.md](docs/README.md).
 - dual build paths through plain CMake and OpenStrata.
 
 The character-control milestone is implemented end to end. Camera rigs are the
-current roadmap milestone; host, behavior, and OpenExec integration are later
-slices.
+current roadmap milestone: their backend-neutral core is implemented, while
+schema and Stage integration remain. Host, behavior, and OpenExec integration
+are later slices.
 
 ## Build with OpenStrata
 

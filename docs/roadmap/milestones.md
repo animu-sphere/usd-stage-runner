@@ -1,10 +1,10 @@
 # Planned Milestones
 
-Status: not started unless noted otherwise
+Status: Milestone 4 in progress; later milestones not started
 
-Milestone 3 is implemented and recorded in the
-[current architecture](../architecture/overview.md). The remaining milestones
-have not started.
+Milestone 3 and the camera-core bootstrap are implemented and recorded in the
+[current architecture](../architecture/overview.md). Camera schema and Stage
+integration are the current work; later milestones have not started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
 [camera-rig vertical slice](current.md) is the current milestone.
@@ -30,15 +30,12 @@ libraries rather than features embedded in the standalone executable.
 
 ## Milestone 4: Camera rigs
 
-Targets: `libs/cameraCore`, followed by `RunnerCameraRigAPI`
+Targets: `RunnerCameraRigAPI`, then the runnable Stage integration
 
-- Refer to a target and optional anchor by prim identity.
-- Define rig mode, offset, distance, pitch, yaw, damping, and collision-probe
-  configuration as declarations.
-- Implement free, first-person, third-person, and orbit modes in reusable
-  runtime code.
-- Calculate the desired transform, perform an optional physics probe, smooth
-  the result, and synchronize it to a `UsdGeomCamera`.
+- Define target, optional anchor, rig mode, offset, distance, pitch, yaw,
+  damping, and collision-probe configuration as declarations.
+- Import the declarations into the implemented prim-indexed `cameraCore` rig.
+- Synchronize the calculated pose to a `UsdGeomCamera`.
 - Add collision avoidance incrementally without coupling `cameraCore` to Jolt.
 - Add a `third_person_camera.usda` scenario.
 

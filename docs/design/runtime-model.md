@@ -1,7 +1,7 @@
 # Runtime Model
 
-Status: intended contract; input, transform, Jolt physics, and complete
-character-control vertical slices implemented
+Status: intended contract; input, transform, Jolt physics, complete character
+control, and the backend-neutral camera-rig foundation implemented
 
 ## State ownership
 
@@ -102,10 +102,13 @@ arbitrary composed asset can all represent the same runtime character.
 
 ### Camera rigs
 
-A USD Camera prim represents a camera in the Stage. A runtime rig calculates its
-live transform from a prim-path target, optional anchor, smoothing, spring,
-damping, and collision avoidance. Initial modes are free, first-person,
-third-person, and orbit; vehicle chase, cockpit, and cinematic modes follow.
+A USD Camera prim represents a camera in the Stage. The implemented runtime rig
+calculates a live position and forward direction from a prim-path target,
+optional anchor, offset, distance, pitch, yaw, and exponential damping. Its
+initial modes are free, first-person, third-person, and orbit, and its live
+smoothing state survives repeatable mode changes. USD import, camera
+orientation write-back, springs, and collision avoidance remain planned;
+vehicle chase, cockpit, and cinematic modes follow later.
 
 ### Vehicles
 

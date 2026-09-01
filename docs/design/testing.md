@@ -1,6 +1,6 @@
 # Testing Strategy
 
-Status: runtime, input, physics-core, character-core contracts, and
+Status: runtime, input, physics-core, character-core, camera-core, and
 runtime-integration contracts, SDL mapping, Jolt bootstrap and ground queries,
 physics and character schema registration, round-trip and import validation,
 input-to-USD, and conditional full physics and character vertical-slice

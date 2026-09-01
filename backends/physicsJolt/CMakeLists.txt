@@ -12,7 +12,7 @@ option(USD_STAGE_RUNNER_REQUIRE_JOLT "Fail configuration when Jolt Physics is un
 
 add_library(physicsJolt_warnings INTERFACE)
 if(MSVC)
-  target_compile_options(physicsJolt_warnings INTERFACE /W4 /permissive-)
+  target_compile_options(physicsJolt_warnings INTERFACE /W4 /permissive- /EHsc)
 else()
   target_compile_options(physicsJolt_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()

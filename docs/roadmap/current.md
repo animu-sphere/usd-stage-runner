@@ -1,10 +1,11 @@
 # Milestone 4: Camera Rigs
 
-Status: not started
+Status: in progress
 
-The character-control vertical slice is implemented. This milestone adds a
-backend-neutral camera rig that follows the controlled character without
-putting camera behavior in the standalone host.
+The character-control vertical slice and the backend-neutral camera core are
+implemented. This milestone next connects those camera rigs to authored USD
+declarations and the runnable Stage without putting camera behavior in the
+standalone host.
 
 ## Outcome
 
@@ -24,15 +25,6 @@ makes following and smoothing deterministic.
 
 ## Scope
 
-### `cameraCore`
-
-- Add a prim-indexed camera rig with target and optional anchor identities.
-- Define free, first-person, third-person, and orbit modes.
-- Track offset, distance, pitch, yaw, damping, and live smoothing state.
-- Keep camera calculations testable without OpenUSD, Jolt, or a renderer.
-- Introduce an optional backend-neutral collision probe only when the runnable
-  third-person slice consumes it.
-
 ### Runtime and Stage integration
 
 - Add `RunnerCameraRigAPI` with the vertical slice that imports and updates it.
@@ -44,13 +36,11 @@ makes following and smoothing deterministic.
 
 ## Recommended PR sequence
 
-1. **Camera core bootstrap** — rig configuration, modes, deterministic target
-   following, and isolated tests.
-2. **Schema and importer** — `RunnerCameraRigAPI` plus prim-reference and
+1. **Schema and importer** — `RunnerCameraRigAPI` plus prim-reference and
    authored-configuration validation.
-3. **Runnable follow slice** — first- and third-person modes follow the
+2. **Runnable follow slice** — first- and third-person modes follow the
    character and synchronize incrementally in `third_person_camera.usda`.
-4. **Collision probe** — add the smallest backend-neutral physics query needed
+3. **Collision probe** — add the smallest backend-neutral physics query needed
    to keep the third-person camera out of geometry.
 
 ## Completion criteria

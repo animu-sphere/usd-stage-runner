@@ -12,7 +12,7 @@ option(USD_STAGE_RUNNER_REQUIRE_SDL "Fail configuration when SDL2 or SDL3 is una
 
 add_library(inputSdl_warnings INTERFACE)
 if(MSVC)
-  target_compile_options(inputSdl_warnings INTERFACE /W4 /permissive-)
+  target_compile_options(inputSdl_warnings INTERFACE /W4 /permissive- /EHsc)
 else()
   target_compile_options(inputSdl_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()

@@ -3,14 +3,16 @@
 ## Current state
 
 The repository implements the input-to-physics-to-USD vertical slice and its
-formal authored-data contract, plus the complete character-control slice. It
-contains the backend-neutral character controller, Jolt ground-query adapter,
-Stage importer, keyboard/gamepad/injected action mapping, and runnable walking,
-grounding, and jumping scenario. Runtime, input, physics, and character core
-libraries, SDL and Jolt adapters, a codeless OpenUSD runtime-schema plugin, an
-OpenUSD-aware host executable, core/adapter/integration tests, and dual
-CMake/OpenStrata build configuration are present. OpenExec, camera, behavior,
-and vehicle targets do not exist yet.
+formal authored-data contract, the complete character-control slice, and the
+backend-neutral camera-rig foundation. It contains the character controller,
+Jolt ground-query adapter, Stage importer, keyboard/gamepad/injected action
+mapping, runnable walking, grounding, and jumping scenario, plus isolated
+camera targeting, mode, and smoothing logic. Runtime, input, physics,
+character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
+runtime-schema plugin, an OpenUSD-aware host executable,
+core/adapter/integration tests, and dual CMake/OpenStrata build configuration
+are present. Camera schema and Stage integration, OpenExec, behavior, and
+vehicle targets do not exist yet.
 
 ## Implemented targets
 
@@ -20,6 +22,7 @@ and vehicle targets do not exist yet.
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
 | `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, and character ground-query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
+| `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera translation updates. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, and character ground shape casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, and `RunnerCharacterAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
@@ -27,10 +30,11 @@ and vehicle targets do not exist yet.
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
 movement logic, physics-core resource, deterministic-step, prim/body mapping,
-changed-transform synchronization, isolated character controller contracts,
-physical-control mapping, Jolt ground queries, host option validation, Stage
-loading, and complete injected movement and jump paths through character
-control to USD synchronization. `ost plugin test plugins/runnerSchema`
+changed-transform synchronization, isolated character controller and camera
+rig contracts, camera target following and smoothing, physical-control
+mapping, Jolt ground queries, host option validation, Stage loading, and
+complete injected movement and jump paths through character control to USD
+synchronization. `ost plugin test plugins/runnerSchema`
 additionally verifies schema registration and authored-attribute flatten
 round-tripping.
 
@@ -156,7 +160,7 @@ exactly one fixed interval per host frame without sleeping.
 
 ## Build and verification
 
-The root CMake tree builds the six compiled libraries, codeless schema plugin,
+The root CMake tree builds the seven compiled libraries, codeless schema plugin,
 host, and CTest suite. Each library installs headers and an exported CMake
 package. OpenUSD, SDL, and Jolt discovery remain isolated to schema,
 adapter, and host directories.
@@ -196,7 +200,8 @@ stage_runner -----> OpenUSD plug + usd + usdGeom
       |  `-----------> characterCore
       v
  runtimeCore
-      ^
+      ^  ^
+      |  `---------------- cameraCore
       |
  physicsCore <----- characterCore
       ^
