@@ -876,14 +876,14 @@ int run(const Options& options) {
   std::cout << ", physics_shapes=" << physicsImport.shapeCount
             << ", physics_bodies=" << physicsImport.bodyCount
             << ", physics_body_updates=" << synchronizedPhysicsBodies
-            << ", character_controllers=" << characterImport.controllerCount
-            << ", camera_rigs=" << cameraImport.rigCount;
+            << ", character_controllers=" << characterImport.controllerCount;
   if (const auto* controller =
           context.world.component<usd_stage_runner::character::CharacterController>(playerPrim)) {
     std::cout << ", character_grounded="
               << (controller->state().grounded ? "true" : "false")
               << ", character_jump_state=" << jumpStateName(controller->state().jumpState);
   }
+  std::cout << ", camera_rigs=" << cameraImport.rigCount;
   std::cout << '\n';
   return 0;
 #endif
