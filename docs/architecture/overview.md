@@ -60,7 +60,10 @@ legacy properties without the API are rejected before the frame loop starts.
 Camera declarations require a Y-up Stage. Camera, target, and anchor
 translations affected by ancestor transforms are rejected unless the prim
 resets its xform stack, keeping the current local `RuntimeTransform` identical
-to its world translation until composed camera transforms are implemented.
+to its world translation until composed camera transforms are implemented. A
+rig Camera accepts an empty transform stack or one translate op optionally
+followed by the reserved double-precision runtime orient op, rejects other
+authored transform ops, and cannot target or anchor itself.
 After each fixed physics extraction, the host evaluates imported rigs with the
 same controlled step. A changed position or forward direction marks that camera
 dirty; synchronization updates its translate op and the dedicated

@@ -77,7 +77,10 @@ Because `RuntimeTransform` currently imports local translations, camera
 declarations require a Y-up Stage and camera, target, and anchor prims whose
 local translation also represents their world translation. Non-identity
 ancestor transforms are rejected unless `resetXformStack` makes the prim local
-to world. Composed camera transforms remain part of the later transform work.
+to world. Rig Camera prims accept an empty transform stack or one translate op
+optionally followed by the reserved double-precision runtime orient op, and self
+target or anchor references are invalid. Composed camera transforms remain part
+of the later transform work.
 
 ## Runtime to USD
 

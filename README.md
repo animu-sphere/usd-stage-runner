@@ -145,10 +145,13 @@ properties without their owning API schema.
 Camera declarations currently require a Y-up Stage. Camera, target, and anchor
 translations must already be representable in world space by their imported
 local `RuntimeTransform`; non-identity ancestor transforms require
-`resetXformStack` until composed camera transforms are supported. At each fixed
-step, imported rigs evaluate after physics extraction. Changed camera poses use
-the shared dirty queue to update translation and a dedicated
-`xformOp:orient:runnerCamera` orientation only.
+`resetXformStack` until composed camera transforms are supported. Rig Camera
+prims accept an empty transform stack or one translate op optionally followed
+by the reserved double-precision `xformOp:orient:runnerCamera`; other authored
+transform ops are rejected so the runtime pose is not composed with an unknown
+rotation. A rig may not target or anchor itself. At each fixed step, imported
+rigs evaluate after physics extraction. Changed camera poses use the shared
+dirty queue to update translation and the reserved orientation only.
 
 ## License
 

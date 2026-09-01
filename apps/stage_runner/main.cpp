@@ -86,6 +86,7 @@ const pxr::TfToken cameraPitchAttribute{"runner:camera:pitchRadians"};
 const pxr::TfToken cameraYawAttribute{"runner:camera:yawRadians"};
 const pxr::TfToken cameraDampingAttribute{"runner:camera:damping"};
 const pxr::TfToken cameraRuntimeOrientationSuffix{"runnerCamera"};
+const pxr::TfToken cameraRuntimeOrientationOp{"xformOp:orient:runnerCamera"};
 #endif
 
 struct Options {
@@ -554,6 +555,49 @@ void validateCameraWorldTranslation(const StageContext& context,
   }
 }
 
+void validateCameraTransformStack(const pxr::UsdPrim& prim) {
+  const pxr::UsdGeomXformable xformable(prim);
+  bool resetsStack = false;
+  const auto operations = xformable.GetOrderedXformOps(&resetsStack);
+  bool hasTranslate = false;
+  bool hasRuntimeOrientation = false;
+  for (const auto& operation : operations) {
+    if (!operation.IsInverseOp() && !hasTranslate &&
+        operation.GetOpType() == pxr::UsdGeomXformOp::TypeTranslate) {
+      hasTranslate = true;
+      continue;
+    }
+    if (!operation.IsInverseOp() && hasTranslate && !hasRuntimeOrientation &&
+        operation.GetOpType() == pxr::UsdGeomXformOp::TypeOrient &&
+        operation.GetOpName() == cameraRuntimeOrientationOp &&
+        operation.GetPrecision() == pxr::UsdGeomXformOp::PrecisionDouble) {
+      hasRuntimeOrientation = true;
+      continue;
+    }
+    throw std::runtime_error(
+        "camera schema import supports an empty transform stack or one translate op "
+        "optionally followed by the double-precision runnerCamera orient op: " +
+        prim.GetPath().GetString());
+  }
+
+  if (resetsStack) {
+    return;
+  }
+  for (auto ancestor = prim.GetParent(); ancestor && !ancestor.IsPseudoRoot();
+       ancestor = ancestor.GetParent()) {
+    const pxr::UsdGeomXformable ancestorTransform(ancestor);
+    if (ancestorTransform &&
+        !pxr::GfIsClose(ancestorTransform.ComputeLocalToWorldTransform(
+                            pxr::UsdTimeCode::Default()),
+                        pxr::GfMatrix4d{1.0}, 1e-9)) {
+      throw std::runtime_error(
+          "camera schema import requires identity parent transforms or "
+          "resetXformStack: " +
+          prim.GetPath().GetString());
+    }
+  }
+}
+
 std::optional<usd_stage_runner::runtime::PrimId>
 readCameraPrimRelationship(const StageContext& context, const pxr::UsdPrim& prim,
                            const pxr::TfToken& name, bool required) {
@@ -697,6 +741,7 @@ CameraImportSummary importCameraRigs(StageContext& context) {
     if (context.world.transform(primId) == nullptr) {
       throw std::runtime_error("camera schema import requires a runtime transform: " + primId);
     }
+    validateCameraTransformStack(prim);
     validateCameraWorldTranslation(context, prim, "camera prim");
 
     const auto mode = readCameraMode(prim);
@@ -711,6 +756,12 @@ CameraImportSummary importCameraRigs(StageContext& context) {
         readCameraDouble(prim, cameraPitchAttribute),
         readCameraDouble(prim, cameraYawAttribute),
         readCameraDouble(prim, cameraDampingAttribute)};
+    if (config.target == primId ||
+        (config.anchor.has_value() && *config.anchor == primId)) {
+      throw std::runtime_error("camera rig target and anchor must not reference the camera "
+                               "itself: " +
+                               primId);
+    }
     try {
       context.world.emplaceComponent<usd_stage_runner::camera::CameraRig>(primId, config);
     } catch (const std::invalid_argument& error) {
@@ -845,7 +896,7 @@ TransformSynchronizationSummary synchronizeDirtyTransforms(StageContext& context
       pxr::UsdGeomXformOp orientation;
       for (const auto& operation : xformable.GetOrderedXformOps(&resetsStack)) {
         if (operation.GetOpType() == pxr::UsdGeomXformOp::TypeOrient &&
-            operation.GetOpName() == pxr::TfToken{"xformOp:orient:runnerCamera"}) {
+            operation.GetOpName() == cameraRuntimeOrientationOp) {
           orientation = operation;
           break;
         }
