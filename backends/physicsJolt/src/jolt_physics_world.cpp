@@ -1,5 +1,6 @@
 #include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
 
+#include "usd_stage_runner/physics/collision_query.h"
 #include "usd_stage_runner/physics/ground_query.h"
 
 #include <Jolt/Jolt.h>
@@ -9,9 +10,11 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyFilter.h>
-#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/BroadPhase/BroadPhaseLayer.h>
+#include <Jolt/Physics/Collision/CastResult.h>
+#include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
+#include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Constraints/FixedConstraint.h>
@@ -151,7 +154,8 @@ bool stateChanged(const physics::BodyState& previous, const physics::BodyState& 
 }
 
 class JoltPhysicsWorld final : public physics::PhysicsWorld,
-                               public physics::GroundQuery {
+                               public physics::GroundQuery,
+                               public physics::CollisionQuery {
 public:
   JoltPhysicsWorld()
       : jobSystem_(JPH::cMaxPhysicsJobs, JPH::cMaxPhysicsBarriers, workerThreadCount()) {
@@ -371,6 +375,37 @@ public:
                                    groundDistance};
     physics::validateGroundContact(contact);
     return contact;
+  }
+
+  std::optional<physics::SegmentHit>
+  segmentHit(runtime::Vec3d origin, runtime::Vec3d target,
+             physics::BodyHandle ignoredBody) const override {
+    physics::validateCollisionSegment(origin, target);
+    const runtime::Vec3d displacement{target.x - origin.x, target.y - origin.y,
+                                     target.z - origin.z};
+    const JPH::RRayCast ray{toJoltPosition(origin), toJoltVector(displacement)};
+    JPH::RayCastResult hit;
+    bool hadHit = false;
+    if (ignoredBody) {
+      const auto ignored = bodies_.find(ignoredBody);
+      if (ignored == bodies_.end()) {
+        throw std::out_of_range("unknown ignored Jolt body handle");
+      }
+      const JPH::IgnoreSingleBodyFilter filter{ignored->second.id};
+      hadHit = physicsSystem_.GetNarrowPhaseQuery().CastRay(ray, hit, {}, {}, filter);
+    } else {
+      hadHit = physicsSystem_.GetNarrowPhaseQuery().CastRay(ray, hit);
+    }
+    if (!hadHit) {
+      return std::nullopt;
+    }
+    const auto body = bodyHandle(hit.mBodyID);
+    if (!body) {
+      throw std::logic_error("Jolt collision query returned an untracked body");
+    }
+    physics::SegmentHit result{body, static_cast<double>(hit.mFraction)};
+    physics::validateSegmentHit(result);
+    return result;
   }
 
   void step(Duration fixedStep) override {

@@ -1,10 +1,11 @@
 # Testing Strategy
 
 Status: runtime, input, physics-core, character-core, camera-core, and
-runtime-integration contracts, SDL mapping, Jolt bootstrap and ground queries,
+runtime-integration contracts, SDL mapping, Jolt bootstrap, ground queries, and
+collision segment queries,
 physics, character, and camera schema registration, round-trip and import
-validation, input-to-USD, runnable camera follow synchronization, and
-conditional full physics and character vertical-slice coverage implemented
+validation, input-to-USD, obstructed camera synchronization, and conditional
+full physics, character, and camera vertical-slice coverage implemented
 
 Deterministic testing is a design requirement. Each vertical slice must be
 testable with controlled time and input and should add a runnable Stage fixture.

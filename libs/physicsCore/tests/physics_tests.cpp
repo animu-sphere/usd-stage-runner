@@ -1,3 +1,4 @@
+#include "usd_stage_runner/physics/collision_query.h"
 #include "usd_stage_runner/physics/ground_query.h"
 #include "usd_stage_runner/physics/physics_runtime.h"
 #include "usd_stage_runner/physics/physics_world.h"
@@ -331,6 +332,15 @@ int main() {
       }) ||
       !rejectsInvalidArgument([&] {
         physics::validateGroundContact({floor, {0.0, 1.0, 0.0}, -0.1});
+      }) ||
+      !rejectsInvalidArgument([] {
+        physics::validateCollisionSegment({}, {});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        physics::validateSegmentHit({{}, 0.5});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        physics::validateSegmentHit({floor, 1.1});
       })) {
     return fail("backend-neutral descriptors and fixed steps must reject invalid values");
   }

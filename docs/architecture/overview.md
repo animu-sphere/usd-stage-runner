@@ -4,17 +4,17 @@
 
 The repository implements the input-to-physics-to-USD vertical slice and its
 formal authored-data contract, the complete character-control slice, and the
-runnable camera-follow slice. It
-contains the character controller, Jolt ground-query adapter, Stage importer,
+camera-rig slice with collision avoidance. It contains the character controller,
+Jolt ground and collision-query adapters, Stage importer,
 keyboard/gamepad/injected action mapping, runnable walking, grounding, and
-jumping scenario, plus camera targeting, mode, smoothing, fixed-step host
-evaluation, and incremental USD Camera pose synchronization.
+jumping scenario, plus camera targeting, mode, collision probes, smoothing,
+fixed-step host evaluation, and incremental USD Camera pose synchronization.
 Runtime, input, physics,
 character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
 runtime-schema plugin, an OpenUSD-aware host executable,
 core/adapter/integration tests, and dual CMake/OpenStrata build configuration
-are present. Camera collision avoidance, OpenExec, behavior, and vehicle targets
-do not exist yet.
+are present. Multi-host integration, OpenExec, behavior, and vehicle targets do
+not exist yet.
 
 ## Implemented targets
 
@@ -22,23 +22,24 @@ do not exist yet.
 | --- | --- | --- | --- |
 | `runtimeCore` | `libs/runtimeCore` | Frame timing, bounded fixed stepping, prim identity, runtime components, runtime transforms, dirty transform queue, and Runtime World lifetime. | C++ standard library only. |
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
-| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, and character ground-query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
+| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, character ground-query, and collision-segment query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
-| `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera pose updates. | `runtimeCore`. |
+| `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; optional collision-probe callbacks and clearance; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera pose updates. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
-| `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, and character ground shape casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
+| `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, character ground shape casts, and first-hit segment ray casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics, character, and camera-rig schemas, poll input, update character intent and controllers, step physics, evaluate camera rigs, and synchronize dirty translations and camera orientations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
 movement logic, physics-core resource, deterministic-step, prim/body mapping,
 changed-transform synchronization, isolated character controller and camera
-rig contracts, camera target following and smoothing, physical-control
-mapping, Jolt ground queries, host option validation, Stage loading, and
+rig contracts, camera target following, collision adjustment, and smoothing,
+physical-control mapping, Jolt ground and segment queries, host option validation,
+Stage loading, and
 complete injected movement and jump paths through character control to USD
 synchronization, plus camera schema import, invalid-declaration rejection, and
-the deterministic first-/third-person follow path through incremental USD
-translation and orientation writes.
+the deterministic first-/third-person follow and obstructed-camera paths
+through incremental USD translation and orientation writes.
 `ost plugin test plugins/runnerSchema` additionally verifies schema
 registration and authored-property flatten round-tripping.
 
@@ -55,7 +56,8 @@ player controller before advancing physics.
 `RunnerCameraRigAPI` is valid only on a `UsdGeomCamera`. Its target and optional
 anchor relationships resolve to Runtime World prim identities with transforms;
 non-free modes require exactly one target. Mode, offset, distance, pitch, yaw,
-and damping are imported into a prim-indexed `CameraRig`, and invalid values or
+damping, collision enablement, and collision clearance are imported into a
+prim-indexed `CameraRig`, and invalid values or
 legacy properties without the API are rejected before the frame loop starts.
 Camera declarations require a Y-up Stage. Camera, target, and anchor
 translations affected by ancestor transforms are rejected unless the prim
@@ -69,6 +71,11 @@ same controlled step. A changed position or forward direction marks that camera
 dirty; synchronization updates its translate op and the dedicated
 `xformOp:orient:runnerCamera` quaternion op. Unchanged cameras do not enter the
 USD write path.
+For collision-enabled third-person rigs, the host connects `cameraCore`'s
+prim-aware callback to the optional `physicsCore` segment query and ignores the
+followed target's bound body. A first hit shortens the desired pose by the
+authored clearance before exponential smoothing, without exposing Jolt types
+to `cameraCore`.
 
 ## Physics boundary
 
@@ -94,6 +101,11 @@ test double can exercise grounding, slope projection, facing, and edge-triggered
 jumping. The Jolt world implements the capability with a downward shape cast
 that excludes the queried body and translates the hit back to stable runtime
 body handles.
+
+`CollisionQuery` is a second optional capability. It reports the first tracked
+body and normalized hit fraction along a finite world-space segment, with an
+optional ignored body handle. The Jolt implementation uses a narrow-phase ray
+cast and translates its result back to backend-neutral handles.
 
 `PhysicsRuntime` owns the one-to-one mapping between runtime prims and backend
 bodies. Its fixed-step boundary drains changed body states, updates only mapped
@@ -174,6 +186,7 @@ poll SDL or inject physical axes and jump button
         -> step Jolt
         -> extract changed body transforms
         -> update and dirty runtime transforms
+        -> probe collision-enabled third-person rigs
         -> evaluate camera rigs and dirty changed poses
     -> synchronize dirty translations and camera orientations to USD
 ```
@@ -209,8 +222,9 @@ body and verifies that the host constructs one runtime controller.
 verify walking, grounding, an edge-triggered jump, physics updates, and dirty
 USD synchronization through the complete host path. `third_person_camera.usda`
 moves a non-physics target through the same controlled clock, evaluates first-
-and third-person rigs, verifies a non-default viewing direction, and proves
-that moving poses use incremental USD writes. The multi-frame
+and third-person rigs, places a static obstruction behind the target, and
+verifies that the third-person pose stops at its authored clearance while both
+moving poses use incremental USD writes. The multi-frame
 `camera_import.usda` test verifies that an unchanged rig writes only once.
 
 ## Dependency direction

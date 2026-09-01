@@ -4,6 +4,7 @@
 #include "usd_stage_runner/runtime/runtime_world.h"
 
 #include <chrono>
+#include <functional>
 #include <optional>
 
 namespace usd_stage_runner::camera {
@@ -31,6 +32,10 @@ struct CameraRigConfig {
   double yawRadians{0.0};
   // Exponential response rate in inverse seconds. Zero disables smoothing.
   double damping{0.0};
+  // Collision probing currently affects third-person mode only. Clearance
+  // shortens the hit distance so the camera remains in front of geometry.
+  bool collisionEnabled{false};
+  double collisionClearance{0.1};
 };
 
 struct CameraRigPose {
@@ -43,6 +48,14 @@ struct CameraRigState {
   CameraRigPose current;
   bool initialized{false};
 };
+
+// Returns the normalized first-hit distance from origin (0) to desiredPosition
+// (1), or no value when the segment is unobstructed. target identifies the
+// followed prim so a host can ignore its physics body without exposing backend
+// handles to cameraCore.
+using CameraCollisionProbe = std::function<std::optional<double>(
+    const runtime::Vec3d& origin, const runtime::Vec3d& desiredPosition,
+    const runtime::PrimId& target)>;
 
 class CameraRig {
 public:
@@ -59,7 +72,8 @@ public:
   // advances the live pose. The camera transform supplies the free-mode
   // position and the initial position before the first evaluation.
   bool update(const runtime::RuntimeWorld& world,
-              const runtime::RuntimeTransform& cameraTransform, Duration elapsed);
+              const runtime::RuntimeTransform& cameraTransform, Duration elapsed,
+              const CameraCollisionProbe& collisionProbe = {});
 
   [[nodiscard]] const CameraRigConfig& config() const noexcept;
   [[nodiscard]] const CameraRigState& state() const noexcept;
@@ -73,7 +87,8 @@ private:
 // the prim's RuntimeTransform, and marks the transform dirty only when the
 // position or viewing direction changed.
 bool updateCameraRig(runtime::RuntimeWorld& world, const runtime::PrimId& cameraPrim,
-                     CameraRig::Duration elapsed);
+                     CameraRig::Duration elapsed,
+                     const CameraCollisionProbe& collisionProbe = {});
 
 void validateCameraRigConfig(const CameraRigConfig& config);
 

@@ -49,19 +49,6 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   )
 
   add_test(
-    NAME stage_runner.camera_follow_and_sync
-    COMMAND stage_runner
-      ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/third_person_camera.usda
-      --frames 4
-      --deterministic
-      --move-x 1
-  )
-  set_tests_properties(stage_runner.camera_follow_and_sync PROPERTIES
-    PASS_REGULAR_EXPRESSION
-      "fixed_steps=4, dropped_steps=0, synchronized_transforms=12, player_translation=\\(0.2, 1, 0\\).*camera_rigs=2, camera_rig_updates=8, synchronized_camera_transforms=8.*camera_pose\\[/World/FirstPersonCamera\\]=\\(position=0.2,2,0; forward=0,0,-1\\).*camera_pose\\[/World/ThirdPersonCamera\\]=\\(position=-3,2.5,2.4; forward=0.8,0,-0.6\\)"
-  )
-
-  add_test(
     NAME stage_runner.rejects_legacy_camera_attributes
     COMMAND ${CMAKE_COMMAND}
       -DEXECUTABLE=$<TARGET_FILE:stage_runner>
@@ -216,6 +203,19 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   )
 
   if(USD_STAGE_RUNNER_JOLT_AVAILABLE)
+    add_test(
+      NAME stage_runner.camera_collision_and_sync
+      COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/third_person_camera.usda
+        --frames 4
+        --deterministic
+        --move-x 1
+    )
+    set_tests_properties(stage_runner.camera_collision_and_sync PROPERTIES
+      PASS_REGULAR_EXPRESSION
+        "fixed_steps=4, dropped_steps=0, synchronized_transforms=12, player_translation=\\(0.2, 1, 0\\), physics_shapes=1, physics_bodies=1.*camera_rigs=2, camera_rig_updates=8, synchronized_camera_transforms=8.*camera_pose\\[/World/FirstPersonCamera\\]=\\(position=0.2,2,0; forward=0,0,-1\\).*camera_pose\\[/World/ThirdPersonCamera\\]=\\(position=0.2,2.5,2.4; forward=0,0,-1\\)"
+    )
+
     add_test(
       NAME stage_runner.character_schema_import
       COMMAND stage_runner

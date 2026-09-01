@@ -1,14 +1,13 @@
 # Planned Milestones
 
-Status: Milestone 4 in progress; later milestones not started
+Status: Milestone 5 in progress; later milestones not started
 
-Milestone 3 and the camera schema, importer, and runnable follow path are
-implemented and recorded in the [current architecture](../architecture/overview.md).
-Camera collision avoidance is the current work; later milestones have not
-started.
+Milestone 4, including camera collision avoidance, is implemented and recorded
+in the [current architecture](../architecture/overview.md). Host integration is
+the current work; later milestones have not started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
-[camera-rig vertical slice](current.md) is the current milestone.
+[host-integration vertical slice](current.md) is the current milestone.
 Physics and the initial Runner physics schemas are already implemented and are
 recorded in the [current architecture](../architecture/overview.md), not as
 open roadmap work.
@@ -17,7 +16,6 @@ open roadmap work.
 
 | Milestone | Capability | Proof |
 | --- | --- | --- |
-| 4 | Camera rigs | First- and third-person modes follow the controlled character. |
 | 5 | Host integration | The same Stage can play safely through `stage_runner`, usdview, and OST Plugin View. |
 | 6 | Vehicle composition | A USD-composed four-wheel vehicle is drivable without a four-wheel-only runtime contract. |
 | 7 | Behavior runtime | An AI character produces the same intent contract as a player. |
@@ -25,20 +23,9 @@ open roadmap work.
 | 9 | Animation integration | Runtime motion drives a USD Skeleton and animation state without redefining character control around one asset format. |
 | 10 | Runtime tooling | Hosts can inspect, debug, profile, and explicitly bake runtime state. |
 
-Camera and host integration form the next uninterrupted implementation path.
-Host integration then proves that character and camera systems are reusable
+Host integration is the next implementation path. It proves that character
+and camera systems are reusable
 libraries rather than features embedded in the standalone executable.
-
-## Milestone 4: Camera rigs
-
-Remaining target: backend-neutral camera collision avoidance
-
-- Add focused collision-probe configuration as declarations.
-- Add collision avoidance incrementally without coupling `cameraCore` to Jolt.
-- Extend the implemented `third_person_camera.usda` scenario with obstruction.
-
-Success: first- and third-person modes can be switched while following the
-controlled character, with repeatable behavior under a controlled clock.
 
 ## Milestone 5: Host integration
 

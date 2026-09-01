@@ -122,7 +122,8 @@ const runtime::RuntimeTransform& requiredTransform(const runtime::RuntimeWorld& 
 
 CameraRigPose desiredPose(const CameraRigConfig& config,
                           const runtime::RuntimeWorld& world,
-                          const runtime::RuntimeTransform& cameraTransform) {
+                          const runtime::RuntimeTransform& cameraTransform,
+                          const CameraCollisionProbe& collisionProbe) {
   const runtime::Vec3d direction = viewDirection(config.yawRadians, config.pitchRadians);
   if (config.mode == CameraRigMode::free) {
     return {cameraTransform.translation, direction};
@@ -139,8 +140,30 @@ CameraRigPose desiredPose(const CameraRigConfig& config,
     break;
   case CameraRigMode::firstPerson:
     return {shiftedOrigin, direction};
-  case CameraRigMode::thirdPerson:
-    return {subtract(shiftedOrigin, multiply(direction, config.distance)), direction};
+  case CameraRigMode::thirdPerson: {
+    CameraRigPose pose{
+        subtract(shiftedOrigin, multiply(direction, config.distance)), direction};
+    if (!config.collisionEnabled || config.distance == 0.0) {
+      return pose;
+    }
+    if (!collisionProbe) {
+      throw std::invalid_argument(
+          "collision-enabled third-person camera requires a collision probe");
+    }
+    const auto hitFraction = collisionProbe(shiftedOrigin, pose.position, config.target);
+    if (!hitFraction.has_value()) {
+      return pose;
+    }
+    if (!std::isfinite(*hitFraction) || *hitFraction < 0.0 || *hitFraction > 1.0) {
+      throw std::invalid_argument("camera collision hit fraction must be in [0, 1]");
+    }
+    const runtime::Vec3d segment = subtract(pose.position, shiftedOrigin);
+    const double segmentLength = std::sqrt(lengthSquared(segment));
+    const double allowedDistance =
+        std::max(0.0, segmentLength * *hitFraction - config.collisionClearance);
+    pose.position = add(shiftedOrigin, multiply(segment, allowedDistance / segmentLength));
+    return pose;
+  }
   case CameraRigMode::orbit: {
     const runtime::Vec3d position =
         subtract(shiftedOrigin, multiply(direction, config.distance));
@@ -167,7 +190,8 @@ void CameraRig::reset() noexcept {
 
 bool CameraRig::update(const runtime::RuntimeWorld& world,
                        const runtime::RuntimeTransform& cameraTransform,
-                       Duration elapsed) {
+                       Duration elapsed,
+                       const CameraCollisionProbe& collisionProbe) {
   const double seconds = elapsed.count();
   if (!std::isfinite(seconds) || seconds < 0.0) {
     throw std::invalid_argument("camera rig timestep must be finite and non-negative");
@@ -176,7 +200,7 @@ bool CameraRig::update(const runtime::RuntimeWorld& world,
     throw std::invalid_argument("camera transform must be finite");
   }
 
-  const CameraRigPose desired = desiredPose(config_, world, cameraTransform);
+  const CameraRigPose desired = desiredPose(config_, world, cameraTransform, collisionProbe);
   const CameraRigPose previous = state_.current;
   const bool wasInitialized = state_.initialized;
   state_.desired = desired;
@@ -204,7 +228,8 @@ const CameraRigState& CameraRig::state() const noexcept {
 }
 
 bool updateCameraRig(runtime::RuntimeWorld& world, const runtime::PrimId& cameraPrim,
-                     CameraRig::Duration elapsed) {
+                     CameraRig::Duration elapsed,
+                     const CameraCollisionProbe& collisionProbe) {
   if (!world.containsPrim(cameraPrim)) {
     throw std::out_of_range("camera rig prim is not present in the Runtime World: " +
                             cameraPrim);
@@ -218,7 +243,7 @@ bool updateCameraRig(runtime::RuntimeWorld& world, const runtime::PrimId& camera
     throw std::out_of_range("camera prim has no CameraRig component: " + cameraPrim);
   }
 
-  const bool poseChanged = rig->update(world, *transform, elapsed);
+  const bool poseChanged = rig->update(world, *transform, elapsed, collisionProbe);
   if (!poseChanged) {
     return false;
   }
@@ -243,9 +268,11 @@ void validateCameraRigConfig(const CameraRigConfig& config) {
   if (!finite(config.offset) || !std::isfinite(config.distance) || config.distance < 0.0 ||
       !std::isfinite(config.pitchRadians) || config.pitchRadians <= -halfPi ||
       config.pitchRadians >= halfPi || !std::isfinite(config.yawRadians) ||
-      !std::isfinite(config.damping) || config.damping < 0.0) {
+      !std::isfinite(config.damping) || config.damping < 0.0 ||
+      !std::isfinite(config.collisionClearance) || config.collisionClearance < 0.0) {
     throw std::invalid_argument(
-        "camera rig offset, distance, angles, and damping are outside their valid ranges");
+        "camera rig offset, distance, angles, damping, and collision clearance are outside "
+        "their valid ranges");
   }
   if (config.mode == CameraRigMode::orbit &&
       lengthSquared(subtract(multiply(viewDirection(config.yawRadians, config.pitchRadians),

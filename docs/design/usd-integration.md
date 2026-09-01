@@ -67,7 +67,8 @@ fixed step.
 
 The implemented `RunnerCameraRigAPI` applies to `UsdGeomCamera` prims and
 declares `target` and optional `anchor` prim relationships plus mode, offset,
-distance, pitch, yaw, and damping. The importer resolves relationship targets
+distance, pitch, yaw, damping, collision enablement, and collision clearance.
+The importer resolves relationship targets
 to prim-indexed Runtime World transforms and validates the authored values
 through `cameraCore`. Non-free modes require exactly one target. Per-frame rig
 evaluation runs after physics extraction. Changed poses enter the shared dirty
@@ -79,8 +80,10 @@ local translation also represents their world translation. Non-identity
 ancestor transforms are rejected unless `resetXformStack` makes the prim local
 to world. Rig Camera prims accept an empty transform stack or one translate op
 optionally followed by the reserved double-precision runtime orient op, and self
-target or anchor references are invalid. Composed camera transforms remain part
-of the later transform work.
+target or anchor references are invalid. Collision-enabled rigs require a
+physics world that exposes the backend-neutral segment query; the host ignores
+the followed target's body when it is bound. Composed camera transforms remain
+part of the later transform work.
 
 ## Runtime to USD
 

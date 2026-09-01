@@ -4,6 +4,7 @@
 #include "usd_stage_runner/input/movement_controller.h"
 #include "usd_stage_runner/input_sdl/physical_input.h"
 #include "usd_stage_runner/input_sdl/sdl_input_source.h"
+#include "usd_stage_runner/physics/collision_query.h"
 #include "usd_stage_runner/physics/physics_runtime.h"
 #include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
 #include "usd_stage_runner/runtime/fixed_step_accumulator.h"
@@ -85,6 +86,8 @@ const pxr::TfToken cameraDistanceAttribute{"runner:camera:distance"};
 const pxr::TfToken cameraPitchAttribute{"runner:camera:pitchRadians"};
 const pxr::TfToken cameraYawAttribute{"runner:camera:yawRadians"};
 const pxr::TfToken cameraDampingAttribute{"runner:camera:damping"};
+const pxr::TfToken cameraCollisionEnabledAttribute{"runner:camera:collisionEnabled"};
+const pxr::TfToken cameraCollisionClearanceAttribute{"runner:camera:collisionClearance"};
 const pxr::TfToken cameraRuntimeOrientationSuffix{"runnerCamera"};
 const pxr::TfToken cameraRuntimeOrientationOp{"xformOp:orient:runnerCamera"};
 #endif
@@ -471,7 +474,9 @@ std::size_t validateDeclarationsAndCountPhysicsBodies(const pxr::UsdStageRefPtr&
          hasAuthoredAttribute(prim, cameraDistanceAttribute) ||
          hasAuthoredAttribute(prim, cameraPitchAttribute) ||
          hasAuthoredAttribute(prim, cameraYawAttribute) ||
-         hasAuthoredAttribute(prim, cameraDampingAttribute))) {
+         hasAuthoredAttribute(prim, cameraDampingAttribute) ||
+         hasAuthoredAttribute(prim, cameraCollisionEnabledAttribute) ||
+         hasAuthoredAttribute(prim, cameraCollisionClearanceAttribute))) {
       throw std::runtime_error("authored camera rig properties require RunnerCameraRigAPI: " +
                                prim.GetPath().GetString());
     }
@@ -508,6 +513,16 @@ usd_stage_runner::camera::CameraRigMode readCameraMode(const pxr::UsdPrim& prim)
 
 double readCameraDouble(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
   double value = 0.0;
+  const auto attribute = prim.GetAttribute(name);
+  if (!attribute || !attribute.Get(&value)) {
+    throw std::runtime_error("could not read " + name.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  return value;
+}
+
+bool readCameraBool(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
+  bool value = false;
   const auto attribute = prim.GetAttribute(name);
   if (!attribute || !attribute.Get(&value)) {
     throw std::runtime_error("could not read " + name.GetString() + " on " +
@@ -755,7 +770,9 @@ CameraImportSummary importCameraRigs(StageContext& context) {
         readCameraDouble(prim, cameraDistanceAttribute),
         readCameraDouble(prim, cameraPitchAttribute),
         readCameraDouble(prim, cameraYawAttribute),
-        readCameraDouble(prim, cameraDampingAttribute)};
+        readCameraDouble(prim, cameraDampingAttribute),
+        readCameraBool(prim, cameraCollisionEnabledAttribute),
+        readCameraDouble(prim, cameraCollisionClearanceAttribute)};
     if (config.target == primId ||
         (config.anchor.has_value() && *config.anchor == primId)) {
       throw std::runtime_error("camera rig target and anchor must not reference the camera "
@@ -776,10 +793,35 @@ CameraImportSummary importCameraRigs(StageContext& context) {
 
 std::size_t updateCameraRigs(StageContext& context,
                              const CameraImportSummary& cameraImport,
-                             usd_stage_runner::camera::CameraRig::Duration elapsed) {
+                             usd_stage_runner::camera::CameraRig::Duration elapsed,
+                             const PhysicsWorld* physicsWorld,
+                             const PhysicsRuntime* physicsRuntime) {
+  const auto* collisionQuery =
+      dynamic_cast<const usd_stage_runner::physics::CollisionQuery*>(physicsWorld);
   std::size_t updated = 0;
   for (const auto& prim : cameraImport.prims) {
-    if (usd_stage_runner::camera::updateCameraRig(context.world, prim, elapsed)) {
+    const auto* rig =
+        context.world.component<usd_stage_runner::camera::CameraRig>(prim);
+    usd_stage_runner::camera::CameraCollisionProbe probe;
+    if (rig != nullptr &&
+        rig->config().mode == usd_stage_runner::camera::CameraRigMode::thirdPerson &&
+        rig->config().collisionEnabled && rig->config().distance > 0.0) {
+      if (collisionQuery == nullptr) {
+        throw std::runtime_error("collision-enabled camera rig requires a physics collision "
+                                 "query: " +
+                                 prim);
+      }
+      probe = [collisionQuery, physicsRuntime](const auto& origin, const auto& desired,
+                                               const auto& target)
+          -> std::optional<double> {
+        const auto ignoredBody =
+            physicsRuntime == nullptr ? usd_stage_runner::physics::BodyHandle{}
+                                      : physicsRuntime->bodyForPrim(target);
+        const auto hit = collisionQuery->segmentHit(origin, desired, ignoredBody);
+        return hit.has_value() ? std::optional<double>{hit->fraction} : std::nullopt;
+      };
+    }
+    if (usd_stage_runner::camera::updateCameraRig(context.world, prim, elapsed, probe)) {
       ++updated;
     }
   }
@@ -1014,7 +1056,8 @@ int run(const Options& options) {
       } else if (context.world.containsPrim(playerPrim)) {
         applyMovementIntent(context.world, playerPrim, 3.0, step.count());
       }
-      updatedCameraRigs += updateCameraRigs(context, cameraImport, step);
+      updatedCameraRigs += updateCameraRigs(context, cameraImport, step, physicsWorld.get(),
+                                            physicsRuntime.get());
     });
     droppedSteps += result.droppedSteps;
     const auto synchronized = synchronizeDirtyTransforms(context);
