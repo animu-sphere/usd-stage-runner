@@ -1,8 +1,8 @@
 # USD Integration
 
 Status: physics, character, and camera schemas and importers plus dirty
-transform write-back implemented; camera evaluation/write-back, later domain
-schemas, and incremental Stage notices planned
+transform and camera-orientation write-back implemented; later domain schemas
+and incremental Stage notices planned
 
 ## Runtime declarations
 
@@ -70,7 +70,9 @@ declares `target` and optional `anchor` prim relationships plus mode, offset,
 distance, pitch, yaw, and damping. The importer resolves relationship targets
 to prim-indexed Runtime World transforms and validates the authored values
 through `cameraCore`. Non-free modes require exactly one target. Per-frame rig
-evaluation and camera orientation write-back are the next runnable slice.
+evaluation runs after physics extraction. Changed poses enter the shared dirty
+queue; the host synchronizes their translation and writes forward direction as
+the dedicated `xformOp:orient:runnerCamera` quaternion op.
 Because `RuntimeTransform` currently imports local translations, camera
 declarations require a Y-up Stage and camera, target, and anchor prims whose
 local translation also represents their world translation. Non-identity
