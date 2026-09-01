@@ -61,8 +61,9 @@ The implemented `RunnerCharacterAPI` declares
 `runner:character:jumpSpeed`. It must be applied with both physics APIs to the
 same dynamic body prim. After physics import, the host binds a prim-indexed
 runtime `CharacterController` to that body and the backend-neutral ground-query
-capability. The schema importer does not itself choose or update player intent;
-that runnable input slice follows separately.
+capability. The schema importer does not itself choose or update player intent.
+The host feeds movement and jump actions through `CharacterIntent` at each
+fixed step.
 
 ## Runtime to USD
 

@@ -3,7 +3,8 @@
 Status: runtime, input, physics-core, character-core contracts, and
 runtime-integration contracts, SDL mapping, Jolt bootstrap and ground queries,
 physics and character schema registration, round-trip and import validation,
-input-to-USD, and conditional full physics vertical-slice coverage implemented
+input-to-USD, and conditional full physics and character vertical-slice
+coverage implemented
 
 Deterministic testing is a design requirement. Each vertical slice must be
 testable with controlled time and input and should add a runnable Stage fixture.
@@ -30,7 +31,7 @@ empty promises.
 | Capability | Planned fixture |
 | --- | --- |
 | Physics | `falling_cube.usda` (implemented) |
-| Character | `character_walk.usda` |
+| Character | `character_walk.usda` (implemented) |
 | Camera | `third_person_camera.usda` |
 | Host play session | `character_walk.usda` and `third_person_camera.usda` (reused) |
 | Vehicle | `four_wheel_vehicle.usda` |

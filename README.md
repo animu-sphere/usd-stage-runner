@@ -29,18 +29,20 @@ behavior are documented in [docs/README.md](docs/README.md).
   `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, and `RunnerCharacterAPI`
   declaration contracts;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
-  `move.x` and `move.y` without exposing SDL types to core consumers;
+  `move.x` and `move.y`, and maps Space or the gamepad south button to `jump`,
+  without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
-  frame bound, imports physics and character API schemas, maps movement intent to
-  desired body velocity, advances Jolt, and synchronizes only dirty runtime
-  transforms to USD;
-- minimal transform, falling-cube, and character-import USDA fixtures plus
+  frame bound, imports physics and character API schemas, maps named actions to
+  character intent, advances controllers and Jolt, and synchronizes only dirty
+  runtime transforms to USD;
+- minimal transform, falling-cube, character-import, and runnable walk-and-jump
+  USDA fixtures plus
   dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-Character control is the current roadmap milestone. Its core bootstrap, Jolt
-ground-query adapter, and schema importer are implemented; the runnable input
-slice remains. Camera, behavior, and OpenExec integration are later slices.
+The character-control milestone is implemented end to end. Camera rigs are the
+current roadmap milestone; host, behavior, and OpenExec integration are later
+slices.
 
 ## Build with OpenStrata
 
@@ -100,14 +102,15 @@ adapter remains buildable but reports that world creation is unavailable.
 ```text
 stage_runner <scene.usd[a|c]> [--frames N] [--fixed-dt SECONDS]
              [--max-fixed-steps N] [--deterministic]
-             [--move-x VALUE] [--move-y VALUE]
+             [--move-x VALUE] [--move-y VALUE] [--jump]
 ```
 
 The default loop runs 300 frames at a 60 Hz target. `--deterministic` injects
 one fixed interval per frame and does not sleep, making integration tests fast
-and repeatable. `--move-x` and `--move-y` accept normalized values from -1 to 1
-for deterministic adapter-to-Stage tests and require `--deterministic`.
-Interactive runs use SDL keyboard and gamepad input.
+and repeatable. `--move-x` and `--move-y` accept normalized values from -1 to 1,
+and `--jump` holds the jump action for deterministic adapter-to-Stage tests.
+All three require `--deterministic`. Interactive runs use SDL keyboard and
+gamepad input.
 
 Physics prims apply both `RunnerPhysicsBodyAPI` and `RunnerColliderAPI`.
 `runner:physics:motionType` accepts `static` or `dynamic`, mass is authored with

@@ -8,8 +8,8 @@ contracts belong in [design](../design/); implemented behavior belongs in
 
 | Document | Contents |
 | --- | --- |
-| [current.md](current.md) | The character-controller vertical slice, completion criteria, and recommended PR sequence. |
-| [milestones.md](milestones.md) | Ordered Character-through-Tooling milestones, host integration, the representative demo, and cross-cutting follow-up work. |
+| [current.md](current.md) | The camera-rig vertical slice, completion criteria, and recommended PR sequence. |
+| [milestones.md](milestones.md) | Ordered Camera-through-Tooling milestones, host integration, the representative demo, and cross-cutting follow-up work. |
 
 Status vocabulary: **in progress** or **not started**. A milestone is complete
 only when its runnable vertical slice and required tests exist.

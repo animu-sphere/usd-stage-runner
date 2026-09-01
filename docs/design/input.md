@@ -1,8 +1,8 @@
 # Input Actions and Intent
 
-Status: scalar movement actions, SDL mapping, and backend-neutral character
-intent implemented; typed action values, action-to-character conversion, and
-vehicle intent planned
+Status: scalar movement and jump actions, SDL mapping, and human and injected
+action-to-character conversion implemented; typed action values and vehicle
+intent planned
 
 Input crosses three boundaries before it affects simulation:
 
@@ -40,9 +40,11 @@ accelerate
 brake
 ```
 
-The initial implementation exposes the scalar `move.x` and `move.y` actions.
-As the character slice expands the contract, `inputCore` should support the
-minimum useful action value set:
+The initial implementation exposes scalar `move.x` and `move.y` actions plus a
+`jump` action represented as zero or one. `inputSdl` maps Space and the first
+gamepad's south button to the same name, and deterministic injection traverses
+that same physical-state mapper. As later slices need richer transitions,
+`inputCore` should support the minimum useful typed action value set:
 
 | Value | Meaning | Examples |
 | --- | --- | --- |
@@ -60,7 +62,8 @@ runtime system should attempt. Controller logic converts actions into types
 such as `CharacterIntent`, `VehicleIntent`, or camera-rig input. AI and behavior
 systems produce those same intent types directly.
 
-Intent is consumed at the fixed-step boundary. Character and vehicle systems
-translate it into backend-neutral physics commands rather than authoring USD
-transforms. This keeps keyboard, gamepad, deterministic tests, AI, and future
-network input on one simulation path.
+Intent is consumed at the fixed-step boundary. The standalone host currently
+converts movement and jump actions into `CharacterIntent`. Character and
+vehicle systems translate it into backend-neutral physics commands rather than
+authoring USD transforms. This keeps keyboard, gamepad, deterministic tests,
+AI, and future network input on one simulation path.

@@ -105,6 +105,33 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
     )
 
     add_test(
+      NAME stage_runner.character_walk_and_ground
+      COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/character_walk.usda
+        --frames 60
+        --deterministic
+        --move-x 1
+    )
+    set_tests_properties(stage_runner.character_walk_and_ground PROPERTIES
+      PASS_REGULAR_EXPRESSION
+        "fixed_steps=60, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\([1-9][0-9.]*, 0\\.5[0-9]*, [^)]+\\).*character_controllers=1, character_grounded=true, character_jump_state=grounded"
+    )
+
+    add_test(
+      NAME stage_runner.character_jump
+      COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/character_walk.usda
+        --frames 30
+        --deterministic
+        --move-x 1
+        --jump
+    )
+    set_tests_properties(stage_runner.character_jump PROPERTIES
+      PASS_REGULAR_EXPRESSION
+        "fixed_steps=30, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\([1-9][0-9.]*, [1-9][0-9.]*, [^)]+\\).*character_controllers=1, character_grounded=false, character_jump_state=rising"
+    )
+
+    add_test(
       NAME stage_runner.physics_falling_cube
       COMMAND stage_runner
         ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/falling_cube.usda
@@ -217,6 +244,16 @@ if(TARGET stage_runner)
       -DOPTION=--move-x
       -DVALUE=1
       "-DEXPECTED=--move-x and --move-y require --deterministic"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_jump_without_deterministic
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/minimal.usda
+      -DOPTION=--jump
+      "-DEXPECTED=--jump requires --deterministic"
       -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
   )
 endif()

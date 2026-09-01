@@ -3,13 +3,14 @@
 ## Current state
 
 The repository implements the input-to-physics-to-USD vertical slice and its
-formal authored-data contract, plus the backend-neutral character controller,
-its Jolt ground-query adapter, and its Stage importer. It contains runtime,
-input, physics, and character core libraries, SDL and Jolt adapters, a codeless
-OpenUSD runtime-schema plugin, an OpenUSD-aware host executable,
-core/adapter/integration tests, and dual CMake/OpenStrata build configuration.
-The runnable character input slice remains roadmap work; OpenExec, camera,
-behavior, and vehicle targets do not exist yet.
+formal authored-data contract, plus the complete character-control slice. It
+contains the backend-neutral character controller, Jolt ground-query adapter,
+Stage importer, keyboard/gamepad/injected action mapping, and runnable walking,
+grounding, and jumping scenario. Runtime, input, physics, and character core
+libraries, SDL and Jolt adapters, a codeless OpenUSD runtime-schema plugin, an
+OpenUSD-aware host executable, core/adapter/integration tests, and dual
+CMake/OpenStrata build configuration are present. OpenExec, camera, behavior,
+and vehicle targets do not exist yet.
 
 ## Implemented targets
 
@@ -19,18 +20,19 @@ behavior, and vehicle targets do not exist yet.
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
 | `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, and character ground-query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
-| `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
+| `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, and character ground shape casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, and `RunnerCharacterAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
-| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics and character schemas, poll input, set desired body motion, step physics, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
+| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics and character schemas, poll input, update character intent and controllers, step physics, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
 movement logic, physics-core resource, deterministic-step, prim/body mapping,
 changed-transform synchronization, isolated character controller contracts,
-physical-control mapping, Jolt ground queries,
-host option validation, Stage loading, and the complete injected-input-to-USD
-synchronization path. `ost plugin test plugins/runnerSchema` additionally
-verifies schema registration and authored-attribute flatten round-tripping.
+physical-control mapping, Jolt ground queries, host option validation, Stage
+loading, and complete injected movement and jump paths through character
+control to USD synchronization. `ost plugin test plugins/runnerSchema`
+additionally verifies schema registration and authored-attribute flatten
+round-tripping.
 
 `RunnerCharacterAPI` is valid only on a prim that also applies both physics APIs
 and declares dynamic motion. Its ground-probe distance, maximum slope angle in
@@ -38,8 +40,9 @@ radians, and jump speed are read into a `CharacterControllerConfig`. The host
 attaches the resulting controller to the same Runtime World prim and binds it
 to the already imported body and Jolt ground-query capability. Character
 attributes without their owning API and incomplete or static character
-declarations are rejected. The current host imports these components but does
-not yet feed movement input through them.
+declarations are rejected. At each fixed step the host converts normalized
+movement and jump actions into `CharacterIntent` and updates the imported
+player controller before advancing physics.
 
 ## Physics boundary
 
@@ -116,7 +119,7 @@ the removed temporary convention.
 
 `ActionState` stores normalized values keyed by names. Missing actions read as
 zero, non-finite values normalize to zero, and finite values clamp to `[-1, 1]`.
-The first actions are `move.x` and `move.y`.
+The first actions are `move.x`, `move.y`, and `jump`.
 
 `SdlInputSource` implements the core `InputSource` interface through a PImpl, so
 SDL types do not appear in public core APIs. SDL3 is preferred and SDL2 is used
@@ -125,20 +128,22 @@ unavailable state so deterministic core and Stage tests remain usable. Setting
 `USD_STAGE_RUNNER_REQUIRE_SDL=ON` converts a missing SDL package into a configure
 error for interactive demo builds.
 
-Deterministic host runs accept `--move-x` and `--move-y`. These values pass
-through the adapter's backend-neutral physical-state mapper, allowing the same
-normalization and controller path to be tested without a window or device.
+Deterministic host runs accept `--move-x`, `--move-y`, and `--jump`. These
+values pass through the adapter's backend-neutral physical-state mapper,
+allowing the same normalization and controller path to be tested without a
+window or device.
 
 ## Frame execution
 
 The implemented physics frame order is:
 
 ```text
-poll SDL or inject physical axes
-    -> normalize move.x and move.y
-    -> update movement intent
+poll SDL or inject physical axes and jump button
+    -> normalize move.x, move.y, and jump
+    -> update movement and character intent
     -> advance zero or more bounded fixed steps
-        -> set desired horizontal body velocity
+        -> update the character controller
+        -> set desired planar or jump body velocity
         -> step Jolt
         -> extract changed body transforms
         -> update and dirty runtime transforms
@@ -171,8 +176,10 @@ through the two applied physics APIs. When OpenUSD and Jolt are both available,
 its integration test verifies imported body counts, changed-body extraction,
 dirty USD writes, gravity, collision, and injected horizontal movement through
 one host path. `character_import.usda` adds `RunnerCharacterAPI` to a dynamic
-body and verifies that the host constructs one runtime controller; the runnable
-walk-and-jump fixture remains part of the next vertical slice.
+body and verifies that the host constructs one runtime controller.
+`character_walk.usda` adds a floor and grounded character; deterministic tests
+verify walking, grounding, an edge-triggered jump, physics updates, and dirty
+USD synchronization through the complete host path.
 
 ## Dependency direction
 

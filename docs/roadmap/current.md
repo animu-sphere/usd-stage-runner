@@ -1,98 +1,72 @@
-# Milestone 3: Character Controller
+# Milestone 4: Camera Rigs
 
-Status: in progress
+Status: not started
 
-The physics schemas and complete input-to-physics-to-USD path are implemented.
-This milestone adds a backend-neutral character contract that moves, grounds,
-and jumps through `physicsCore` instead of editing transforms directly.
+The character-control vertical slice is implemented. This milestone adds a
+backend-neutral camera rig that follows the controlled character without
+putting camera behavior in the standalone host.
 
 ## Outcome
 
 ```text
-input or AI
-    -> CharacterIntent
-    -> character controller state
-    -> physics commands and ground queries
-    -> RuntimeTransform
-    -> dirty queue
-    -> USD xform update
+controlled character RuntimeTransform
+    -> camera target and rig state
+    -> desired camera transform
+    -> optional physics collision probe
+    -> smoothing
+    -> dirty RuntimeTransform
+    -> USD Camera xform update
 ```
 
-The representative Stage adds a character that can walk, ground, and jump in a
-small deterministic scenario. Human input and later behavior systems use the
-same intent boundary.
-
-## Implemented foundation
-
-The first recommended change is complete. `characterCore` now defines
-`CharacterIntent`, controller configuration and live state, walkable-ground
-and slope evaluation, desired velocity, normalized facing, jump-edge handling,
-and rising/falling transitions. It uses `PhysicsWorld` plus a small
-backend-neutral `GroundQuery` extension and is covered by deterministic tests
-without Jolt or OpenUSD.
-
-The Jolt implementation of that ground-query boundary is also complete. The
-adapter performs a downward shape cast, excludes the character body, and
-returns backend-neutral support identity, distance, and normal. Existing
-physics velocity commands carry desired planar and jump motion.
-
-The schema and importer slice is also complete. `RunnerCharacterAPI` declares
-ground-probe distance, maximum walkable slope, and jump speed. The host requires
-the API on a dynamic physics prim and constructs a prim-indexed
-`CharacterController` bound to its imported body and backend ground query.
-
-The next change is the gamepad and deterministic-input vertical slice that
-updates the imported controller and proves walking, grounding, and jumping on
-the runnable Stage.
+The representative Stage adds first- and third-person views that can switch
+while following the character from `character_walk.usda`. A controlled clock
+makes following and smoothing deterministic.
 
 ## Scope
 
-### `characterCore`
+### `cameraCore`
 
-- Add `CharacterIntent` with desired velocity, facing direction, and jump.
-- Track velocity, grounded state, jump state, facing, and support body.
-- Implement ground detection, movement, basic slope handling, and jumping
-  through backend-neutral `physicsCore` contracts, with Jolt-specific character
-  support confined to `physicsJolt`.
-- Keep controller logic testable without Jolt or OpenUSD.
+- Add a prim-indexed camera rig with target and optional anchor identities.
+- Define free, first-person, third-person, and orbit modes.
+- Track offset, distance, pitch, yaw, damping, and live smoothing state.
+- Keep camera calculations testable without OpenUSD, Jolt, or a renderer.
+- Introduce an optional backend-neutral collision probe only when the runnable
+  third-person slice consumes it.
 
 ### Runtime and Stage integration
 
-- Add `RunnerCharacterAPI` only with the vertical slice that consumes it.
-- Import character declarations into prim-indexed runtime components.
-- Feed both movement input and deterministic injected intent through the same
-  controller path.
-- Map keyboard and gamepad controls to named actions; character code must not
-  inspect SDL identifiers or button enums.
-- Preserve fixed-step ordering and dirty-only USD synchronization.
-- Add `character_walk.usda` as the runnable golden scenario.
+- Add `RunnerCameraRigAPI` with the vertical slice that imports and updates it.
+- Resolve target and anchor paths to Runtime World prim identities.
+- Update camera rigs after physics extraction and before dirty USD
+  synchronization.
+- Synchronize only changed `UsdGeomCamera` transforms.
+- Add `third_person_camera.usda` as the runnable golden scenario.
 
 ## Recommended PR sequence
 
-1. **Character core bootstrap (implemented)** — intent, state, and isolated
-   controller tests using a deterministic physics test double.
-2. **Jolt character adapter (implemented)** — implement grounding through the
-   optional `GroundQuery`; desired motion, slope evaluation, and jumping reuse
-   the existing backend-neutral velocity and contact contracts.
-3. **Schema and importer (implemented)** — `RunnerCharacterAPI` plus
-   Stage-to-runtime mapping.
-4. **Gamepad vertical slice** — SDL and injected actions drive the character in
-   `character_walk.usda`, with runtime transforms synchronized incrementally.
+1. **Camera core bootstrap** — rig configuration, modes, deterministic target
+   following, and isolated tests.
+2. **Schema and importer** — `RunnerCameraRigAPI` plus prim-reference and
+   authored-configuration validation.
+3. **Runnable follow slice** — first- and third-person modes follow the
+   character and synchronize incrementally in `third_person_camera.usda`.
+4. **Collision probe** — add the smallest backend-neutral physics query needed
+   to keep the third-person camera out of geometry.
 
 ## Completion criteria
 
-- A Stage-declared character walks, grounds, and jumps without direct transform
-  movement.
-- Human input and deterministic injected intent share one contract.
-- Keyboard and the first supported gamepad share named gameplay actions.
+- First- and third-person modes follow the controlled character.
+- Mode switching preserves a documented, repeatable rig state.
 - Core tests require neither OpenUSD nor Jolt.
-- Fixed-step results are repeatable under a controlled clock.
-- Runtime-to-USD writes contain only dirty simulated transforms.
-- Plain CMake and OpenStrata build paths remain valid in supported environments.
+- Following and smoothing are repeatable under a controlled clock.
+- Camera collision support does not expose Jolt types to `cameraCore`.
+- Runtime-to-USD writes contain only dirty camera transforms.
+- Plain CMake and OpenStrata build paths remain valid in supported
+  environments.
 
 The relevant long-term contracts are documented in the
 [runtime model](../design/runtime-model.md),
-[input actions and intent](../design/input.md),
 [module boundaries](../design/modules.md),
-[USD integration](../design/usd-integration.md), and
+[USD integration](../design/usd-integration.md),
+[host integration](../design/hosts.md), and
 [testing strategy](../design/testing.md).

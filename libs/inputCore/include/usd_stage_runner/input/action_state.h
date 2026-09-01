@@ -9,6 +9,7 @@ namespace usd_stage_runner::input {
 namespace actions {
 inline constexpr std::string_view moveX{"move.x"};
 inline constexpr std::string_view moveY{"move.y"};
+inline constexpr std::string_view jump{"jump"};
 } // namespace actions
 
 class ActionState {

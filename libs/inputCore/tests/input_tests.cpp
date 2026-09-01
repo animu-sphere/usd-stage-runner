@@ -23,6 +23,7 @@ int main() {
   using usd_stage_runner::input::MovementIntent;
   using usd_stage_runner::input::actions::moveX;
   using usd_stage_runner::input::actions::moveY;
+  using usd_stage_runner::input::actions::jump;
   using usd_stage_runner::input::applyMovementIntent;
   using usd_stage_runner::input::updateMovementIntent;
   using usd_stage_runner::runtime::RuntimeWorld;
@@ -30,8 +31,10 @@ int main() {
   ActionState actions;
   actions.set(std::string(moveX), 2.0);
   actions.set(std::string(moveY), -0.25);
+  actions.set(std::string(jump), 1.0);
   actions.set("invalid", std::numeric_limits<double>::quiet_NaN());
   if (actions.value(moveX) != 1.0 || actions.value(moveY) != -0.25 ||
+      actions.value(jump) != 1.0 ||
       actions.value("invalid") != 0.0 || actions.value("missing") != 0.0) {
     return fail("action state must normalize injected values and default missing actions to zero");
   }

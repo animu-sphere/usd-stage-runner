@@ -21,6 +21,8 @@ void mapPhysicalInput(const PhysicalInputState& physical, input::ActionState& ac
                            static_cast<double>(physical.moveBackward);
   actions.set(std::string(input::actions::moveX), strongest(keyboardX, physical.gamepadMoveX));
   actions.set(std::string(input::actions::moveY), strongest(keyboardY, physical.gamepadMoveY));
+  actions.set(std::string(input::actions::jump),
+              physical.keyboardJump || physical.gamepadJump ? 1.0 : 0.0);
 }
 
 } // namespace usd_stage_runner::input_sdl

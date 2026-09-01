@@ -9,6 +9,8 @@ struct PhysicalInputState {
   bool moveRight{false};
   bool moveForward{false};
   bool moveBackward{false};
+  bool keyboardJump{false};
+  bool gamepadJump{false};
   double gamepadMoveX{0.0};
   double gamepadMoveY{0.0};
 };
