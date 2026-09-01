@@ -20,7 +20,7 @@ not exist yet.
 
 | Target | Path | Responsibility | Dependencies |
 | --- | --- | --- | --- |
-| `runtimeCore` | `libs/runtimeCore` | Frame timing, bounded fixed stepping, prim identity, runtime components, runtime transforms, dirty transform queue, and Runtime World lifetime. | C++ standard library only. |
+| `runtimeCore` | `libs/runtimeCore` | Frame timing, bounded fixed stepping, host-facing play-session lifecycle, prim identity, runtime components, runtime transforms, dirty transform queue, and Runtime World lifetime. | C++ standard library only. |
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
 | `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, character ground-query, and collision-segment query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
@@ -30,8 +30,9 @@ not exist yet.
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics, character, and camera-rig schemas, poll input, update character intent and controllers, step physics, evaluate camera rigs, and synchronize dirty translations and camera orientations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
 
-The CTest suite covers clocks, registry and dirty-queue behavior, action and
-movement logic, physics-core resource, deterministic-step, prim/body mapping,
+The CTest suite covers clocks, play/pause/single-step/reset lifecycle,
+registry and dirty-queue behavior, action and movement logic, physics-core
+resource, deterministic-step, prim/body mapping,
 changed-transform synchronization, isolated character controller and camera
 rig contracts, camera target following, collision adjustment, and smoothing,
 physical-control mapping, Jolt ground and segment queries, host option validation,
@@ -174,7 +175,8 @@ window or device.
 
 ## Frame execution
 
-The implemented physics frame order is:
+The implemented physics frame order is coordinated through the host-neutral
+`PlaySession` boundary:
 
 ```text
 poll SDL or inject physical axes and jump button
@@ -190,6 +192,16 @@ poll SDL or inject physical axes and jump button
         -> evaluate camera rigs and dirty changed poses
     -> synchronize dirty translations and camera orientations to USD
 ```
+
+`PlaySession` owns play and pause state plus the bounded accumulator. A playing
+host frame advances zero or more fixed steps and then invokes one synchronization
+callback. While paused, host time is ignored. Single-step clears any partial
+remainder, advances exactly one fixed interval, synchronizes once, and remains
+paused. Reset also clears the remainder, invokes the host-supplied state rebuild
+callback, synchronizes the restored state, and remains paused. The standalone
+host now runs its existing Stage path through this same controller; extracting
+the Stage import and state rebuild into a reusable session implementation remains
+part of Milestone 5.
 
 The default fixed interval is 1/60 second, the default frame bound is 300, and
 catch-up is limited to eight fixed updates per frame. `--deterministic` supplies

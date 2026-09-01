@@ -7,8 +7,8 @@
 #include "usd_stage_runner/physics/collision_query.h"
 #include "usd_stage_runner/physics/physics_runtime.h"
 #include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
-#include "usd_stage_runner/runtime/fixed_step_accumulator.h"
 #include "usd_stage_runner/runtime/frame_clock.h"
+#include "usd_stage_runner/runtime/play_session.h"
 #include "usd_stage_runner/runtime/runtime_world.h"
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
@@ -61,8 +61,8 @@ using usd_stage_runner::physics::MotionType;
 using usd_stage_runner::physics::PhysicsRuntime;
 using usd_stage_runner::physics::PhysicsWorld;
 using usd_stage_runner::physics::ShapeDescriptor;
-using usd_stage_runner::runtime::FixedStepAccumulator;
 using usd_stage_runner::runtime::FrameClock;
+using usd_stage_runner::runtime::PlaySession;
 using usd_stage_runner::runtime::RuntimeWorld;
 
 constexpr const char* playerPrim = "/World/PlayerCube";
@@ -1000,8 +1000,7 @@ int run(const Options& options) {
     characterImport = importCharacters(context, *physicsWorld, *physicsRuntime);
   }
   cameraImport = importCameraRigs(context);
-  const FixedStepAccumulator::Duration fixedStep{options.fixedDt};
-  FixedStepAccumulator accumulator(fixedStep, options.maxFixedSteps);
+  const PlaySession::Duration fixedStep{options.fixedDt};
   FrameClock clock;
   std::size_t fixedSteps = 0;
   std::size_t droppedSteps = 0;
@@ -1018,6 +1017,45 @@ int run(const Options& options) {
       throw std::runtime_error("SDL input is unavailable: " + std::string(inputSource->error()));
     }
   }
+
+  PlaySession session(
+      PlaySession::Callbacks{
+          // The bounded standalone run never resets. Interactive hosts provide
+          // the Stage-state rebuild callback when they expose the reset control.
+          [] {},
+          [&](const auto step) {
+            ++fixedSteps;
+            if (physicsRuntime) {
+              const bool playerHasPhysicsBody =
+                  static_cast<bool>(physicsRuntime->bodyForPrim(playerPrim));
+              if (playerHasPhysicsBody) {
+                const bool playerHasCharacter =
+                    context.world.component<usd_stage_runner::character::CharacterController>(
+                        playerPrim) != nullptr;
+                if (playerHasCharacter) {
+                  (void)applyCharacterIntent(context.world, playerPrim, actions, step, 3.0);
+                } else {
+                  (void)applyMovementIntentToPhysics(context.world, playerPrim, *physicsWorld,
+                                                     *physicsRuntime, 3.0);
+                }
+              } else if (context.world.containsPrim(playerPrim)) {
+                applyMovementIntent(context.world, playerPrim, 3.0, step.count());
+              }
+              synchronizedPhysicsBodies += physicsRuntime->step(step);
+            } else if (context.world.containsPrim(playerPrim)) {
+              applyMovementIntent(context.world, playerPrim, 3.0, step.count());
+            }
+            updatedCameraRigs += updateCameraRigs(context, cameraImport, step,
+                                                  physicsWorld.get(), physicsRuntime.get());
+          },
+          [&] {
+            const auto synchronized = synchronizeDirtyTransforms(context);
+            synchronizedTransforms += synchronized.transformCount;
+            synchronizedCameraTransforms += synchronized.cameraTransformCount;
+          },
+      },
+      fixedStep, options.maxFixedSteps);
+  session.play();
 
   auto nextFrame = FrameClock::Clock::now();
   (void)clock.tick();
@@ -1045,35 +1083,8 @@ int run(const Options& options) {
       frameTime = clock.tick();
     }
 
-    const auto result = accumulator.advance(frameTime, [&](const auto step) {
-      ++fixedSteps;
-      if (physicsRuntime) {
-        const bool playerHasPhysicsBody =
-            static_cast<bool>(physicsRuntime->bodyForPrim(playerPrim));
-        if (playerHasPhysicsBody) {
-          const bool playerHasCharacter =
-              context.world.component<usd_stage_runner::character::CharacterController>(
-                  playerPrim) != nullptr;
-          if (playerHasCharacter) {
-            (void)applyCharacterIntent(context.world, playerPrim, actions, step, 3.0);
-          } else {
-            (void)applyMovementIntentToPhysics(context.world, playerPrim, *physicsWorld,
-                                               *physicsRuntime, 3.0);
-          }
-        } else if (context.world.containsPrim(playerPrim)) {
-          applyMovementIntent(context.world, playerPrim, 3.0, step.count());
-        }
-        synchronizedPhysicsBodies += physicsRuntime->step(step);
-      } else if (context.world.containsPrim(playerPrim)) {
-        applyMovementIntent(context.world, playerPrim, 3.0, step.count());
-      }
-      updatedCameraRigs += updateCameraRigs(context, cameraImport, step, physicsWorld.get(),
-                                            physicsRuntime.get());
-    });
+    const auto result = session.advance(frameTime);
     droppedSteps += result.droppedSteps;
-    const auto synchronized = synchronizeDirtyTransforms(context);
-    synchronizedTransforms += synchronized.transformCount;
-    synchronizedCameraTransforms += synchronized.cameraTransformCount;
     ++processedFrames;
   }
 

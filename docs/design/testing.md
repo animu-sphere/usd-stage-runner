@@ -1,7 +1,8 @@
 # Testing Strategy
 
-Status: runtime, input, physics-core, character-core, camera-core, and
-runtime-integration contracts, SDL mapping, Jolt bootstrap, ground queries, and
+Status: runtime, play-session lifecycle, input, physics-core, character-core,
+camera-core, and runtime-integration contracts, SDL mapping, Jolt bootstrap,
+ground queries, and
 collision segment queries,
 physics, character, and camera schema registration, round-trip and import
 validation, input-to-USD, obstructed camera synchronization, and conditional
