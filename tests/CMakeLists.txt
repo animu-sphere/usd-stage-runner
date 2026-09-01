@@ -104,6 +104,17 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   )
 
   add_test(
+    NAME stage_runner.rejects_inherited_camera_reference_rotation_at_origin
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_reference_parent_rotation.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=camera schema import requires identity parent transforms or resetXformStack for runner:camera:target"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
     NAME stage_runner.rejects_authored_camera_rotation
     COMMAND ${CMAKE_COMMAND}
       -DEXECUTABLE=$<TARGET_FILE:stage_runner>

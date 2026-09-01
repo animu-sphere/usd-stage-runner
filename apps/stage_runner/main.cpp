@@ -568,6 +568,17 @@ void validateCameraWorldTranslation(const StageContext& context,
         role + " (use identity parent transforms or resetXformStack): " +
         prim.GetPath().GetString());
   }
+
+  bool resetsStack = false;
+  (void)xformable.GetOrderedXformOps(&resetsStack);
+  if (!resetsStack &&
+      !pxr::GfIsClose(
+          xformable.ComputeParentToWorldTransform(pxr::UsdTimeCode::Default()),
+          pxr::GfMatrix4d{1.0}, 1e-9)) {
+    throw std::runtime_error(
+        "camera schema import requires identity parent transforms or resetXformStack for " +
+        role + ": " + prim.GetPath().GetString());
+  }
 }
 
 void validateCameraTransformStack(const pxr::UsdPrim& prim) {
