@@ -3,9 +3,8 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; physics and character control are implemented, and the camera-rig
-schema and backend-neutral foundation are in progress toward a runnable follow
-slice.
+slices; physics, character control, and runnable first- and third-person camera
+following are implemented.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -39,17 +38,17 @@ behavior are documented in [docs/README.md](docs/README.md).
   without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
   frame bound, imports physics, character, and camera-rig API schemas, maps named
-  actions to character intent, advances controllers and Jolt, and synchronizes
-  only dirty runtime transforms to USD;
-- minimal transform, falling-cube, character-import, and runnable walk-and-jump
-  USDA fixtures plus
+  actions to character intent, advances controllers, Jolt, and camera rigs, and
+  synchronizes only dirty translations and camera orientations to USD;
+- minimal transform, falling-cube, character-import, runnable walk-and-jump,
+  and first-/third-person camera-follow USDA fixtures plus
   dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
 The character-control milestone is implemented end to end. Camera rigs are the
-current roadmap milestone: their backend-neutral core, schema, and importer are
-implemented, while per-frame evaluation and camera orientation synchronization
-remain. Host, behavior, and OpenExec integration are later slices.
+current roadmap milestone: their backend-neutral core, schema, importer, and
+runnable follow synchronization are implemented, while collision avoidance
+remains. Host, behavior, and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
@@ -146,7 +145,13 @@ properties without their owning API schema.
 Camera declarations currently require a Y-up Stage. Camera, target, and anchor
 translations must already be representable in world space by their imported
 local `RuntimeTransform`; non-identity ancestor transforms require
-`resetXformStack` until composed camera transforms are supported.
+`resetXformStack` until composed camera transforms are supported. Rig Camera
+prims accept an empty transform stack or one translate op optionally followed
+by the reserved double-precision `xformOp:orient:runnerCamera`; other authored
+transform ops are rejected so the runtime pose is not composed with an unknown
+rotation. A rig may not target or anchor itself. At each fixed step, imported
+rigs evaluate after physics extraction. Changed camera poses use the shared
+dirty queue to update translation and the reserved orientation only.
 
 ## License
 

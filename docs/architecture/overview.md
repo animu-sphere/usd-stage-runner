@@ -4,16 +4,17 @@
 
 The repository implements the input-to-physics-to-USD vertical slice and its
 formal authored-data contract, the complete character-control slice, and the
-backend-neutral camera-rig foundation and authored camera schema importer. It
+runnable camera-follow slice. It
 contains the character controller, Jolt ground-query adapter, Stage importer,
 keyboard/gamepad/injected action mapping, runnable walking, grounding, and
-jumping scenario, plus isolated camera targeting, mode, and smoothing logic.
+jumping scenario, plus camera targeting, mode, smoothing, fixed-step host
+evaluation, and incremental USD Camera pose synchronization.
 Runtime, input, physics,
 character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
 runtime-schema plugin, an OpenUSD-aware host executable,
 core/adapter/integration tests, and dual CMake/OpenStrata build configuration
-are present. Per-frame camera evaluation and orientation synchronization,
-OpenExec, behavior, and vehicle targets do not exist yet.
+are present. Camera collision avoidance, OpenExec, behavior, and vehicle targets
+do not exist yet.
 
 ## Implemented targets
 
@@ -23,11 +24,11 @@ OpenExec, behavior, and vehicle targets do not exist yet.
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
 | `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, and character ground-query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
-| `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera translation updates. | `runtimeCore`. |
+| `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera pose updates. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, and character ground shape casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
-| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics, character, and camera-rig schemas, poll input, update character intent and controllers, step physics, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
+| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics, character, and camera-rig schemas, poll input, update character intent and controllers, step physics, evaluate camera rigs, and synchronize dirty translations and camera orientations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
 movement logic, physics-core resource, deterministic-step, prim/body mapping,
@@ -35,7 +36,9 @@ changed-transform synchronization, isolated character controller and camera
 rig contracts, camera target following and smoothing, physical-control
 mapping, Jolt ground queries, host option validation, Stage loading, and
 complete injected movement and jump paths through character control to USD
-synchronization, plus camera schema import and invalid-declaration rejection.
+synchronization, plus camera schema import, invalid-declaration rejection, and
+the deterministic first-/third-person follow path through incremental USD
+translation and orientation writes.
 `ost plugin test plugins/runnerSchema` additionally verifies schema
 registration and authored-property flatten round-tripping.
 
@@ -57,8 +60,15 @@ legacy properties without the API are rejected before the frame loop starts.
 Camera declarations require a Y-up Stage. Camera, target, and anchor
 translations affected by ancestor transforms are rejected unless the prim
 resets its xform stack, keeping the current local `RuntimeTransform` identical
-to its world translation until composed camera transforms are implemented.
-Per-frame rig evaluation and orientation write-back remain the next slice.
+to its world translation until composed camera transforms are implemented. A
+rig Camera accepts an empty transform stack or one translate op optionally
+followed by the reserved double-precision runtime orient op, rejects other
+authored transform ops, and cannot target or anchor itself.
+After each fixed physics extraction, the host evaluates imported rigs with the
+same controlled step. A changed position or forward direction marks that camera
+dirty; synchronization updates its translate op and the dedicated
+`xformOp:orient:runnerCamera` quaternion op. Unchanged cameras do not enter the
+USD write path.
 
 ## Physics boundary
 
@@ -126,8 +136,9 @@ its transform stack. These restrictions keep local USD translation identical
 to Jolt world position until composed transform support lands. The importer
 creates and binds backend bodies through `PhysicsRuntime`; a physics-declaring
 Stage is rejected when Jolt is unavailable. After each host frame, the host
-sets the USD translate op only for dirty runtime transforms. Stage writes remain
-outside the core libraries. Authored body or collider attributes without their
+sets the USD translate op only for dirty runtime transforms. Dirty camera rigs
+also write their runtime orientation through a dedicated orient op. Stage writes
+remain outside the core libraries. Authored body or collider attributes without their
 owning API schema are rejected instead of being silently interpreted through
 the removed temporary convention.
 
@@ -163,7 +174,8 @@ poll SDL or inject physical axes and jump button
         -> step Jolt
         -> extract changed body transforms
         -> update and dirty runtime transforms
-    -> synchronize dirty translations to USD
+        -> evaluate camera rigs and dirty changed poses
+    -> synchronize dirty translations and camera orientations to USD
 ```
 
 The default fixed interval is 1/60 second, the default frame bound is 300, and
@@ -195,7 +207,11 @@ one host path. `character_import.usda` adds `RunnerCharacterAPI` to a dynamic
 body and verifies that the host constructs one runtime controller.
 `character_walk.usda` adds a floor and grounded character; deterministic tests
 verify walking, grounding, an edge-triggered jump, physics updates, and dirty
-USD synchronization through the complete host path.
+USD synchronization through the complete host path. `third_person_camera.usda`
+moves a non-physics target through the same controlled clock, evaluates first-
+and third-person rigs, verifies a non-default viewing direction, and proves
+that moving poses use incremental USD writes. The multi-frame
+`camera_import.usda` test verifies that an unchanged rig writes only once.
 
 ## Dependency direction
 

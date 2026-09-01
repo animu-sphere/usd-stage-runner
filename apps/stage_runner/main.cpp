@@ -12,6 +12,7 @@
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
 #include <pxr/base/gf/matrix4d.h>
+#include <pxr/base/gf/quatd.h>
 #include <pxr/base/gf/vec3d.h>
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec3h.h>
@@ -47,6 +48,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -83,6 +85,8 @@ const pxr::TfToken cameraDistanceAttribute{"runner:camera:distance"};
 const pxr::TfToken cameraPitchAttribute{"runner:camera:pitchRadians"};
 const pxr::TfToken cameraYawAttribute{"runner:camera:yawRadians"};
 const pxr::TfToken cameraDampingAttribute{"runner:camera:damping"};
+const pxr::TfToken cameraRuntimeOrientationSuffix{"runnerCamera"};
+const pxr::TfToken cameraRuntimeOrientationOp{"xformOp:orient:runnerCamera"};
 #endif
 
 struct Options {
@@ -187,6 +191,12 @@ struct CharacterImportSummary {
 
 struct CameraImportSummary {
   std::size_t rigCount{0};
+  std::vector<usd_stage_runner::runtime::PrimId> prims;
+};
+
+struct TransformSynchronizationSummary {
+  std::size_t transformCount{0};
+  std::size_t cameraTransformCount{0};
 };
 
 std::filesystem::path executableDirectory(const std::filesystem::path& invocation) {
@@ -545,6 +555,49 @@ void validateCameraWorldTranslation(const StageContext& context,
   }
 }
 
+void validateCameraTransformStack(const pxr::UsdPrim& prim) {
+  const pxr::UsdGeomXformable xformable(prim);
+  bool resetsStack = false;
+  const auto operations = xformable.GetOrderedXformOps(&resetsStack);
+  bool hasTranslate = false;
+  bool hasRuntimeOrientation = false;
+  for (const auto& operation : operations) {
+    if (!operation.IsInverseOp() && !hasTranslate &&
+        operation.GetOpType() == pxr::UsdGeomXformOp::TypeTranslate) {
+      hasTranslate = true;
+      continue;
+    }
+    if (!operation.IsInverseOp() && hasTranslate && !hasRuntimeOrientation &&
+        operation.GetOpType() == pxr::UsdGeomXformOp::TypeOrient &&
+        operation.GetOpName() == cameraRuntimeOrientationOp &&
+        operation.GetPrecision() == pxr::UsdGeomXformOp::PrecisionDouble) {
+      hasRuntimeOrientation = true;
+      continue;
+    }
+    throw std::runtime_error(
+        "camera schema import supports an empty transform stack or one translate op "
+        "optionally followed by the double-precision runnerCamera orient op: " +
+        prim.GetPath().GetString());
+  }
+
+  if (resetsStack) {
+    return;
+  }
+  for (auto ancestor = prim.GetParent(); ancestor && !ancestor.IsPseudoRoot();
+       ancestor = ancestor.GetParent()) {
+    const pxr::UsdGeomXformable ancestorTransform(ancestor);
+    if (ancestorTransform &&
+        !pxr::GfIsClose(ancestorTransform.ComputeLocalToWorldTransform(
+                            pxr::UsdTimeCode::Default()),
+                        pxr::GfMatrix4d{1.0}, 1e-9)) {
+      throw std::runtime_error(
+          "camera schema import requires identity parent transforms or "
+          "resetXformStack: " +
+          prim.GetPath().GetString());
+    }
+  }
+}
+
 std::optional<usd_stage_runner::runtime::PrimId>
 readCameraPrimRelationship(const StageContext& context, const pxr::UsdPrim& prim,
                            const pxr::TfToken& name, bool required) {
@@ -688,6 +741,7 @@ CameraImportSummary importCameraRigs(StageContext& context) {
     if (context.world.transform(primId) == nullptr) {
       throw std::runtime_error("camera schema import requires a runtime transform: " + primId);
     }
+    validateCameraTransformStack(prim);
     validateCameraWorldTranslation(context, prim, "camera prim");
 
     const auto mode = readCameraMode(prim);
@@ -702,15 +756,34 @@ CameraImportSummary importCameraRigs(StageContext& context) {
         readCameraDouble(prim, cameraPitchAttribute),
         readCameraDouble(prim, cameraYawAttribute),
         readCameraDouble(prim, cameraDampingAttribute)};
+    if (config.target == primId ||
+        (config.anchor.has_value() && *config.anchor == primId)) {
+      throw std::runtime_error("camera rig target and anchor must not reference the camera "
+                               "itself: " +
+                               primId);
+    }
     try {
       context.world.emplaceComponent<usd_stage_runner::camera::CameraRig>(primId, config);
     } catch (const std::invalid_argument& error) {
       throw std::runtime_error("invalid camera rig configuration on " + primId + ": " +
                                error.what());
     }
+    summary.prims.push_back(primId);
     ++summary.rigCount;
   }
   return summary;
+}
+
+std::size_t updateCameraRigs(StageContext& context,
+                             const CameraImportSummary& cameraImport,
+                             usd_stage_runner::camera::CameraRig::Duration elapsed) {
+  std::size_t updated = 0;
+  for (const auto& prim : cameraImport.prims) {
+    if (usd_stage_runner::camera::updateCameraRig(context.world, prim, elapsed)) {
+      ++updated;
+    }
+  }
+  return updated;
 }
 
 bool applyMovementIntentToPhysics(RuntimeWorld& world, const std::string& prim,
@@ -773,8 +846,28 @@ bool setTranslate(const pxr::UsdGeomXformOp& operation,
   return false;
 }
 
-std::size_t synchronizeDirtyTransforms(StageContext& context) {
-  std::size_t synchronized = 0;
+bool setCameraOrientation(const pxr::UsdGeomXformOp& operation,
+                          const usd_stage_runner::camera::CameraRigPose& pose) {
+  const auto& forward = pose.forward;
+  const double pitch = std::asin(std::clamp(forward.y, -1.0, 1.0));
+  const double yaw = std::atan2(forward.x, -forward.z);
+  const double halfPitch = pitch * 0.5;
+  const double halfNegativeYaw = yaw * -0.5;
+  const double cosPitch = std::cos(halfPitch);
+  const double sinPitch = std::sin(halfPitch);
+  const double cosYaw = std::cos(halfNegativeYaw);
+  const double sinYaw = std::sin(halfNegativeYaw);
+  // A UsdGeomCamera looks down local -Z. Compose world yaw after local pitch
+  // so the authored quaternion maps -Z to the rig's smoothed forward vector.
+  const pxr::GfQuatd orientation{
+      cosYaw * cosPitch,
+      pxr::GfVec3d{cosYaw * sinPitch, sinYaw * cosPitch,
+                   -sinYaw * sinPitch}};
+  return operation.Set(orientation);
+}
+
+TransformSynchronizationSummary synchronizeDirtyTransforms(StageContext& context) {
+  TransformSynchronizationSummary summary;
   for (const auto& primId : context.world.takeDirtyTransforms()) {
     const auto* transform = context.world.transform(primId);
     const pxr::UsdPrim prim = context.stage->GetPrimAtPath(pxr::SdfPath(primId));
@@ -797,13 +890,34 @@ std::size_t synchronizeDirtyTransforms(StageContext& context) {
     if (!translate) {
       translate = xformable.AddTranslateOp(pxr::UsdGeomXformOp::PrecisionDouble);
     }
-    if (translate && setTranslate(translate, *transform)) {
-      ++synchronized;
+    bool synchronized = translate && setTranslate(translate, *transform);
+    const auto* cameraRig = context.world.component<usd_stage_runner::camera::CameraRig>(primId);
+    if (synchronized && cameraRig != nullptr) {
+      pxr::UsdGeomXformOp orientation;
+      for (const auto& operation : xformable.GetOrderedXformOps(&resetsStack)) {
+        if (operation.GetOpType() == pxr::UsdGeomXformOp::TypeOrient &&
+            operation.GetOpName() == cameraRuntimeOrientationOp) {
+          orientation = operation;
+          break;
+        }
+      }
+      if (!orientation) {
+        orientation = xformable.AddOrientOp(pxr::UsdGeomXformOp::PrecisionDouble,
+                                            cameraRuntimeOrientationSuffix);
+      }
+      synchronized = orientation &&
+                     setCameraOrientation(orientation, cameraRig->state().current);
+      if (synchronized) {
+        ++summary.cameraTransformCount;
+      }
+    }
+    if (synchronized) {
+      ++summary.transformCount;
     } else {
       context.world.markTransformDirty(primId);
     }
   }
-  return synchronized;
+  return summary;
 }
 #endif
 
@@ -839,7 +953,9 @@ int run(const Options& options) {
   std::size_t fixedSteps = 0;
   std::size_t droppedSteps = 0;
   std::size_t synchronizedTransforms = 0;
+  std::size_t synchronizedCameraTransforms = 0;
   std::size_t synchronizedPhysicsBodies = 0;
+  std::size_t updatedCameraRigs = 0;
   std::size_t processedFrames = 0;
   ActionState actions;
   std::unique_ptr<usd_stage_runner::input_sdl::SdlInputSource> inputSource;
@@ -898,9 +1014,12 @@ int run(const Options& options) {
       } else if (context.world.containsPrim(playerPrim)) {
         applyMovementIntent(context.world, playerPrim, 3.0, step.count());
       }
+      updatedCameraRigs += updateCameraRigs(context, cameraImport, step);
     });
     droppedSteps += result.droppedSteps;
-    synchronizedTransforms += synchronizeDirtyTransforms(context);
+    const auto synchronized = synchronizeDirtyTransforms(context);
+    synchronizedTransforms += synchronized.transformCount;
+    synchronizedCameraTransforms += synchronized.cameraTransformCount;
     ++processedFrames;
   }
 
@@ -922,7 +1041,19 @@ int run(const Options& options) {
               << (controller->state().grounded ? "true" : "false")
               << ", character_jump_state=" << jumpStateName(controller->state().jumpState);
   }
-  std::cout << ", camera_rigs=" << cameraImport.rigCount;
+  std::cout << ", camera_rigs=" << cameraImport.rigCount
+            << ", camera_rig_updates=" << updatedCameraRigs
+            << ", synchronized_camera_transforms=" << synchronizedCameraTransforms;
+  for (const auto& prim : cameraImport.prims) {
+    const auto* rig = context.world.component<usd_stage_runner::camera::CameraRig>(prim);
+    if (rig == nullptr || !rig->state().initialized) {
+      continue;
+    }
+    const auto& pose = rig->state().current;
+    std::cout << ", camera_pose[" << prim << "]=(position=" << pose.position.x << ','
+              << pose.position.y << ',' << pose.position.z << "; forward="
+              << pose.forward.x << ',' << pose.forward.y << ',' << pose.forward.z << ')';
+  }
   std::cout << '\n';
   return 0;
 #endif

@@ -40,11 +40,25 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
     NAME stage_runner.camera_schema_import
     COMMAND stage_runner
       ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_import.usda
-      --frames 1
+      --frames 4
       --deterministic
   )
   set_tests_properties(stage_runner.camera_schema_import PROPERTIES
-    PASS_REGULAR_EXPRESSION "camera_rigs=1"
+    PASS_REGULAR_EXPRESSION
+      "fixed_steps=4, dropped_steps=0, synchronized_transforms=1.*camera_rigs=1, camera_rig_updates=1, synchronized_camera_transforms=1"
+  )
+
+  add_test(
+    NAME stage_runner.camera_follow_and_sync
+    COMMAND stage_runner
+      ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/third_person_camera.usda
+      --frames 4
+      --deterministic
+      --move-x 1
+  )
+  set_tests_properties(stage_runner.camera_follow_and_sync PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "fixed_steps=4, dropped_steps=0, synchronized_transforms=12, player_translation=\\(0.2, 1, 0\\).*camera_rigs=2, camera_rig_updates=8, synchronized_camera_transforms=8.*camera_pose\\[/World/FirstPersonCamera\\]=\\(position=0.2,2,0; forward=0,0,-1\\).*camera_pose\\[/World/ThirdPersonCamera\\]=\\(position=-3,2.5,2.4; forward=0.8,0,-0.6\\)"
   )
 
   add_test(
@@ -99,6 +113,39 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
       -DOPTION=--frames
       -DVALUE=1
       "-DEXPECTED=local RuntimeTransform translation to match world translation"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_authored_camera_rotation
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_authored_rotation.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=camera schema import supports an empty transform stack or one translate op optionally followed by the double-precision runnerCamera orient op"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_inherited_camera_rotation
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_parent_rotation.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=camera schema import requires identity parent transforms or resetXformStack"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_camera_self_reference
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_self_reference.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=camera rig target and anchor must not reference the camera itself"
       -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
   )
 

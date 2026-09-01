@@ -2,10 +2,10 @@
 
 Status: Milestone 4 in progress; later milestones not started
 
-Milestone 3, the camera-core bootstrap, and the camera schema/importer are
+Milestone 3 and the camera schema, importer, and runnable follow path are
 implemented and recorded in the [current architecture](../architecture/overview.md).
-Runnable camera evaluation and Stage synchronization are the current work;
-later milestones have not started.
+Camera collision avoidance is the current work; later milestones have not
+started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
 [camera-rig vertical slice](current.md) is the current milestone.
@@ -31,14 +31,11 @@ libraries rather than features embedded in the standalone executable.
 
 ## Milestone 4: Camera rigs
 
-Targets: `RunnerCameraRigAPI`, then the runnable Stage integration
+Remaining target: backend-neutral camera collision avoidance
 
-- Define target, optional anchor, rig mode, offset, distance, pitch, yaw,
-  damping, and collision-probe configuration as declarations.
-- Import the declarations into the implemented prim-indexed `cameraCore` rig.
-- Synchronize the calculated pose to a `UsdGeomCamera`.
+- Add focused collision-probe configuration as declarations.
 - Add collision avoidance incrementally without coupling `cameraCore` to Jolt.
-- Add a `third_person_camera.usda` scenario.
+- Extend the implemented `third_person_camera.usda` scenario with obstruction.
 
 Success: first- and third-person modes can be switched while following the
 controlled character, with repeatable behavior under a controlled clock.

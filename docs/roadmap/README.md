@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-08-31
+Updated: 2026-09-01
 
 The roadmap contains incomplete delivery work only. Design rationale and
 contracts belong in [design](../design/); implemented behavior belongs in

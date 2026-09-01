@@ -2,10 +2,11 @@
 
 Status: in progress
 
-The character-control vertical slice, backend-neutral camera core, and camera
-schema importer are implemented. This milestone next evaluates those imported
-rigs in the runnable Stage without putting camera behavior in the standalone
-host.
+The character-control vertical slice and runnable first-/third-person camera
+follow path are implemented. The standalone host now imports and evaluates
+camera rigs after physics extraction, then incrementally synchronizes dirty
+camera translations and orientations. This milestone next adds camera collision
+avoidance without coupling `cameraCore` to Jolt.
 
 ## Outcome
 
@@ -19,38 +20,30 @@ controlled character RuntimeTransform
     -> USD Camera xform update
 ```
 
-The representative Stage adds first- and third-person views that can switch
-while following the character from `character_walk.usda`. A controlled clock
-makes following and smoothing deterministic.
+The representative Stage contains first- and third-person views that follow the
+same controlled target. Isolated core coverage verifies repeatable live mode
+changes, while the Stage test verifies follow updates and dirty USD writes under
+a controlled clock.
 
 ## Scope
 
-### Runtime and Stage integration
+### Collision probe
 
-- Add `RunnerCameraRigAPI` with the vertical slice that imports and updates it.
-- Resolve target and anchor paths to Runtime World prim identities.
-- Update camera rigs after physics extraction and before dirty USD
-  synchronization.
-- Synchronize only changed `UsdGeomCamera` transforms.
-- Add `third_person_camera.usda` as the runnable golden scenario.
+- Add the smallest backend-neutral physics query needed to probe from the rig
+  origin toward the desired third-person camera position.
+- Shorten the camera distance when geometry blocks the desired pose without
+  exposing Jolt handles or result types to `cameraCore`.
+- Extend `third_person_camera.usda` with deterministic obstruction coverage.
 
 ## Recommended PR sequence
 
-1. **Schema and importer (implemented)** — `RunnerCameraRigAPI` plus
-   prim-reference and authored-configuration validation.
-2. **Runnable follow slice** — first- and third-person modes follow the
-   character and synchronize incrementally in `third_person_camera.usda`.
-3. **Collision probe** — add the smallest backend-neutral physics query needed
-   to keep the third-person camera out of geometry.
+The schema/importer and runnable follow slices are implemented and recorded in
+the [current architecture](../architecture/overview.md). The next PR adds the
+collision probe and its obstructed-camera scenario.
 
 ## Completion criteria
 
-- First- and third-person modes follow the controlled character.
-- Mode switching preserves a documented, repeatable rig state.
-- Core tests require neither OpenUSD nor Jolt.
-- Following and smoothing are repeatable under a controlled clock.
 - Camera collision support does not expose Jolt types to `cameraCore`.
-- Runtime-to-USD writes contain only dirty camera transforms.
 - Plain CMake and OpenStrata build paths remain valid in supported
   environments.
 

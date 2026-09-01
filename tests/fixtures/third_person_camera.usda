@@ -1,0 +1,44 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Xform "PlayerCube"
+    {
+        double3 xformOp:translate = (0, 1, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Camera "FirstPersonCamera" (
+        prepend apiSchemas = ["RunnerCameraRigAPI"]
+    )
+    {
+        uniform double runner:camera:damping = 0
+        uniform double runner:camera:distance = 0
+        uniform token runner:camera:mode = "firstPerson"
+        uniform double3 runner:camera:offset = (0, 1, 0)
+        uniform double runner:camera:pitchRadians = 0
+        rel runner:camera:target = </World/PlayerCube>
+        uniform double runner:camera:yawRadians = 0
+        double3 xformOp:translate = (0, 2, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Camera "ThirdPersonCamera" (
+        prepend apiSchemas = ["RunnerCameraRigAPI"]
+    )
+    {
+        uniform double runner:camera:damping = 0
+        uniform double runner:camera:distance = 4
+        uniform token runner:camera:mode = "thirdPerson"
+        uniform double3 runner:camera:offset = (0, 1.5, 0)
+        uniform double runner:camera:pitchRadians = 0
+        rel runner:camera:target = </World/PlayerCube>
+        uniform double runner:camera:yawRadians = 0.9272952180016122
+        double3 xformOp:translate = (0, 2.5, 4)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+}
