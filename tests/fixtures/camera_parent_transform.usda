@@ -1,0 +1,28 @@
+#usda 1.0
+(
+    upAxis = "Y"
+)
+
+def Xform "World"
+{
+    def Xform "Target"
+    {
+        double3 xformOp:translate = (2, 0, 0)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+
+        def Xform "Anchor"
+        {
+            double3 xformOp:translate = (0, 1, 0)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Camera "Camera" (
+        prepend apiSchemas = ["RunnerCameraRigAPI"]
+    )
+    {
+        rel runner:camera:anchor = </World/Target/Anchor>
+        uniform token runner:camera:mode = "thirdPerson"
+        rel runner:camera:target = </World/Target>
+    }
+}

@@ -64,3 +64,52 @@ class "RunnerCharacterAPI" (
     )
 }
 
+class "RunnerCameraRigAPI" (
+    customData = {
+        string userDocBrief = "Declares a UsdGeomCamera as a runtime camera rig."
+    }
+)
+{
+    rel runner:camera:anchor (
+        customData = {
+            string userDocBrief = "Optional prim whose transform overrides the target as the rig origin."
+        }
+    )
+    uniform double runner:camera:damping = 0 (
+        customData = {
+            string userDocBrief = "Non-negative exponential smoothing response rate in inverse seconds."
+        }
+    )
+    uniform double runner:camera:distance = 4 (
+        customData = {
+            string userDocBrief = "Non-negative follow or orbit distance in Stage units."
+        }
+    )
+    uniform token runner:camera:mode = "free" (
+        allowedTokens = ["free", "firstPerson", "thirdPerson", "orbit"]
+        customData = {
+            string userDocBrief = "Camera rig behavior mode."
+        }
+    )
+    uniform double3 runner:camera:offset = (0, 0, 0) (
+        customData = {
+            string userDocBrief = "World-space framing offset from the target or anchor."
+        }
+    )
+    uniform double runner:camera:pitchRadians = 0 (
+        customData = {
+            string userDocBrief = "Vertical viewing angle in radians, strictly between -pi / 2 and pi / 2."
+        }
+    )
+    rel runner:camera:target (
+        customData = {
+            string userDocBrief = "Optional target prim."
+        }
+    )
+    uniform double runner:camera:yawRadians = 0 (
+        customData = {
+            string userDocBrief = "Horizontal viewing angle in radians."
+        }
+    )
+}
+

@@ -1,8 +1,8 @@
 # USD Integration
 
-Status: physics and character schemas, transform and controller import, and
-dirty write-back implemented; later domain schemas and incremental Stage
-notices planned
+Status: physics, character, and camera schemas and importers plus dirty
+transform write-back implemented; camera evaluation/write-back, later domain
+schemas, and incremental Stage notices planned
 
 ## Runtime declarations
 
@@ -64,6 +64,18 @@ runtime `CharacterController` to that body and the backend-neutral ground-query
 capability. The schema importer does not itself choose or update player intent.
 The host feeds movement and jump actions through `CharacterIntent` at each
 fixed step.
+
+The implemented `RunnerCameraRigAPI` applies to `UsdGeomCamera` prims and
+declares `target` and optional `anchor` prim relationships plus mode, offset,
+distance, pitch, yaw, and damping. The importer resolves relationship targets
+to prim-indexed Runtime World transforms and validates the authored values
+through `cameraCore`. Non-free modes require exactly one target. Per-frame rig
+evaluation and camera orientation write-back are the next runnable slice.
+Because `RuntimeTransform` currently imports local translations, camera
+declarations require a Y-up Stage and camera, target, and anchor prims whose
+local translation also represents their world translation. Non-identity
+ancestor transforms are rejected unless `resetXformStack` makes the prim local
+to world. Composed camera transforms remain part of the later transform work.
 
 ## Runtime to USD
 

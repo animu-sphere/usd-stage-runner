@@ -2,7 +2,7 @@
 (
     """
     Authored runtime declarations for usd-stage-runner. This is the source of
-    truth for the codeless physics, collider, and character API schemas.
+    truth for the codeless physics, collider, character, and camera API schemas.
     """
     subLayers = [
         @usd/schema.usda@
@@ -71,5 +71,40 @@ class "RunnerCharacterAPI" (
     )
     uniform double runner:character:jumpSpeed = 5 (
         doc = "Positive upward jump speed in Stage meters per second."
+    )
+}
+
+class "RunnerCameraRigAPI" (
+    inherits = </APISchemaBase>
+    customData = {
+        token apiSchemaType = "singleApply"
+    }
+    doc = "Declares a UsdGeomCamera as a runtime camera rig."
+)
+{
+    rel runner:camera:target (
+        doc = "Optional target prim. Required by every mode except free."
+    )
+    rel runner:camera:anchor (
+        doc = "Optional prim whose transform overrides the target as the rig origin."
+    )
+    uniform token runner:camera:mode = "free" (
+        allowedTokens = ["free", "firstPerson", "thirdPerson", "orbit"]
+        doc = "Camera rig behavior mode."
+    )
+    uniform double3 runner:camera:offset = (0, 0, 0) (
+        doc = "World-space framing offset from the target or anchor."
+    )
+    uniform double runner:camera:distance = 4 (
+        doc = "Non-negative follow or orbit distance in Stage units."
+    )
+    uniform double runner:camera:pitchRadians = 0 (
+        doc = "Vertical viewing angle in radians, strictly between -pi / 2 and pi / 2."
+    )
+    uniform double runner:camera:yawRadians = 0 (
+        doc = "Horizontal viewing angle in radians."
+    )
+    uniform double runner:camera:damping = 0 (
+        doc = "Non-negative exponential smoothing response rate in inverse seconds."
     )
 }

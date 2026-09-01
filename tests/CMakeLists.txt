@@ -37,6 +37,83 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   )
 
   add_test(
+    NAME stage_runner.camera_schema_import
+    COMMAND stage_runner
+      ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_import.usda
+      --frames 1
+      --deterministic
+  )
+  set_tests_properties(stage_runner.camera_schema_import PROPERTIES
+    PASS_REGULAR_EXPRESSION "camera_rigs=1"
+  )
+
+  add_test(
+    NAME stage_runner.rejects_legacy_camera_attributes
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/legacy_camera_attributes.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=authored camera rig properties require RunnerCameraRigAPI"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_camera_missing_target
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_missing_target.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=runner:camera:target on /Camera must target exactly one prim"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_camera_schema_on_non_camera
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_non_camera.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=RunnerCameraRigAPI requires a UsdGeomCamera prim"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_invalid_camera_config
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_invalid_config.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=invalid camera rig configuration on /Camera"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_inherited_camera_reference_transform
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_parent_transform.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=local RuntimeTransform translation to match world translation"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_z_up_camera_stage
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_z_up.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=camera schema import requires a Y-up Stage"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
     NAME stage_runner.rejects_legacy_physics_attributes
     COMMAND ${CMAKE_COMMAND}
       -DEXECUTABLE=$<TARGET_FILE:stage_runner>

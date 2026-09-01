@@ -4,15 +4,16 @@
 
 The repository implements the input-to-physics-to-USD vertical slice and its
 formal authored-data contract, the complete character-control slice, and the
-backend-neutral camera-rig foundation. It contains the character controller,
-Jolt ground-query adapter, Stage importer, keyboard/gamepad/injected action
-mapping, runnable walking, grounding, and jumping scenario, plus isolated
-camera targeting, mode, and smoothing logic. Runtime, input, physics,
+backend-neutral camera-rig foundation and authored camera schema importer. It
+contains the character controller, Jolt ground-query adapter, Stage importer,
+keyboard/gamepad/injected action mapping, runnable walking, grounding, and
+jumping scenario, plus isolated camera targeting, mode, and smoothing logic.
+Runtime, input, physics,
 character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
 runtime-schema plugin, an OpenUSD-aware host executable,
 core/adapter/integration tests, and dual CMake/OpenStrata build configuration
-are present. Camera schema and Stage integration, OpenExec, behavior, and
-vehicle targets do not exist yet.
+are present. Per-frame camera evaluation and orientation synchronization,
+OpenExec, behavior, and vehicle targets do not exist yet.
 
 ## Implemented targets
 
@@ -25,8 +26,8 @@ vehicle targets do not exist yet.
 | `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera translation updates. | `runtimeCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, and character ground shape casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
-| `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, and `RunnerCharacterAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
-| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics and character schemas, poll input, update character intent and controllers, step physics, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
+| `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
+| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics, character, and camera-rig schemas, poll input, update character intent and controllers, step physics, and synchronize dirty translations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
 
 The CTest suite covers clocks, registry and dirty-queue behavior, action and
 movement logic, physics-core resource, deterministic-step, prim/body mapping,
@@ -34,9 +35,9 @@ changed-transform synchronization, isolated character controller and camera
 rig contracts, camera target following and smoothing, physical-control
 mapping, Jolt ground queries, host option validation, Stage loading, and
 complete injected movement and jump paths through character control to USD
-synchronization. `ost plugin test plugins/runnerSchema`
-additionally verifies schema registration and authored-attribute flatten
-round-tripping.
+synchronization, plus camera schema import and invalid-declaration rejection.
+`ost plugin test plugins/runnerSchema` additionally verifies schema
+registration and authored-property flatten round-tripping.
 
 `RunnerCharacterAPI` is valid only on a prim that also applies both physics APIs
 and declares dynamic motion. Its ground-probe distance, maximum slope angle in
@@ -47,6 +48,17 @@ attributes without their owning API and incomplete or static character
 declarations are rejected. At each fixed step the host converts normalized
 movement and jump actions into `CharacterIntent` and updates the imported
 player controller before advancing physics.
+
+`RunnerCameraRigAPI` is valid only on a `UsdGeomCamera`. Its target and optional
+anchor relationships resolve to Runtime World prim identities with transforms;
+non-free modes require exactly one target. Mode, offset, distance, pitch, yaw,
+and damping are imported into a prim-indexed `CameraRig`, and invalid values or
+legacy properties without the API are rejected before the frame loop starts.
+Camera declarations require a Y-up Stage. Camera, target, and anchor
+translations affected by ancestor transforms are rejected unless the prim
+resets its xform stack, keeping the current local `RuntimeTransform` identical
+to its world translation until composed camera transforms are implemented.
+Per-frame rig evaluation and orientation write-back remain the next slice.
 
 ## Physics boundary
 

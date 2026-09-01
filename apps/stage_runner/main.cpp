@@ -1,4 +1,5 @@
 #include "usd_stage_runner/character/character_controller.h"
+#include "usd_stage_runner/camera/camera_rig.h"
 #include "usd_stage_runner/input/action_state.h"
 #include "usd_stage_runner/input/movement_controller.h"
 #include "usd_stage_runner/input_sdl/physical_input.h"
@@ -19,6 +20,7 @@
 #include <pxr/usd/sdf/path.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usd/stage.h>
+#include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/metrics.h>
 #include <pxr/usd/usdGeom/tokens.h>
 #include <pxr/usd/usdGeom/xformOp.h>
@@ -65,6 +67,7 @@ constexpr const char* playerPrim = "/World/PlayerCube";
 const pxr::TfToken physicsBodySchema{"RunnerPhysicsBodyAPI"};
 const pxr::TfToken colliderSchema{"RunnerColliderAPI"};
 const pxr::TfToken characterSchema{"RunnerCharacterAPI"};
+const pxr::TfToken cameraRigSchema{"RunnerCameraRigAPI"};
 const pxr::TfToken physicsMotionTypeAttribute{"runner:physics:motionType"};
 const pxr::TfToken physicsMassAttribute{"runner:physics:mass"};
 const pxr::TfToken physicsShapeAttribute{"runner:physics:shape"};
@@ -72,6 +75,14 @@ const pxr::TfToken physicsHalfExtentsAttribute{"runner:physics:halfExtents"};
 const pxr::TfToken characterGroundProbeDistanceAttribute{"runner:character:groundProbeDistance"};
 const pxr::TfToken characterMaximumSlopeAngleAttribute{"runner:character:maximumSlopeAngleRadians"};
 const pxr::TfToken characterJumpSpeedAttribute{"runner:character:jumpSpeed"};
+const pxr::TfToken cameraTargetRelationship{"runner:camera:target"};
+const pxr::TfToken cameraAnchorRelationship{"runner:camera:anchor"};
+const pxr::TfToken cameraModeAttribute{"runner:camera:mode"};
+const pxr::TfToken cameraOffsetAttribute{"runner:camera:offset"};
+const pxr::TfToken cameraDistanceAttribute{"runner:camera:distance"};
+const pxr::TfToken cameraPitchAttribute{"runner:camera:pitchRadians"};
+const pxr::TfToken cameraYawAttribute{"runner:camera:yawRadians"};
+const pxr::TfToken cameraDampingAttribute{"runner:camera:damping"};
 #endif
 
 struct Options {
@@ -174,6 +185,10 @@ struct CharacterImportSummary {
   std::size_t controllerCount{0};
 };
 
+struct CameraImportSummary {
+  std::size_t rigCount{0};
+};
+
 std::filesystem::path executableDirectory(const std::filesystem::path& invocation) {
 #ifdef _WIN32
   std::wstring buffer(32768, L'\0');
@@ -223,6 +238,10 @@ bool hasAppliedSchema(const pxr::UsdPrim& prim, const pxr::TfToken& schema) {
 bool hasAuthoredAttribute(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
   const auto attribute = prim.GetAttribute(name);
   return attribute && attribute.HasAuthoredValue();
+}
+
+bool hasRelationship(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
+  return static_cast<bool>(prim.GetRelationship(name));
 }
 
 usd_stage_runner::runtime::RuntimeTransform readTransform(const pxr::UsdPrim& prim) {
@@ -401,6 +420,7 @@ std::size_t validateDeclarationsAndCountPhysicsBodies(const pxr::UsdStageRefPtr&
     const bool hasBodySchema = hasAppliedSchema(prim, physicsBodySchema);
     const bool hasColliderSchema = hasAppliedSchema(prim, colliderSchema);
     const bool hasCharacterSchema = hasAppliedSchema(prim, characterSchema);
+    const bool hasCameraSchema = hasAppliedSchema(prim, cameraRigSchema);
     if (!hasBodySchema &&
         (hasAuthoredAttribute(prim, physicsMotionTypeAttribute) ||
          hasAuthoredAttribute(prim, physicsMassAttribute))) {
@@ -433,11 +453,133 @@ std::size_t validateDeclarationsAndCountPhysicsBodies(const pxr::UsdStageRefPtr&
       throw std::runtime_error("RunnerCharacterAPI requires a dynamic physics body: " +
                                prim.GetPath().GetString());
     }
+    if (!hasCameraSchema &&
+        (hasRelationship(prim, cameraTargetRelationship) ||
+         hasRelationship(prim, cameraAnchorRelationship) ||
+         hasAuthoredAttribute(prim, cameraModeAttribute) ||
+         hasAuthoredAttribute(prim, cameraOffsetAttribute) ||
+         hasAuthoredAttribute(prim, cameraDistanceAttribute) ||
+         hasAuthoredAttribute(prim, cameraPitchAttribute) ||
+         hasAuthoredAttribute(prim, cameraYawAttribute) ||
+         hasAuthoredAttribute(prim, cameraDampingAttribute))) {
+      throw std::runtime_error("authored camera rig properties require RunnerCameraRigAPI: " +
+                               prim.GetPath().GetString());
+    }
     if (hasBodySchema || hasColliderSchema) {
       ++count;
     }
   }
   return count;
+}
+
+usd_stage_runner::camera::CameraRigMode readCameraMode(const pxr::UsdPrim& prim) {
+  pxr::TfToken value;
+  const auto attribute = prim.GetAttribute(cameraModeAttribute);
+  if (!attribute || !attribute.Get(&value)) {
+    throw std::runtime_error("could not read " + cameraModeAttribute.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  if (value == pxr::TfToken{"free"}) {
+    return usd_stage_runner::camera::CameraRigMode::free;
+  }
+  if (value == pxr::TfToken{"firstPerson"}) {
+    return usd_stage_runner::camera::CameraRigMode::firstPerson;
+  }
+  if (value == pxr::TfToken{"thirdPerson"}) {
+    return usd_stage_runner::camera::CameraRigMode::thirdPerson;
+  }
+  if (value == pxr::TfToken{"orbit"}) {
+    return usd_stage_runner::camera::CameraRigMode::orbit;
+  }
+  throw std::runtime_error(cameraModeAttribute.GetString() + " on " +
+                           prim.GetPath().GetString() +
+                           " must be 'free', 'firstPerson', 'thirdPerson', or 'orbit'");
+}
+
+double readCameraDouble(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
+  double value = 0.0;
+  const auto attribute = prim.GetAttribute(name);
+  if (!attribute || !attribute.Get(&value)) {
+    throw std::runtime_error("could not read " + name.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  return value;
+}
+
+usd_stage_runner::runtime::Vec3d readCameraOffset(const pxr::UsdPrim& prim) {
+  pxr::GfVec3d value;
+  const auto attribute = prim.GetAttribute(cameraOffsetAttribute);
+  if (!attribute || !attribute.Get(&value)) {
+    throw std::runtime_error("could not read " + cameraOffsetAttribute.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  return {value[0], value[1], value[2]};
+}
+
+void validateCameraWorldTranslation(const StageContext& context,
+                                    const pxr::UsdPrim& prim,
+                                    const std::string& role) {
+  const auto* transform = context.world.transform(prim.GetPath().GetString());
+  const pxr::UsdGeomXformable xformable(prim);
+  if (transform == nullptr || !xformable) {
+    throw std::runtime_error("camera schema import requires an xformable " + role + ": " +
+                             prim.GetPath().GetString());
+  }
+
+  const pxr::GfVec3d worldTranslation =
+      xformable.ComputeLocalToWorldTransform(pxr::UsdTimeCode::Default()).ExtractTranslation();
+  const auto matches = [](double worldValue, double runtimeValue) {
+    constexpr double relativeTolerance = 1.0e-9;
+    const double scale = std::max({1.0, std::abs(worldValue), std::abs(runtimeValue)});
+    return std::isfinite(worldValue) && std::isfinite(runtimeValue) &&
+           std::abs(worldValue - runtimeValue) <= relativeTolerance * scale;
+  };
+  if (!matches(worldTranslation[0], transform->translation.x) ||
+      !matches(worldTranslation[1], transform->translation.y) ||
+      !matches(worldTranslation[2], transform->translation.z)) {
+    throw std::runtime_error(
+        "camera schema import requires local RuntimeTransform translation to match world "
+        "translation for " +
+        role + " (use identity parent transforms or resetXformStack): " +
+        prim.GetPath().GetString());
+  }
+}
+
+std::optional<usd_stage_runner::runtime::PrimId>
+readCameraPrimRelationship(const StageContext& context, const pxr::UsdPrim& prim,
+                           const pxr::TfToken& name, bool required) {
+  const auto relationship = prim.GetRelationship(name);
+  pxr::SdfPathVector targets;
+  if (relationship && relationship.HasAuthoredTargets() &&
+      !relationship.GetTargets(&targets)) {
+    throw std::runtime_error("could not read " + name.GetString() + " on " +
+                             prim.GetPath().GetString());
+  }
+  if (targets.empty()) {
+    if (required) {
+      throw std::runtime_error(name.GetString() + " on " + prim.GetPath().GetString() +
+                               " must target exactly one prim");
+    }
+    return std::nullopt;
+  }
+  if (targets.size() != 1 || !targets.front().IsAbsolutePath() ||
+      !targets.front().IsPrimPath()) {
+    throw std::runtime_error(name.GetString() + " on " + prim.GetPath().GetString() +
+                             " must target exactly one absolute prim path");
+  }
+
+  const auto target = targets.front().GetString();
+  if (!context.world.containsPrim(target)) {
+    throw std::runtime_error(name.GetString() + " on " + prim.GetPath().GetString() +
+                             " does not resolve to a Runtime World prim: " + target);
+  }
+  if (context.world.transform(target) == nullptr) {
+    throw std::runtime_error(name.GetString() + " on " + prim.GetPath().GetString() +
+                             " must target an xformable prim: " + target);
+  }
+  validateCameraWorldTranslation(context, context.stage->GetPrimAtPath(targets.front()),
+                                 name.GetString());
+  return target;
 }
 
 double readCharacterAttribute(const pxr::UsdPrim& prim, const pxr::TfToken& name) {
@@ -520,6 +662,53 @@ CharacterImportSummary importCharacters(StageContext& context, PhysicsWorld& phy
     context.world.emplaceComponent<usd_stage_runner::character::CharacterController>(
         primId, body, physicsWorld, *groundQuery, config);
     ++summary.controllerCount;
+  }
+  return summary;
+}
+
+CameraImportSummary importCameraRigs(StageContext& context) {
+  CameraImportSummary summary;
+  bool coordinateSystemValidated = false;
+  for (const auto& prim : context.stage->Traverse()) {
+    if (!hasAppliedSchema(prim, cameraRigSchema)) {
+      continue;
+    }
+    if (!coordinateSystemValidated) {
+      if (pxr::UsdGeomGetStageUpAxis(context.stage) != pxr::UsdGeomTokens->y) {
+        throw std::runtime_error("camera schema import requires a Y-up Stage");
+      }
+      coordinateSystemValidated = true;
+    }
+    if (!pxr::UsdGeomCamera(prim)) {
+      throw std::runtime_error("RunnerCameraRigAPI requires a UsdGeomCamera prim: " +
+                               prim.GetPath().GetString());
+    }
+
+    const auto primId = prim.GetPath().GetString();
+    if (context.world.transform(primId) == nullptr) {
+      throw std::runtime_error("camera schema import requires a runtime transform: " + primId);
+    }
+    validateCameraWorldTranslation(context, prim, "camera prim");
+
+    const auto mode = readCameraMode(prim);
+    const bool targetRequired = mode != usd_stage_runner::camera::CameraRigMode::free;
+    const usd_stage_runner::camera::CameraRigConfig config{
+        mode,
+        readCameraPrimRelationship(context, prim, cameraTargetRelationship, targetRequired)
+            .value_or(usd_stage_runner::runtime::PrimId{}),
+        readCameraPrimRelationship(context, prim, cameraAnchorRelationship, false),
+        readCameraOffset(prim),
+        readCameraDouble(prim, cameraDistanceAttribute),
+        readCameraDouble(prim, cameraPitchAttribute),
+        readCameraDouble(prim, cameraYawAttribute),
+        readCameraDouble(prim, cameraDampingAttribute)};
+    try {
+      context.world.emplaceComponent<usd_stage_runner::camera::CameraRig>(primId, config);
+    } catch (const std::invalid_argument& error) {
+      throw std::runtime_error("invalid camera rig configuration on " + primId + ": " +
+                               error.what());
+    }
+    ++summary.rigCount;
   }
   return summary;
 }
@@ -630,6 +819,7 @@ int run(const Options& options) {
   std::unique_ptr<PhysicsRuntime> physicsRuntime;
   PhysicsImportSummary physicsImport;
   CharacterImportSummary characterImport;
+  CameraImportSummary cameraImport;
   const std::size_t declaredPhysicsBodies =
       validateDeclarationsAndCountPhysicsBodies(context.stage);
   if (declaredPhysicsBodies != 0) {
@@ -642,6 +832,7 @@ int run(const Options& options) {
     physicsImport = importPhysicsBodies(context, *physicsWorld, *physicsRuntime);
     characterImport = importCharacters(context, *physicsWorld, *physicsRuntime);
   }
+  cameraImport = importCameraRigs(context);
   const FixedStepAccumulator::Duration fixedStep{options.fixedDt};
   FixedStepAccumulator accumulator(fixedStep, options.maxFixedSteps);
   FrameClock clock;
@@ -731,6 +922,7 @@ int run(const Options& options) {
               << (controller->state().grounded ? "true" : "false")
               << ", character_jump_state=" << jumpStateName(controller->state().jumpState);
   }
+  std::cout << ", camera_rigs=" << cameraImport.rigCount;
   std::cout << '\n';
   return 0;
 #endif

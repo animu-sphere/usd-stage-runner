@@ -3,8 +3,9 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; physics and character control are implemented, and the backend-neutral
-camera-rig foundation is in progress.
+slices; physics and character control are implemented, and the camera-rig
+schema and backend-neutral foundation are in progress toward a runnable follow
+slice.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -31,24 +32,24 @@ behavior are documented in [docs/README.md](docs/README.md).
   extracts changed body state, and implements character ground shape casts
   without exposing Jolt types publicly;
 - `runnerSchema`, a codeless OpenUSD plugin defining the single-apply
-  `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, and `RunnerCharacterAPI`
-  declaration contracts;
+  `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and
+  `RunnerCameraRigAPI` declaration contracts;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y`, and maps Space or the gamepad south button to `jump`,
   without exposing SDL types to core consumers;
 - `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
-  frame bound, imports physics and character API schemas, maps named actions to
-  character intent, advances controllers and Jolt, and synchronizes only dirty
-  runtime transforms to USD;
+  frame bound, imports physics, character, and camera-rig API schemas, maps named
+  actions to character intent, advances controllers and Jolt, and synchronizes
+  only dirty runtime transforms to USD;
 - minimal transform, falling-cube, character-import, and runnable walk-and-jump
   USDA fixtures plus
   dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
 The character-control milestone is implemented end to end. Camera rigs are the
-current roadmap milestone: their backend-neutral core is implemented, while
-schema and Stage integration remain. Host, behavior, and OpenExec integration
-are later slices.
+current roadmap milestone: their backend-neutral core, schema, and importer are
+implemented, while per-frame evaluation and camera orientation synchronization
+remain. Host, behavior, and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
@@ -135,6 +136,17 @@ physics prim. `runner:character:groundProbeDistance`,
 `runner:character:jumpSpeed` configure the prim-indexed runtime controller.
 Character attributes without `RunnerCharacterAPI`, characters without both
 physics APIs, and static character bodies are rejected.
+
+Camera prims apply `RunnerCameraRigAPI`. `runner:camera:target` and the optional
+`runner:camera:anchor` are prim relationships; non-free modes require exactly
+one target. Mode, offset, distance, pitch, yaw, and damping are read into a
+prim-indexed camera rig. The importer rejects non-camera application sites,
+unresolved or non-xformable references, invalid values, and authored camera
+properties without their owning API schema.
+Camera declarations currently require a Y-up Stage. Camera, target, and anchor
+translations must already be representable in world space by their imported
+local `RuntimeTransform`; non-identity ancestor transforms require
+`resetXformStack` until composed camera transforms are supported.
 
 ## License
 
