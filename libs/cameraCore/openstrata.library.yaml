@@ -1,0 +1,11 @@
+schema: openstrata.library/v1alpha1
+library:
+  id: cameraCore
+  version: 0.1.0
+cmake:
+  package: cameraCore
+  target: cameraCore::cameraCore
+requires:
+  libraries:
+    - id: runtimeCore
+      version: ">=0.1,<0.2"

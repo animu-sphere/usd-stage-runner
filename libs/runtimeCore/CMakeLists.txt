@@ -11,7 +11,7 @@ include(CTest)
 
 add_library(runtimeCore_warnings INTERFACE)
 if(MSVC)
-  target_compile_options(runtimeCore_warnings INTERFACE /W4 /permissive-)
+  target_compile_options(runtimeCore_warnings INTERFACE /W4 /permissive- /EHsc)
 else()
   target_compile_options(runtimeCore_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()

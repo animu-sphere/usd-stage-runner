@@ -13,7 +13,7 @@ endif()
 
 add_library(characterCore_warnings INTERFACE)
 if(MSVC)
-  target_compile_options(characterCore_warnings INTERFACE /W4 /permissive-)
+  target_compile_options(characterCore_warnings INTERFACE /W4 /permissive- /EHsc)
 else()
   target_compile_options(characterCore_warnings INTERFACE -Wall -Wextra -Wpedantic)
 endif()

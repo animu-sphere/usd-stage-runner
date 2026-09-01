@@ -1,0 +1,4 @@
+add_executable(camera_core_tests camera_tests.cpp)
+target_compile_features(camera_core_tests PRIVATE cxx_std_17)
+target_link_libraries(camera_core_tests PRIVATE cameraCore::cameraCore cameraCore_warnings)
+add_test(NAME cameraCore.rigs COMMAND camera_core_tests)
