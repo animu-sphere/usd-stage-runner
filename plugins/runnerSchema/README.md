@@ -23,6 +23,9 @@ Camera rigs apply only to `UsdGeomCamera` prims. `free` mode may omit a target;
 `firstPerson`, `thirdPerson`, and `orbit` require exactly one target prim. An
 authored anchor also resolves to exactly one prim. Referenced prims must be
 loaded into the Runtime World and provide runtime transforms.
+The current importer requires a Y-up Stage and rejects camera, target, or
+anchor translations changed by ancestor transforms unless the prim resets its
+xform stack.
 
 `schema.usda` is the source of truth. `plugInfo.json` and
 `generatedSchema.usda` are committed generated resources so the bundle can be

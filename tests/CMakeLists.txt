@@ -92,6 +92,28 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   )
 
   add_test(
+    NAME stage_runner.rejects_inherited_camera_reference_transform
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_parent_transform.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=local RuntimeTransform translation to match world translation"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
+    NAME stage_runner.rejects_z_up_camera_stage
+    COMMAND ${CMAKE_COMMAND}
+      -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+      -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/camera_z_up.usda
+      -DOPTION=--frames
+      -DVALUE=1
+      "-DEXPECTED=camera schema import requires a Y-up Stage"
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
+  )
+
+  add_test(
     NAME stage_runner.rejects_legacy_physics_attributes
     COMMAND ${CMAKE_COMMAND}
       -DEXECUTABLE=$<TARGET_FILE:stage_runner>

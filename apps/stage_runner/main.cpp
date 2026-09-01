@@ -516,6 +516,35 @@ usd_stage_runner::runtime::Vec3d readCameraOffset(const pxr::UsdPrim& prim) {
   return {value[0], value[1], value[2]};
 }
 
+void validateCameraWorldTranslation(const StageContext& context,
+                                    const pxr::UsdPrim& prim,
+                                    const std::string& role) {
+  const auto* transform = context.world.transform(prim.GetPath().GetString());
+  const pxr::UsdGeomXformable xformable(prim);
+  if (transform == nullptr || !xformable) {
+    throw std::runtime_error("camera schema import requires an xformable " + role + ": " +
+                             prim.GetPath().GetString());
+  }
+
+  const pxr::GfVec3d worldTranslation =
+      xformable.ComputeLocalToWorldTransform(pxr::UsdTimeCode::Default()).ExtractTranslation();
+  const auto matches = [](double worldValue, double runtimeValue) {
+    constexpr double relativeTolerance = 1.0e-9;
+    const double scale = std::max({1.0, std::abs(worldValue), std::abs(runtimeValue)});
+    return std::isfinite(worldValue) && std::isfinite(runtimeValue) &&
+           std::abs(worldValue - runtimeValue) <= relativeTolerance * scale;
+  };
+  if (!matches(worldTranslation[0], transform->translation.x) ||
+      !matches(worldTranslation[1], transform->translation.y) ||
+      !matches(worldTranslation[2], transform->translation.z)) {
+    throw std::runtime_error(
+        "camera schema import requires local RuntimeTransform translation to match world "
+        "translation for " +
+        role + " (use identity parent transforms or resetXformStack): " +
+        prim.GetPath().GetString());
+  }
+}
+
 std::optional<usd_stage_runner::runtime::PrimId>
 readCameraPrimRelationship(const StageContext& context, const pxr::UsdPrim& prim,
                            const pxr::TfToken& name, bool required) {
@@ -548,6 +577,8 @@ readCameraPrimRelationship(const StageContext& context, const pxr::UsdPrim& prim
     throw std::runtime_error(name.GetString() + " on " + prim.GetPath().GetString() +
                              " must target an xformable prim: " + target);
   }
+  validateCameraWorldTranslation(context, context.stage->GetPrimAtPath(targets.front()),
+                                 name.GetString());
   return target;
 }
 
@@ -637,9 +668,16 @@ CharacterImportSummary importCharacters(StageContext& context, PhysicsWorld& phy
 
 CameraImportSummary importCameraRigs(StageContext& context) {
   CameraImportSummary summary;
+  bool coordinateSystemValidated = false;
   for (const auto& prim : context.stage->Traverse()) {
     if (!hasAppliedSchema(prim, cameraRigSchema)) {
       continue;
+    }
+    if (!coordinateSystemValidated) {
+      if (pxr::UsdGeomGetStageUpAxis(context.stage) != pxr::UsdGeomTokens->y) {
+        throw std::runtime_error("camera schema import requires a Y-up Stage");
+      }
+      coordinateSystemValidated = true;
     }
     if (!pxr::UsdGeomCamera(prim)) {
       throw std::runtime_error("RunnerCameraRigAPI requires a UsdGeomCamera prim: " +
@@ -650,6 +688,7 @@ CameraImportSummary importCameraRigs(StageContext& context) {
     if (context.world.transform(primId) == nullptr) {
       throw std::runtime_error("camera schema import requires a runtime transform: " + primId);
     }
+    validateCameraWorldTranslation(context, prim, "camera prim");
 
     const auto mode = readCameraMode(prim);
     const bool targetRequired = mode != usd_stage_runner::camera::CameraRigMode::free;

@@ -54,6 +54,10 @@ anchor relationships resolve to Runtime World prim identities with transforms;
 non-free modes require exactly one target. Mode, offset, distance, pitch, yaw,
 and damping are imported into a prim-indexed `CameraRig`, and invalid values or
 legacy properties without the API are rejected before the frame loop starts.
+Camera declarations require a Y-up Stage. Camera, target, and anchor
+translations affected by ancestor transforms are rejected unless the prim
+resets its xform stack, keeping the current local `RuntimeTransform` identical
+to its world translation until composed camera transforms are implemented.
 Per-frame rig evaluation and orientation write-back remain the next slice.
 
 ## Physics boundary

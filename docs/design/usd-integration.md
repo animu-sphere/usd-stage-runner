@@ -71,6 +71,11 @@ distance, pitch, yaw, and damping. The importer resolves relationship targets
 to prim-indexed Runtime World transforms and validates the authored values
 through `cameraCore`. Non-free modes require exactly one target. Per-frame rig
 evaluation and camera orientation write-back are the next runnable slice.
+Because `RuntimeTransform` currently imports local translations, camera
+declarations require a Y-up Stage and camera, target, and anchor prims whose
+local translation also represents their world translation. Non-identity
+ancestor transforms are rejected unless `resetXformStack` makes the prim local
+to world. Composed camera transforms remain part of the later transform work.
 
 ## Runtime to USD
 

@@ -143,6 +143,10 @@ one target. Mode, offset, distance, pitch, yaw, and damping are read into a
 prim-indexed camera rig. The importer rejects non-camera application sites,
 unresolved or non-xformable references, invalid values, and authored camera
 properties without their owning API schema.
+Camera declarations currently require a Y-up Stage. Camera, target, and anchor
+translations must already be representable in world space by their imported
+local `RuntimeTransform`; non-identity ancestor transforms require
+`resetXformStack` until composed camera transforms are supported.
 
 ## License
 

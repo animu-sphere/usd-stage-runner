@@ -10,19 +10,19 @@ def Xform "World"
     {
         double3 xformOp:translate = (2, 1, -3)
         uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
 
-        def Xform "Head"
-        {
-            double3 xformOp:translate = (0, 1, 0)
-            uniform token[] xformOpOrder = ["xformOp:translate"]
-        }
+    def Xform "PlayerHead"
+    {
+        double3 xformOp:translate = (2, 2, -3)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 
     def Camera "FollowCamera" (
         prepend apiSchemas = ["RunnerCameraRigAPI"]
     )
     {
-        rel runner:camera:anchor = </World/PlayerCube/Head>
+        rel runner:camera:anchor = </World/PlayerHead>
         uniform double runner:camera:damping = 8
         uniform double runner:camera:distance = 5
         uniform token runner:camera:mode = "thirdPerson"
