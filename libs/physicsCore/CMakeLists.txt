@@ -16,6 +16,7 @@ else()
 endif()
 
 add_library(physicsCore
+  src/collision_query.cpp
   src/descriptors.cpp
   src/ground_query.cpp
   src/physics_runtime.cpp

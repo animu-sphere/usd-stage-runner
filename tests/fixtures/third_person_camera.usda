@@ -1,6 +1,7 @@
 #usda 1.0
 (
     defaultPrim = "World"
+    metersPerUnit = 1
     upAxis = "Y"
 )
 
@@ -31,14 +32,28 @@ def Xform "World"
         prepend apiSchemas = ["RunnerCameraRigAPI"]
     )
     {
+        uniform double runner:camera:collisionClearance = 0.1
+        uniform bool runner:camera:collisionEnabled = true
         uniform double runner:camera:damping = 0
         uniform double runner:camera:distance = 4
         uniform token runner:camera:mode = "thirdPerson"
         uniform double3 runner:camera:offset = (0, 1.5, 0)
         uniform double runner:camera:pitchRadians = 0
         rel runner:camera:target = </World/PlayerCube>
-        uniform double runner:camera:yawRadians = 0.9272952180016122
+        uniform double runner:camera:yawRadians = 0
         double3 xformOp:translate = (0, 2.5, 4)
+        uniform token[] xformOpOrder = ["xformOp:translate"]
+    }
+
+    def Cube "CameraObstruction" (
+        prepend apiSchemas = ["RunnerPhysicsBodyAPI", "RunnerColliderAPI"]
+    )
+    {
+        uniform double3 runner:physics:halfExtents = (1, 1, 0.5)
+        uniform double runner:physics:mass = 1
+        uniform token runner:physics:motionType = "static"
+        uniform token runner:physics:shape = "box"
+        double3 xformOp:translate = (0, 2.5, 3)
         uniform token[] xformOpOrder = ["xformOp:translate"]
     }
 }

@@ -10,7 +10,8 @@
 - `RunnerCharacterAPI` declares ground-probe distance, maximum walkable slope
   angle in radians, and jump speed; and
 - `RunnerCameraRigAPI` declares target and optional anchor relationships plus
-  mode, framing offset, distance, pitch, yaw, and damping.
+  mode, framing offset, distance, pitch, yaw, damping, collision enablement,
+  and collision clearance.
 
 The half extents are local-space values. Ordered scale ops are applied when the
 host creates the backend shape. The initial contract accepts only `box` shapes,
@@ -28,6 +29,8 @@ anchor translations changed by ancestor transforms unless the prim resets its
 xform stack. Rig Camera prims allow an empty transform stack or one translate
 op optionally followed by the reserved double-precision runtime orient op;
 other authored transform ops and self target or anchor references are rejected.
+Collision enablement affects third-person mode. Its non-negative clearance is
+the distance retained in front of the first probed physics hit.
 
 `schema.usda` is the source of truth. `plugInfo.json` and
 `generatedSchema.usda` are committed generated resources so the bundle can be

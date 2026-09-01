@@ -3,8 +3,8 @@
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
 bounded real-time update loop. The project is being delivered as small vertical
-slices; physics, character control, and runnable first- and third-person camera
-following are implemented.
+slices; physics, character control, and first- and third-person camera following
+with collision avoidance are implemented.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
@@ -17,19 +17,20 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `inputCore`, with named action state and backend-neutral movement intent;
 - `physicsCore`, with typed backend-neutral resource handles, descriptors for
   boxes, bodies, and fixed constraints, fixed-step commands, changed-body
-  extraction contracts, a character ground-query extension, and prim/body
-  runtime synchronization;
+  extraction contracts, character ground and collision-segment query
+  extensions, and prim/body runtime synchronization;
 - `characterCore`, with backend-neutral character intent and controller state,
   walkable-ground and slope evaluation, desired motion, facing, jump-edge
   handling, and deterministic tests against a physics test double;
 - `cameraCore`, with prim-indexed target and optional anchor identities, free,
   first-person, third-person, and orbit modes, deterministic target following,
-  live pose state, exponential smoothing, and dirty Runtime World translation
-  updates without OpenUSD, Jolt, or a renderer;
+  optional third-person collision probes, live pose state, exponential
+  smoothing, and dirty Runtime World translation updates without OpenUSD, Jolt,
+  or a renderer;
 - `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
   box shapes and static or dynamic bodies, advances fixed simulation steps,
-  extracts changed body state, and implements character ground shape casts
-  without exposing Jolt types publicly;
+  extracts changed body state, and implements character ground shape casts and
+  camera collision ray casts without exposing Jolt types publicly;
 - `runnerSchema`, a codeless OpenUSD plugin defining the single-apply
   `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and
   `RunnerCameraRigAPI` declaration contracts;
@@ -41,14 +42,13 @@ behavior are documented in [docs/README.md](docs/README.md).
   actions to character intent, advances controllers, Jolt, and camera rigs, and
   synchronizes only dirty translations and camera orientations to USD;
 - minimal transform, falling-cube, character-import, runnable walk-and-jump,
-  and first-/third-person camera-follow USDA fixtures plus
+  and obstructed first-/third-person camera-follow USDA fixtures plus
   dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-The character-control milestone is implemented end to end. Camera rigs are the
-current roadmap milestone: their backend-neutral core, schema, importer, and
-runnable follow synchronization are implemented, while collision avoidance
-remains. Host, behavior, and OpenExec integration are later slices.
+The character-control and camera-rig milestones are implemented end to end.
+Host integration is the current roadmap milestone; behavior and OpenExec
+integration are later slices.
 
 ## Build with OpenStrata
 
@@ -138,8 +138,9 @@ physics APIs, and static character bodies are rejected.
 
 Camera prims apply `RunnerCameraRigAPI`. `runner:camera:target` and the optional
 `runner:camera:anchor` are prim relationships; non-free modes require exactly
-one target. Mode, offset, distance, pitch, yaw, and damping are read into a
-prim-indexed camera rig. The importer rejects non-camera application sites,
+one target. Mode, offset, distance, pitch, yaw, damping, collision enablement,
+and collision clearance are read into a prim-indexed camera rig. The importer
+rejects non-camera application sites,
 unresolved or non-xformable references, invalid values, and authored camera
 properties without their owning API schema.
 Camera declarations currently require a Y-up Stage. Camera, target, and anchor
@@ -152,6 +153,9 @@ transform ops are rejected so the runtime pose is not composed with an unknown
 rotation. A rig may not target or anchor itself. At each fixed step, imported
 rigs evaluate after physics extraction. Changed camera poses use the shared
 dirty queue to update translation and the reserved orientation only.
+Collision-enabled third-person rigs use the optional backend-neutral segment
+query, ignore a bound target body, shorten the desired camera distance by the
+authored clearance, and smooth the collision-adjusted pose.
 
 ## License
 

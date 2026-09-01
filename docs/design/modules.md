@@ -36,7 +36,7 @@ PhysicsConstraint
 | Area | Core responsibility | Adapter or plugin responsibility |
 | --- | --- | --- |
 | Input | Named actions and controller intent. | SDL device polling and mapping. |
-| Physics | Backend-neutral worlds, bodies, shapes, constraints, and commands. | Jolt initialization, object lifetime, layers, stepping, and transform extraction. |
+| Physics | Backend-neutral worlds, bodies, shapes, constraints, commands, and optional queries. | Jolt initialization, object lifetime, layers, stepping, queries, and transform extraction. |
 | Character | Character intent and controller state. | Physics operations through `physicsCore`. |
 | Camera | Targeting, rig modes, smoothing, and probes. | Host rendering and USD camera synchronization. |
 | Vehicle | Chassis, wheel, suspension, steering, and drivetrain composition. | Backend capabilities through `physicsCore`; thin Exec wrappers. |
@@ -70,7 +70,7 @@ physicsCore  -/-> OpenUSD or Jolt
 characterCore -/-> Jolt
 vehicleCore  -/-> OpenExec
 behaviorCore -/-> OpenExec
-cameraCore   -/-> OpenExec
+cameraCore   -/-> OpenExec or Jolt
 ```
 
 The CMake target graph and CI should enforce these boundaries as targets are

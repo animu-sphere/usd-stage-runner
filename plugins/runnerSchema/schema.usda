@@ -107,4 +107,10 @@ class "RunnerCameraRigAPI" (
     uniform double runner:camera:damping = 0 (
         doc = "Non-negative exponential smoothing response rate in inverse seconds."
     )
+    uniform bool runner:camera:collisionEnabled = false (
+        doc = "Whether third-person mode probes physics geometry before smoothing."
+    )
+    uniform double runner:camera:collisionClearance = 0.1 (
+        doc = "Non-negative distance kept between the camera and probed geometry."
+    )
 }

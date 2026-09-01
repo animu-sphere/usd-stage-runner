@@ -94,6 +94,48 @@ int main() {
     return fail("third-person mode must follow behind its target at the configured distance");
   }
 
+  bool collisionProbeCalled = false;
+  camera::CameraRig collisionRig({camera::CameraRigMode::thirdPerson,
+                                  "/World/Player",
+                                  std::nullopt,
+                                  {0.0, 1.5, 0.0},
+                                  4.0,
+                                  0.0,
+                                  0.0,
+                                  0.0,
+                                  true,
+                                  0.25});
+  const camera::CameraCollisionProbe collisionProbe =
+      [&](const runtime::Vec3d& origin, const runtime::Vec3d& desired,
+          const runtime::PrimId& target) -> std::optional<double> {
+    collisionProbeCalled = near(origin, {10.0, 3.5, -3.0}) &&
+                           near(desired, {10.0, 3.5, 1.0}) &&
+                           target == "/World/Player";
+    return 0.5;
+  };
+  if (!collisionRig.update(world, *world.transform("/World/Camera"),
+                           camera::CameraRig::Duration{1.0 / 60.0}, collisionProbe) ||
+      !collisionProbeCalled ||
+      !near(collisionRig.state().desired.position, {10.0, 3.5, -1.25}) ||
+      !near(collisionRig.state().current.position, {10.0, 3.5, -1.25})) {
+    return fail("third-person collision must shorten the desired distance before smoothing");
+  }
+
+  camera::CameraRig zeroDistanceCollision({camera::CameraRigMode::thirdPerson,
+                                           "/World/Player",
+                                           std::nullopt,
+                                           {0.0, 1.5, 0.0},
+                                           0.0,
+                                           0.0,
+                                           0.0,
+                                           0.0,
+                                           true});
+  if (!zeroDistanceCollision.update(world, *world.transform("/World/Camera"),
+                                    camera::CameraRig::Duration{1.0 / 60.0}) ||
+      !near(zeroDistanceCollision.state().current.position, {10.0, 3.5, -3.0})) {
+    return fail("a zero-distance camera must not issue a zero-length collision probe");
+  }
+
   const double quarterTurn = 1.57079632679489661923;
   camera::CameraRig orbit({camera::CameraRigMode::orbit,
                            "/World/Player",
@@ -204,6 +246,31 @@ int main() {
       !rejectsInvalidArgument([&] {
         freeRig.update(world, *world.transform("/World/Camera"),
                        camera::CameraRig::Duration{-0.1});
+      }) ||
+      !rejectsInvalidArgument([] {
+        camera::CameraRig invalid({camera::CameraRigMode::thirdPerson,
+                                   "/World/Player",
+                                   std::nullopt,
+                                   {},
+                                   4.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   true,
+                                   -0.1});
+      }) ||
+      !rejectsInvalidArgument([&] {
+        camera::CameraRig enabled({camera::CameraRigMode::thirdPerson,
+                                   "/World/Player",
+                                   std::nullopt,
+                                   {},
+                                   4.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   true});
+        enabled.update(world, *world.transform("/World/Camera"),
+                       camera::CameraRig::Duration{1.0 / 60.0});
       })) {
     return fail("camera rig contracts must reject invalid identities, values, and timesteps");
   }

@@ -1,5 +1,6 @@
 #include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
 
+#include "usd_stage_runner/physics/collision_query.h"
 #include "usd_stage_runner/physics/ground_query.h"
 
 #include <cmath>
@@ -30,8 +31,9 @@ int main() {
 
   auto world = physics_jolt::createJoltPhysicsWorld();
   auto* groundQuery = dynamic_cast<physics::GroundQuery*>(world.get());
-  if (groundQuery == nullptr) {
-    return fail("the Jolt world must expose the optional ground-query capability");
+  auto* collisionQuery = dynamic_cast<physics::CollisionQuery*>(world.get());
+  if (groundQuery == nullptr || collisionQuery == nullptr) {
+    return fail("the Jolt world must expose ground and collision query capabilities");
   }
   const auto floorShape = world->createShape({physics::ShapeType::box, {5.0, 0.5, 5.0}});
   const auto cubeShape = world->createShape({physics::ShapeType::box, {0.5, 0.5, 0.5}});
@@ -66,6 +68,13 @@ int main() {
   if (groundQuery->groundContact(probeBody, 0.1)) {
     return fail("the Jolt ground query must honor the requested probe distance");
   }
+  const auto wallHit = collisionQuery->segmentHit({2.0, 2.0, 0.0}, {4.0, 2.0, 0.0});
+  if (!wallHit || wallHit->body != wall || std::abs(wallHit->fraction - 0.2) > 0.01) {
+    return fail("the Jolt collision query must return the closest segment hit");
+  }
+  if (collisionQuery->segmentHit({2.0, 2.0, 0.0}, {4.0, 2.0, 0.0}, wall)) {
+    return fail("the Jolt collision query must ignore the requested body");
+  }
   try {
     static_cast<void>(groundQuery->groundContact(
         probeBody, std::numeric_limits<double>::quiet_NaN()));
@@ -75,6 +84,17 @@ int main() {
   try {
     static_cast<void>(groundQuery->groundContact(physics::BodyHandle{9999}, 0.2));
     return fail("the Jolt ground query must reject unknown bodies");
+  } catch (const std::out_of_range&) {
+  }
+  try {
+    static_cast<void>(collisionQuery->segmentHit({}, {}));
+    return fail("the Jolt collision query must reject zero-length segments");
+  } catch (const std::invalid_argument&) {
+  }
+  try {
+    static_cast<void>(collisionQuery->segmentHit({2.0, 2.0, 0.0}, {4.0, 2.0, 0.0},
+                                                  physics::BodyHandle{9999}));
+    return fail("the Jolt collision query must reject unknown ignored bodies");
   } catch (const std::out_of_range&) {
   }
   if (!world->destroyBody(probeBody) || !world->destroyBody(wall) ||

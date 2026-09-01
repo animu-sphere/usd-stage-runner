@@ -1,7 +1,7 @@
 # Runtime Model
 
 Status: intended contract; input, transform, Jolt physics, complete character
-control, and runnable camera following implemented
+control, and camera following with collision avoidance implemented
 
 ## State ownership
 
@@ -106,11 +106,14 @@ A USD Camera prim represents a camera in the Stage. The implemented runtime rig
 calculates a live position and forward direction from a prim-path target,
 optional anchor, offset, distance, pitch, yaw, and exponential damping. Its
 initial modes are free, first-person, third-person, and orbit, and its live
-smoothing state survives repeatable mode changes. The standalone host imports
-the declarations, evaluates rigs after fixed-step physics extraction, and
-synchronizes only dirty camera translations and orientations to USD. Springs
-and collision avoidance remain planned; vehicle chase, cockpit, and cinematic
-modes follow later.
+smoothing state survives repeatable mode changes. Optional third-person
+collision configuration probes from the shifted rig origin toward the desired
+pose, shortens the distance by an authored clearance when blocked, and then
+applies smoothing. The standalone host bridges the camera callback to the
+backend-neutral `physicsCore` collision query, evaluates rigs after fixed-step
+physics extraction, and synchronizes only dirty camera translations and
+orientations to USD. Springs, vehicle chase, cockpit, and cinematic modes
+follow later.
 
 ### Vehicles
 
