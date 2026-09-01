@@ -12,8 +12,9 @@ behavior are documented in [docs/README.md](docs/README.md).
 ## Current capabilities
 
 - `runtimeCore`, with an injectable frame clock, bounded fixed-step accumulator,
-  prim-indexed component registry, Runtime World, runtime transforms, and a dirty
-  synchronization queue;
+  a host-facing play-session controller for play, pause, single-step, and reset,
+  a prim-indexed component registry, Runtime World, runtime transforms, and a
+  dirty synchronization queue;
 - `inputCore`, with named action state and backend-neutral movement intent;
 - `physicsCore`, with typed backend-neutral resource handles, descriptors for
   boxes, bodies, and fixed constraints, fixed-step commands, changed-body

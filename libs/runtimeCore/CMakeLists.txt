@@ -20,6 +20,7 @@ add_library(runtimeCore
   src/dirty_prim_queue.cpp
   src/fixed_step_accumulator.cpp
   src/frame_clock.cpp
+  src/play_session.cpp
   src/runtime_world.cpp
 )
 add_library(runtimeCore::runtimeCore ALIAS runtimeCore)

@@ -1,7 +1,8 @@
 # Runtime Model
 
-Status: intended contract; input, transform, Jolt physics, complete character
-control, and camera following with collision avoidance implemented
+Status: intended contract; input, transform, play-session lifecycle, Jolt
+physics, complete character control, and camera following with collision
+avoidance implemented
 
 ## State ownership
 
@@ -81,6 +82,13 @@ poll devices
 Host and render frames may use variable time. Physics starts at 60 Hz
 (`dt = 1 / 60`) and uses the existing bounded accumulator. A controlled clock
 must be injectable so the same path can be tested without wall-clock sleeps.
+
+The implemented host-neutral `PlaySession` owns the bounded accumulator and the
+play/pause state. It invokes host-supplied reset, fixed-step, and synchronization
+callbacks. Paused frames do not accumulate time; single-step advances exactly
+one fixed interval and synchronizes once; reset pauses the session, clears any
+partial remainder, rebuilds state through the callback, and synchronizes the
+restored result.
 
 The current host maps player movement and jump actions to `CharacterIntent` for
 an imported character controller. The controller owns desired horizontal and
