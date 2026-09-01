@@ -392,3 +392,22 @@ if(TARGET stage_runner)
       -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake
   )
 endif()
+
+# The OpenStrata Windows runtime keeps OpenUSD DLLs in both lib and bin. Keep
+# direct CTest runs reproducible outside an activated OpenStrata shell.
+if(WIN32 AND USD_STAGE_RUNNER_OPENUSD_TARGET)
+  set(_stage_runner_test_paths
+    "PATH=path_list_prepend:${pxr_DIR}/lib"
+    "PATH=path_list_prepend:${pxr_DIR}/bin"
+  )
+  if(Python3_RUNTIME_LIBRARY_DIRS)
+    list(APPEND _stage_runner_test_paths
+      "PATH=path_list_prepend:${Python3_RUNTIME_LIBRARY_DIRS}")
+  endif()
+  get_property(_stage_runner_tests DIRECTORY PROPERTY TESTS)
+  foreach(_test IN LISTS _stage_runner_tests)
+    set_property(TEST ${_test} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+      ${_stage_runner_test_paths}
+    )
+  endforeach()
+endif()

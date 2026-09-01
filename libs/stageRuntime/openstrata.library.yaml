@@ -1,25 +1,19 @@
-schema: openstrata.tool/v1alpha1
-tool:
-  id: stage_runner
+schema: openstrata.library/v1alpha1
+library:
+  id: stageRuntime
   version: 0.1.0
-  license: Apache-2.0
-executables: [stage_runner]
-directories: [bin]
+cmake:
+  package: stageRuntime
+  target: stageRuntime::stageRuntime
 requires:
   libraries:
     - id: runtimeCore
       version: ">=0.1,<0.2"
     - id: inputCore
       version: ">=0.1,<0.2"
-    - id: inputSdl
-      version: ">=0.1,<0.2"
     - id: physicsCore
-      version: ">=0.1,<0.2"
-    - id: physicsJolt
       version: ">=0.1,<0.2"
     - id: characterCore
       version: ">=0.1,<0.2"
     - id: cameraCore
-      version: ">=0.1,<0.2"
-    - id: stageRuntime
       version: ">=0.1,<0.2"

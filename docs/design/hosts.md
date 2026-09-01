@@ -1,7 +1,7 @@
 # Host Integration
 
-Status: `stage_runner` and the host-neutral play-session controller implemented;
-usdview and OST Plugin View planned
+Status: reusable Stage play session and `stage_runner` adapter implemented;
+discardable layer, usdview, and OST Plugin View planned
 
 Runtime libraries remain host-independent so the same world and systems can be
 used from three hosts:
@@ -15,9 +15,11 @@ runtime libraries
 
 ## Standalone host
 
-`stage_runner` opens a Stage, builds the Runtime World, selects adapters, runs
-the frame loop, and coordinates synchronization. Command-line parsing and the
-host loop do not own domain behavior.
+`stage_runner` registers schemas, opens a Stage, selects input and physics
+adapters, polls input, and runs the frame loop. `stageRuntime::StageSession`
+builds the Runtime World, imports systems, executes fixed updates, rebuilds on
+reset, and coordinates incremental synchronization. Command-line parsing and
+the host loop do not own domain behavior.
 
 ## usdview plugin
 
@@ -42,12 +44,13 @@ prototype may land earlier to prove host independence, but the milestone is not
 complete until simulation writes use the discardable
 [play-session layer](usd-integration.md#play-session-layer).
 
-The implemented `runtimeCore::PlaySession` defines these lifecycle and timing
-semantics without depending on OpenUSD or a host SDK. It delegates state rebuild,
-one fixed update, and synchronization through callbacks. `stage_runner` uses the
-same fixed-update and synchronization boundary. The remaining host work must
-move Stage import and rebuild behind a reusable session implementation, then add
-the discardable layer before editor adapters consume it.
+The implemented `runtimeCore::PlaySession` defines lifecycle and timing
+semantics without depending on OpenUSD or a host SDK. The implemented
+`stageRuntime::StageSession` binds its callbacks to Stage import, state rebuild,
+one fixed update, and dirty USD synchronization while accepting a
+backend-neutral physics-world factory. `stage_runner` drives this public
+boundary. The remaining safety work is the discardable layer required before
+editor adapters consume it.
 
 ## OST Plugin View and OpenStrata
 

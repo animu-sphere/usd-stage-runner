@@ -1,0 +1,11 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+find_dependency(runtimeCore 0.1)
+find_dependency(inputCore 0.1)
+find_dependency(physicsCore 0.1)
+find_dependency(characterCore 0.1)
+find_dependency(cameraCore 0.1)
+find_dependency(pxr CONFIG)
+
+include("${CMAKE_CURRENT_LIST_DIR}/stageRuntimeTargets.cmake")

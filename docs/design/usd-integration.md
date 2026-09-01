@@ -1,8 +1,8 @@
 # USD Integration
 
-Status: physics, character, and camera schemas and importers plus dirty
-transform and camera-orientation write-back implemented; later domain schemas
-and incremental Stage notices planned
+Status: reusable physics, character, and camera Stage session importers plus
+dirty transform and camera-orientation write-back implemented; later domain
+schemas, discardable layer writes, and incremental Stage notices planned
 
 ## Runtime declarations
 
@@ -59,10 +59,10 @@ The implemented `RunnerCharacterAPI` declares
 `runner:character:groundProbeDistance`,
 `runner:character:maximumSlopeAngleRadians`, and
 `runner:character:jumpSpeed`. It must be applied with both physics APIs to the
-same dynamic body prim. After physics import, the host binds a prim-indexed
+same dynamic body prim. After physics import, `StageSession` binds a prim-indexed
 runtime `CharacterController` to that body and the backend-neutral ground-query
 capability. The schema importer does not itself choose or update player intent.
-The host feeds movement and jump actions through `CharacterIntent` at each
+`StageSession` feeds movement and jump actions through `CharacterIntent` at each
 fixed step.
 
 The implemented `RunnerCameraRigAPI` applies to `UsdGeomCamera` prims and
@@ -72,7 +72,7 @@ The importer resolves relationship targets
 to prim-indexed Runtime World transforms and validates the authored values
 through `cameraCore`. Non-free modes require exactly one target. Per-frame rig
 evaluation runs after physics extraction. Changed poses enter the shared dirty
-queue; the host synchronizes their translation and writes forward direction as
+queue; `StageSession` synchronizes their translation and writes forward direction as
 the dedicated `xformOp:orient:runnerCamera` quaternion op.
 Because `RuntimeTransform` currently imports local translations, camera
 declarations require a Y-up Stage and camera, target, and anchor prims whose
@@ -81,7 +81,7 @@ ancestor transforms are rejected unless `resetXformStack` makes the prim local
 to world. Rig Camera prims accept an empty transform stack or one translate op
 optionally followed by the reserved double-precision runtime orient op, and self
 target or anchor references are invalid. Collision-enabled rigs require a
-physics world that exposes the backend-neutral segment query; the host ignores
+physics world that exposes the backend-neutral segment query; `StageSession` ignores
 the followed target's body when it is bound. Composed camera transforms remain
 part of the later transform work.
 

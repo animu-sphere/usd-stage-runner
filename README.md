@@ -35,13 +35,16 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `runnerSchema`, a codeless OpenUSD plugin defining the single-apply
   `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and
   `RunnerCameraRigAPI` declaration contracts;
+- `stageRuntime`, a reusable OpenUSD-facing play session that imports the
+  Runtime World and physics, character, and camera systems, owns fixed-step
+  execution and reset/rebuild semantics, and incrementally synchronizes dirty
+  transforms for any host;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y`, and maps Space or the gamepad south button to `jump`,
   without exposing SDL types to core consumers;
-- `stage_runner`, which uses OpenUSD when an SDK is available and has an explicit
-  frame bound, imports physics, character, and camera-rig API schemas, maps named
-  actions to character intent, advances controllers, Jolt, and camera rigs, and
-  synchronizes only dirty translations and camera orientations to USD;
+- `stage_runner`, a thin standalone adapter that opens a Stage, selects Jolt and
+  SDL adapters, polls input, and drives the shared `stageRuntime` session for an
+  explicit frame bound;
 - minimal transform, falling-cube, character-import, runnable walk-and-jump,
   and obstructed first-/third-person camera-follow USDA fixtures plus
   dependency-free unit tests; and
