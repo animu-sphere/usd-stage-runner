@@ -56,6 +56,7 @@ public:
   void pause() noexcept;
   void singleStep();
   void reset();
+  void stop();
   [[nodiscard]] AdvanceResult advance(Duration frameTime);
 
   [[nodiscard]] runtime::PlaySession::State state() const noexcept;

@@ -8,9 +8,10 @@ Its frame execution now passes through a host-neutral play-session controller
 with deterministic play, pause, single-step, and reset semantics. Stage import,
 state rebuild, fixed updates, and incremental synchronization now live in the
 reusable `stageRuntime::StageSession` boundary rather than the standalone host.
-This milestone makes that same play session reusable from usdview and OST
-Plugin View without duplicating simulation logic or authoring live values into
-the Stage's persistent layers.
+Simulation writes now use an owned anonymous runtime layer that reset, stop, and
+destruction can discard without changing persistent authored layers. This
+milestone next makes that same safe play session reusable from usdview and OST
+Plugin View without duplicating simulation logic.
 
 ## Outcome
 
@@ -30,13 +31,8 @@ character, camera, timing, and synchronization behavior remains shared.
 
 ### Shared play session
 
-- Extract the implemented Stage import, fixed-step execution, reset, and
-  synchronization path from standalone-only orchestration into a reusable
-  host-facing boundary.
-- Add play, pause, single-step, and reset semantics under a controlled clock.
-- Author simulated values into a discardable session/runtime layer.
-- Prove that reset or stop discards runtime values without changing the root
-  layer.
+The reusable host-facing boundary, controlled lifecycle, anonymous runtime
+layer, and root-layer preservation tests are implemented.
 
 ### Host adapters
 
@@ -47,10 +43,10 @@ character, camera, timing, and synchronization behavior remains shared.
 
 ## Recommended PR sequence
 
-The host-neutral lifecycle and reusable Stage session are implemented, and
-`stage_runner` consumes them without changing its Stage behavior. The next PR
-adds the discardable runtime layer. The usdview and OST Plugin View adapters
-then consume that boundary.
+The host-neutral lifecycle, reusable Stage session, and discardable runtime
+layer are implemented, and `stage_runner` consumes them without changing its
+Stage behavior. The next PR adds the usdview adapter, followed by OST Plugin
+View integration over the same boundary.
 
 ## Completion criteria
 

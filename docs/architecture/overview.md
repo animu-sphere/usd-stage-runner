@@ -151,7 +151,10 @@ to Jolt world position until composed transform support lands. The importer
 creates and binds backend bodies through `PhysicsRuntime`; a physics-declaring
 Stage is rejected when Jolt is unavailable. After each host frame, `StageSession`
 sets the USD translate op only for dirty runtime transforms. Dirty camera rigs
-also write their runtime orientation through a dedicated orient op. Stage writes
+also write their runtime orientation through a dedicated orient op. These live
+values are authored in a scoped edit context to an owned anonymous layer placed
+first among the existing Stage session layer's sublayers; the host edit target,
+root layer, and unrelated session sublayers remain unchanged. Stage writes
 remain in `stageRuntime` and outside the backend-neutral core libraries. Authored
 body or collider attributes without their
 owning API schema are rejected instead of being silently interpreted through
@@ -205,6 +208,9 @@ paused. Reset also clears the remainder, invokes the host-supplied state rebuild
 callback, synchronizes the restored state, and remains paused. `StageSession`
 captures initial transforms, reconstructs the Runtime World and imported
 systems on reset, and restores those values through the same dirty write path.
+Before reset it clears the runtime layer, so prior simulation opinions are
+discarded. Stop clears the layer and rebuilds from persistent composed state;
+destruction detaches only the sublayer owned by that session.
 The standalone host only supplies time, actions, and the selected physics
 factory.
 

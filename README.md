@@ -38,7 +38,8 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `stageRuntime`, a reusable OpenUSD-facing play session that imports the
   Runtime World and physics, character, and camera systems, owns fixed-step
   execution and reset/rebuild semantics, and incrementally synchronizes dirty
-  transforms for any host;
+  transforms into a discardable anonymous runtime layer for any host without
+  changing persistent authored layers;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y`, and maps Space or the gamepad south button to `jump`,
   without exposing SDL types to core consumers;

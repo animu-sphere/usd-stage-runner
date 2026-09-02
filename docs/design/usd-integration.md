@@ -1,8 +1,9 @@
 # USD Integration
 
-Status: reusable physics, character, and camera Stage session importers plus
-dirty transform and camera-orientation write-back implemented; later domain
-schemas, discardable layer writes, and incremental Stage notices planned
+Status: reusable physics, character, and camera Stage session importers,
+discardable runtime-layer write-back, and dirty transform and camera-orientation
+synchronization implemented; later domain schemas and incremental Stage notices
+planned
 
 ## Runtime declarations
 
@@ -116,6 +117,14 @@ hosts should place live values in a dedicated anonymous or session layer:
 root layer
     + session / runtime layer
 ```
+
+`StageSession` implements this with an owned anonymous layer inserted as the
+strongest sublayer of the Stage's existing session layer. It enters a scoped
+runtime edit context only while synchronizing dirty values, so the host's edit
+target remains unchanged and unrelated host session sublayers are preserved.
+Reset clears the live results before rebuilding the captured starting state.
+Stop clears the layer and rebuilds from the persistent composed Stage, and
+destruction detaches only the runtime sublayer.
 
 Stopping a play session should support three explicit outcomes:
 

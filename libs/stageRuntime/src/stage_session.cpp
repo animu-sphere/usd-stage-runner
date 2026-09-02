@@ -16,7 +16,10 @@
 #include <pxr/base/gf/vec3f.h>
 #include <pxr/base/gf/vec3h.h>
 #include <pxr/base/tf/token.h>
+#include <pxr/usd/sdf/layer.h>
 #include <pxr/usd/sdf/path.h>
+#include <pxr/usd/usd/editContext.h>
+#include <pxr/usd/usd/editTarget.h>
 #include <pxr/usd/usd/primRange.h>
 #include <pxr/usd/usdGeom/camera.h>
 #include <pxr/usd/usdGeom/metrics.h>
@@ -766,6 +769,11 @@ public:
                                                    [this] { synchronize(); },
                                                },
                                                config_.fixedStep, config_.maxFixedStepsPerFrame);
+    attachRuntimeLayer();
+  }
+
+  ~Impl() {
+    detachRuntimeLayer();
   }
 
   void setActions(input::ActionState actions) {
@@ -779,6 +787,47 @@ public:
         initialTransforms_.insert_or_assign(prim.GetPath().GetString(), readTransform(prim));
       }
     }
+  }
+
+  void attachRuntimeLayer() {
+    sessionLayer_ = stage_->GetSessionLayer();
+    runtimeLayer_ = pxr::SdfLayer::CreateAnonymous("usd-stage-runner-runtime.usda");
+    if (!sessionLayer_ || !runtimeLayer_) {
+      throw std::runtime_error("could not create the Stage play-session runtime layer");
+    }
+
+    auto sublayers = sessionLayer_->GetSubLayerPaths();
+    sublayers.insert(sublayers.begin(), runtimeLayer_->GetIdentifier());
+    sessionLayer_->SetSubLayerPaths(sublayers);
+    const auto attachedSublayers = sessionLayer_->GetSubLayerPaths();
+    if (std::find(attachedSublayers.begin(), attachedSublayers.end(),
+                  runtimeLayer_->GetIdentifier()) == attachedSublayers.end()) {
+      runtimeLayer_.Reset();
+      sessionLayer_.Reset();
+      throw std::runtime_error("could not attach the Stage play-session runtime layer");
+    }
+  }
+
+  void detachRuntimeLayer() noexcept {
+    if (!sessionLayer_ || !runtimeLayer_) {
+      return;
+    }
+    auto sublayers = sessionLayer_->GetSubLayerPaths();
+    const auto runtimeLayerIdentifier = runtimeLayer_->GetIdentifier();
+    const auto runtimeLayer = std::find(sublayers.begin(), sublayers.end(), runtimeLayerIdentifier);
+    if (runtimeLayer != sublayers.end()) {
+      sublayers.erase(runtimeLayer);
+      (void)sessionLayer_->SetSubLayerPaths(sublayers);
+    }
+    runtimeLayer_.Reset();
+    sessionLayer_.Reset();
+  }
+
+  void clearRuntimeLayer() {
+    if (!runtimeLayer_) {
+      throw std::runtime_error("Stage play-session runtime layer is unavailable");
+    }
+    runtimeLayer_->Clear();
   }
 
   void rebuild(bool restoreInitialState) {
@@ -861,12 +910,15 @@ public:
   }
 
   void synchronize() {
+    pxr::UsdEditContext runtimeEditContext(stage_, pxr::UsdEditTarget(runtimeLayer_));
     const auto synchronized = synchronizeDirtyTransforms(stage_, state_->world);
     stats_.synchronizedTransforms += synchronized.first;
     stats_.synchronizedCameraTransforms += synchronized.second;
   }
 
   pxr::UsdStageRefPtr stage_;
+  pxr::SdfLayerHandle sessionLayer_;
+  pxr::SdfLayerRefPtr runtimeLayer_;
   StageSessionConfig config_;
   PhysicsWorldFactory physicsWorldFactory_;
   input::ActionState actions_;
@@ -902,7 +954,15 @@ void StageSession::singleStep() {
 }
 
 void StageSession::reset() {
+  impl_->clearRuntimeLayer();
   impl_->playSession_->reset();
+}
+
+void StageSession::stop() {
+  impl_->clearRuntimeLayer();
+  impl_->playSession_->reset();
+  impl_->clearRuntimeLayer();
+  impl_->rebuild(false);
 }
 
 StageSession::AdvanceResult StageSession::advance(Duration frameTime) {
