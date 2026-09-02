@@ -1,0 +1,16 @@
+{
+    "Plugins": [
+        {
+            "Type": "python",
+            "Name": "usdviewStageRunner",
+            "Info": {
+                "Types": {
+                    "usdviewStageRunner.StageRunnerPluginContainer": {
+                        "bases": ["pxr.Usdviewq.plugin.PluginContainer"],
+                        "displayName": "Stage Runner usdview Controls"
+                    }
+                }
+            }
+        }
+    ]
+}

@@ -1,7 +1,7 @@
 # Host Integration
 
 Status: reusable Stage play session, discardable runtime layer,
-`stage_runner`, and usdview adapters implemented; OST Plugin View planned
+`stage_runner`, usdview, and OST Plugin View adapters implemented
 
 Runtime libraries remain host-independent so the same world and systems can be
 used from three hosts:
@@ -45,7 +45,12 @@ The first usable controls—play, pause, stop, single-step, and reset—are expo
 from a `Stage Runner` menu. A small native Python binding passes usdview's
 existing `Usd.Stage` directly into `StageSession`; the Python layer owns only
 commands, elapsed host time, redraw requests, and Stage replacement handling.
-The milestone is not complete until OST Plugin View also reuses the discardable
+OST Plugin View reuses this adapter rather than introducing another session
+implementation. The `plugin-view` OpenStrata build intent stages the Python
+package and native binding into the `runnerSchema` bundle. Its schema
+`plugInfo.json` includes the Python plugin registration, so `ost plugin view`
+composes the bundle's plugin, Python, and loader paths and opens the same menu
+adapter over the same discardable
 [play-session layer](usd-integration.md#play-session-layer).
 
 The implemented `runtimeCore::PlaySession` defines lifecycle and timing
@@ -70,6 +75,6 @@ Stage Runner    -> ordinary C++ runtime libraries
 ```
 
 The existing `openstrata.toml` and `openstrata.ci.yaml` direction remains in
-place, while direct CMake builds continue to work. A later OST Plugin View
-integration should load the same runtime libraries rather than fork their
-implementation.
+place, while direct CMake builds continue to work. The named `plugin-view`
+intent is isolated in its own build tree and adds only deployment staging; the
+runtime target graph is unchanged.
