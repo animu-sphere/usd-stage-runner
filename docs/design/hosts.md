@@ -39,7 +39,7 @@ camera slices. A Stage that runs in `stage_runner` must use the same Runtime
 World, subsystem implementations, and fixed-step semantics when played in
 usdview. The plugin remains a thin lifecycle and UI adapter.
 
-The first usable controls are play, pause, single-step, and reset. A small
+The first usable controls are play, pause, stop, single-step, and reset. A small
 prototype may land earlier to prove host independence, but the milestone is not
 complete until usdview and OST Plugin View reuse the discardable
 [play-session layer](usd-integration.md#play-session-layer).

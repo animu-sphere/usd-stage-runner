@@ -31,7 +31,7 @@ not exist yet.
 | `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, `physicsJolt`; OpenUSD `plug` when available. |
 
-The CTest suite covers clocks, play/pause/single-step/reset lifecycle,
+The CTest suite covers clocks, play/pause/stop/single-step/reset lifecycle,
 registry and dirty-queue behavior, action and movement logic, physics-core
 resource, deterministic-step, prim/body mapping,
 changed-transform synchronization, isolated character controller and camera
@@ -205,7 +205,9 @@ host frame advances zero or more fixed steps and then invokes one synchronizatio
 callback. While paused, host time is ignored. Single-step clears any partial
 remainder, advances exactly one fixed interval, synchronizes once, and remains
 paused. Reset also clears the remainder, invokes the host-supplied state rebuild
-callback, synchronizes the restored state, and remains paused. `StageSession`
+callback, synchronizes the restored state, and remains paused. Stop pauses and
+clears the remainder without invoking lifecycle callbacks, leaving the host to
+discard its state. `StageSession`
 captures initial transforms, reconstructs the Runtime World and imported
 systems on reset, and restores those values through the same dirty write path.
 Before reset it clears the runtime layer, so prior simulation opinions are

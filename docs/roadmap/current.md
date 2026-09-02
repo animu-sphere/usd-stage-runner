@@ -5,8 +5,8 @@ Status: in progress
 The standalone `stage_runner` path now implements physics, character control,
 camera following, collision avoidance, and incremental USD synchronization.
 Its frame execution now passes through a host-neutral play-session controller
-with deterministic play, pause, single-step, and reset semantics. Stage import,
-state rebuild, fixed updates, and incremental synchronization now live in the
+with deterministic play, pause, stop, single-step, and reset semantics. Stage
+import, state rebuild, fixed updates, and incremental synchronization now live in the
 reusable `stageRuntime::StageSession` boundary rather than the standalone host.
 Simulation writes now use an owned anonymous runtime layer that reset, stop, and
 destruction can discard without changing persistent authored layers. This

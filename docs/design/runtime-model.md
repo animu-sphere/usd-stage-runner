@@ -89,8 +89,9 @@ callbacks. Paused frames do not accumulate time; single-step advances exactly
 one fixed interval and synchronizes once; reset pauses the session, clears any
 partial remainder, rebuilds state through the callback, and synchronizes the
 restored result. `StageSession` clears its anonymous runtime layer before that
-reset path; stop additionally exposes the persistent composed Stage and leaves
-the reusable session paused.
+reset path. Stop pauses and clears partial timing without invoking callbacks;
+`StageSession` then clears its runtime layer, rebuilds the persistent composed
+Stage exactly once, and leaves the reusable session paused.
 
 The reusable Stage session maps player movement and jump actions to `CharacterIntent` for
 an imported character controller. The controller owns desired horizontal and

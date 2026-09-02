@@ -959,8 +959,7 @@ void StageSession::reset() {
 }
 
 void StageSession::stop() {
-  impl_->clearRuntimeLayer();
-  impl_->playSession_->reset();
+  impl_->playSession_->stop();
   impl_->clearRuntimeLayer();
   impl_->rebuild(false);
 }
