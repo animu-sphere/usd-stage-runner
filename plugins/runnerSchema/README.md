@@ -37,3 +37,10 @@ the distance retained in front of the first probed physics hit.
 used when `usdGenSchema` or a compatible `pxr` Python environment is not
 available. CMake regenerates them only after verifying that the selected Python
 can import OpenUSD.
+
+The schema `plugInfo.json` also includes the `python/usdviewStageRunner`
+registration used by OpenStrata Plugin View. `ost build --intent plugin-view`
+stages the existing usdview adapter and native binding into that conventional
+bundle Python directory. The schema remains codeless; the staged Python payload
+is a host adapter over `stageRuntime::StageSession`, not a schema
+implementation.

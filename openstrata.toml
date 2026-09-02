@@ -6,6 +6,11 @@ version = "0.1.0"
 platform = "cy2026"
 profile = "usd"
 
+[build.intents.plugin-view]
+cache = {
+  USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR = { type = "PATH", value = "plugins/runnerSchema", portability = "portable" }
+}
+
 [workspace]
 members = [
   "libs/runtimeCore",

@@ -20,3 +20,19 @@ bound, `/World/PlayerCube` as the player prim, and the Jolt backend when a
 Stage declares physics bodies. It intentionally owns host lifecycle, timing,
 and UI only; import, simulation, camera evaluation, synchronization, and layer
 discard remain in shared libraries.
+
+For OpenStrata Plugin View, the root `plugin-view` intent stages this package
+inside the `runnerSchema` bundle, whose schema `plugInfo.json` includes the
+Python plugin registration:
+
+```powershell
+ost build --intent plugin-view
+ost plugin view plugins/runnerSchema tests/fixtures/third_person_camera.usda
+```
+
+`--with plugins/usdviewStageRunner` is not used because OpenStrata 0.22.8
+requires a manifest-backed plugin kind and does not model usdview Python host
+extensions. The adapter is staged into `runnerSchema` instead.
+
+This path uses the same package and native module as the ordinary usdview
+adapter; it does not introduce another host implementation.

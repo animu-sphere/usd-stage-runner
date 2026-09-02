@@ -2,7 +2,7 @@
 
 Status: runtime, play-session lifecycle, input, physics-core, character-core,
 camera-core, Stage-session rebuild and discardable-layer contracts, usdview
-native-binding lifecycle smoke coverage,
+native-binding lifecycle and OpenStrata-staged bundle smoke coverage,
 runtime-integration contracts, SDL mapping, Jolt bootstrap,
 ground queries, and
 collision segment queries,

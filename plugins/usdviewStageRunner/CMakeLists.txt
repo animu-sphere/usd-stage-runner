@@ -7,6 +7,9 @@ project(
   LANGUAGES CXX
 )
 
+set(USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR "" CACHE PATH
+  "OpenStrata bundle root that receives the usdview adapter for `ost plugin view`")
+
 if(NOT TARGET stageRuntime::stageRuntime)
   find_package(stageRuntime CONFIG REQUIRED)
 endif()
@@ -70,6 +73,44 @@ if(USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH)
   )
 endif()
 
+if(USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR)
+  set(_ost_bundle_dir "${USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR}")
+  if(NOT IS_ABSOLUTE "${_ost_bundle_dir}")
+    cmake_path(ABSOLUTE_PATH _ost_bundle_dir
+      BASE_DIRECTORY "${CMAKE_SOURCE_DIR}"
+      NORMALIZE
+    )
+  endif()
+  if(NOT EXISTS "${_ost_bundle_dir}/openstrata.plugin.yaml")
+    message(FATAL_ERROR
+      "USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR must name an OpenStrata plugin bundle: ${_ost_bundle_dir}")
+  endif()
+
+  set(_ost_python_package_dir "${_ost_bundle_dir}/python/usdviewStageRunner")
+  add_custom_target(usdviewStageRunnerOstPluginView ALL
+    COMMAND "${CMAKE_COMMAND}" -E make_directory
+      "${_ost_python_package_dir}"
+      "${_ost_python_package_dir}/resources/runnerSchema"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f
+      "${_ost_python_package_dir}/_usdviewStageRunner.pyd"
+      "${_ost_python_package_dir}/_usdviewStageRunner.so"
+      "${_ost_python_package_dir}/_usdviewStageRunner.dylib"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      "${CMAKE_CURRENT_SOURCE_DIR}/python/usdviewStageRunner/__init__.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/python/usdviewStageRunner/controller.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/plugin/plugInfo.json"
+      "$<TARGET_FILE:usdviewStageRunnerPython>"
+      "${_ost_python_package_dir}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+      "${USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH}/plugInfo.json"
+      "${USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH}/generatedSchema.usda"
+      "${_ost_python_package_dir}/resources/runnerSchema"
+    DEPENDS usdviewStageRunnerPython
+    COMMENT "Staging usdviewStageRunner for OpenStrata plugin view"
+    VERBATIM
+  )
+endif()
+
 set(_usdview_install_dir "${CMAKE_INSTALL_LIBDIR}/usd-stage-runner/usdview")
 install(TARGETS usdviewStageRunnerPython
   LIBRARY DESTINATION "${_usdview_install_dir}/usdviewStageRunner"
@@ -109,6 +150,7 @@ if(BUILD_TESTING AND Python3_EXECUTABLE)
       "${CMAKE_CURRENT_SOURCE_DIR}/python/usdviewStageRunner/controller.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/controller_smoke.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/native_session_smoke.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_smoke.py"
   )
 
   add_test(
@@ -116,4 +158,18 @@ if(BUILD_TESTING AND Python3_EXECUTABLE)
     COMMAND "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/controller_smoke.py"
   )
+
+  if(USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR)
+    add_test(
+      NAME usdviewStageRunner.ost_plugin_view
+      COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_smoke.py"
+        "${_ost_bundle_dir}/plugin/resources/runnerSchema"
+        "${CMAKE_SOURCE_DIR}/tests/fixtures/minimal.usda"
+    )
+    set_tests_properties(usdviewStageRunner.ost_plugin_view PROPERTIES
+      ENVIRONMENT_MODIFICATION
+        "PYTHONPATH=path_list_prepend:${_ost_bundle_dir}/python;PYTHONPATH=path_list_prepend:${pxr_DIR}/lib/python;PATH=path_list_prepend:${_ost_python_package_dir};PATH=path_list_prepend:${pxr_DIR}/lib;PATH=path_list_prepend:${pxr_DIR}/bin;PATH=path_list_prepend:${_python_runtime_dir};PXR_PLUGINPATH_NAME=path_list_prepend:${_ost_bundle_dir}/plugin/resources/runnerSchema;PYTHONDONTWRITEBYTECODE=set:1"
+    )
+  endif()
 endif()
