@@ -5,13 +5,13 @@
 The repository implements the input-to-physics-to-USD vertical slice and its
 formal authored-data contract, the complete character-control slice, and the
 camera-rig slice with collision avoidance. It contains the character controller,
-Jolt ground and collision-query adapters, Stage importer,
+Jolt ground and collision-query adapters, a reusable Stage play session,
 keyboard/gamepad/injected action mapping, runnable walking, grounding, and
 jumping scenario, plus camera targeting, mode, collision probes, smoothing,
 fixed-step host evaluation, and incremental USD Camera pose synchronization.
 Runtime, input, physics,
 character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
-runtime-schema plugin, an OpenUSD-aware host executable,
+runtime-schema plugin, a thin OpenUSD-aware host executable,
 core/adapter/integration tests, and dual CMake/OpenStrata build configuration
 are present. Multi-host integration, OpenExec, behavior, and vehicle targets do
 not exist yet.
@@ -28,7 +28,8 @@ not exist yet.
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, character ground shape casts, and first-hit segment ray casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
-| `stage_runner` | `apps/stage_runner` | Parse host options, open an OpenUSD Stage, import applied physics, character, and camera-rig schemas, poll input, update character intent and controllers, step physics, evaluate camera rigs, and synchronize dirty translations and camera orientations to USD. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`, `inputSdl`, `physicsJolt`; OpenUSD `plug`, `usd`, and `usdGeom` when available. |
+| `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
+| `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, `physicsJolt`; OpenUSD `plug` when available. |
 
 The CTest suite covers clocks, play/pause/single-step/reset lifecycle,
 registry and dirty-queue behavior, action and movement logic, physics-core
@@ -36,7 +37,7 @@ resource, deterministic-step, prim/body mapping,
 changed-transform synchronization, isolated character controller and camera
 rig contracts, camera target following, collision adjustment, and smoothing,
 physical-control mapping, Jolt ground and segment queries, host option validation,
-Stage loading, and
+Stage-session import, reset/rebuild and synchronization, Stage loading, and
 complete injected movement and jump paths through character control to USD
 synchronization, plus camera schema import, invalid-declaration rejection, and
 the deterministic first-/third-person follow and obstructed-camera paths
@@ -50,7 +51,7 @@ radians, and jump speed are read into a `CharacterControllerConfig`. The host
 attaches the resulting controller to the same Runtime World prim and binds it
 to the already imported body and Jolt ground-query capability. Character
 attributes without their owning API and incomplete or static character
-declarations are rejected. At each fixed step the host converts normalized
+declarations are rejected. At each fixed step `StageSession` converts normalized
 movement and jump actions into `CharacterIntent` and updates the imported
 player controller before advancing physics.
 
@@ -67,12 +68,12 @@ to its world translation until composed camera transforms are implemented. A
 rig Camera accepts an empty transform stack or one translate op optionally
 followed by the reserved double-precision runtime orient op, rejects other
 authored transform ops, and cannot target or anchor itself.
-After each fixed physics extraction, the host evaluates imported rigs with the
+After each fixed physics extraction, `StageSession` evaluates imported rigs with the
 same controlled step. A changed position or forward direction marks that camera
 dirty; synchronization updates its translate op and the dedicated
 `xformOp:orient:runnerCamera` quaternion op. Unchanged cameras do not enter the
 USD write path.
-For collision-enabled third-person rigs, the host connects `cameraCore`'s
+For collision-enabled third-person rigs, `StageSession` connects `cameraCore`'s
 prim-aware callback to the optional `physicsCore` segment query and ignores the
 followed target's bound body. A first hit shortens the desired pose by the
 authored clearance before exponential smoothing, without exposing Jolt types
@@ -134,11 +135,11 @@ Jolt is an explicit configure option.
 component; it does not introduce another entity or scene hierarchy.
 
 Transform mutations are added to a duplicate-free dirty queue. Taking the queue
-drains it, so the host writes only transforms changed since the previous
+drains it, so `StageSession` writes only transforms changed since the previous
 synchronization point. Removing a prim removes its components and any pending
 dirty entry.
 
-When a Stage opens, the host traverses its prims and imports local translate ops
+When a Stage session starts, `stageRuntime` traverses its prims and imports local translate ops
 for xformable prims. A physics prim applies both `RunnerPhysicsBodyAPI` and
 `RunnerColliderAPI`. Motion type, mass, shape, and local-space box half extents
 come from their declared `runner:physics:*` attributes; ordered scale ops
@@ -148,10 +149,11 @@ followed by scale ops, and identity ancestor transforms unless the prim resets
 its transform stack. These restrictions keep local USD translation identical
 to Jolt world position until composed transform support lands. The importer
 creates and binds backend bodies through `PhysicsRuntime`; a physics-declaring
-Stage is rejected when Jolt is unavailable. After each host frame, the host
+Stage is rejected when Jolt is unavailable. After each host frame, `StageSession`
 sets the USD translate op only for dirty runtime transforms. Dirty camera rigs
 also write their runtime orientation through a dedicated orient op. Stage writes
-remain outside the core libraries. Authored body or collider attributes without their
+remain in `stageRuntime` and outside the backend-neutral core libraries. Authored
+body or collider attributes without their
 owning API schema are rejected instead of being silently interpreted through
 the removed temporary convention.
 
@@ -193,15 +195,18 @@ poll SDL or inject physical axes and jump button
     -> synchronize dirty translations and camera orientations to USD
 ```
 
-`PlaySession` owns play and pause state plus the bounded accumulator. A playing
+`PlaySession` owns play and pause state plus the bounded accumulator, while
+`StageSession` supplies its rebuild, fixed-update, and synchronization
+callbacks. A playing
 host frame advances zero or more fixed steps and then invokes one synchronization
 callback. While paused, host time is ignored. Single-step clears any partial
 remainder, advances exactly one fixed interval, synchronizes once, and remains
 paused. Reset also clears the remainder, invokes the host-supplied state rebuild
-callback, synchronizes the restored state, and remains paused. The standalone
-host now runs its existing Stage path through this same controller; extracting
-the Stage import and state rebuild into a reusable session implementation remains
-part of Milestone 5.
+callback, synchronizes the restored state, and remains paused. `StageSession`
+captures initial transforms, reconstructs the Runtime World and imported
+systems on reset, and restores those values through the same dirty write path.
+The standalone host only supplies time, actions, and the selected physics
+factory.
 
 The default fixed interval is 1/60 second, the default frame bound is 300, and
 catch-up is limited to eight fixed updates per frame. `--deterministic` supplies
@@ -209,10 +214,10 @@ exactly one fixed interval per host frame without sleeping.
 
 ## Build and verification
 
-The root CMake tree builds the seven compiled libraries, codeless schema plugin,
+The root CMake tree builds the eight compiled libraries, codeless schema plugin,
 host, and CTest suite. Each library installs headers and an exported CMake
 package. OpenUSD, SDL, and Jolt discovery remain isolated to schema,
-adapter, and host directories.
+Stage-integration, adapter, and host directories.
 
 OpenStrata owns the pinned `cy2026`/`usd` environment. That profile supplies
 OpenUSD but not SDL or Jolt; interactive or Jolt-backed builds therefore need

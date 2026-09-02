@@ -5,7 +5,9 @@ Status: in progress
 The standalone `stage_runner` path now implements physics, character control,
 camera following, collision avoidance, and incremental USD synchronization.
 Its frame execution now passes through a host-neutral play-session controller
-with deterministic play, pause, single-step, and reset semantics.
+with deterministic play, pause, single-step, and reset semantics. Stage import,
+state rebuild, fixed updates, and incremental synchronization now live in the
+reusable `stageRuntime::StageSession` boundary rather than the standalone host.
 This milestone makes that same play session reusable from usdview and OST
 Plugin View without duplicating simulation logic or authoring live values into
 the Stage's persistent layers.
@@ -45,11 +47,10 @@ character, camera, timing, and synchronization behavior remains shared.
 
 ## Recommended PR sequence
 
-The host-neutral lifecycle and fixed-step boundary is implemented and
-`stage_runner` uses it without changing its Stage behavior. The next PR moves
-Stage import, state rebuild, and synchronization behind a reusable session
-implementation. A following PR adds the discardable runtime layer, then the
-usdview and OST Plugin View adapters consume that boundary.
+The host-neutral lifecycle and reusable Stage session are implemented, and
+`stage_runner` consumes them without changing its Stage behavior. The next PR
+adds the discardable runtime layer. The usdview and OST Plugin View adapters
+then consume that boundary.
 
 ## Completion criteria
 

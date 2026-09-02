@@ -1,6 +1,6 @@
 # Runtime Model
 
-Status: intended contract; input, transform, play-session lifecycle, Jolt
+Status: intended contract; input, transform, reusable Stage play-session lifecycle, Jolt
 physics, complete character control, and camera following with collision
 avoidance implemented
 
@@ -90,7 +90,7 @@ one fixed interval and synchronizes once; reset pauses the session, clears any
 partial remainder, rebuilds state through the callback, and synchronizes the
 restored result.
 
-The current host maps player movement and jump actions to `CharacterIntent` for
+The reusable Stage session maps player movement and jump actions to `CharacterIntent` for
 an imported character controller. The controller owns desired horizontal and
 jump velocity, advances Jolt through the bounded fixed step, and synchronizes
 changed bodies through the dirty transform queue. Non-character physics bodies
@@ -117,7 +117,7 @@ initial modes are free, first-person, third-person, and orbit, and its live
 smoothing state survives repeatable mode changes. Optional third-person
 collision configuration probes from the shifted rig origin toward the desired
 pose, shortens the distance by an authored clearance when blocked, and then
-applies smoothing. The standalone host bridges the camera callback to the
+applies smoothing. `StageSession` bridges the camera callback to the
 backend-neutral `physicsCore` collision query, evaluates rigs after fixed-step
 physics extraction, and synchronizes only dirty camera translations and
 orientations to USD. Springs, vehicle chase, cockpit, and cinematic modes

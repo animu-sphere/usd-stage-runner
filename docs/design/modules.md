@@ -1,8 +1,8 @@
 # Modules and Dependency Boundaries
 
 Status: intended contract; `runtimeCore`, `inputCore`, `physicsCore`,
-`characterCore`, `cameraCore`, `inputSdl`, `physicsJolt`, and the physics,
-character, and camera contracts in `runnerSchema` implemented
+`characterCore`, `cameraCore`, `stageRuntime`, `inputSdl`, `physicsJolt`, and
+the physics, character, and camera contracts in `runnerSchema` implemented
 
 ## Core and adapter rule
 
@@ -14,6 +14,7 @@ inputCore    <- inputSdl
 physicsCore  <- physicsJolt
 characterCore <- host / execCharacter
 cameraCore    <- host / execRunner
+stageRuntime  <- host adapters
 behaviorCore  <- host / execBehavior
 vehicleCore   <- host / execVehicle
 ```
@@ -38,10 +39,11 @@ PhysicsConstraint
 | Input | Named actions and controller intent. | SDL device polling and mapping. |
 | Physics | Backend-neutral worlds, bodies, shapes, constraints, commands, and optional queries. | Jolt initialization, object lifetime, layers, stepping, queries, and transform extraction. |
 | Character | Character intent and controller state. | Physics operations through `physicsCore`. |
-| Camera | Targeting, rig modes, smoothing, and probes. | Host rendering and USD camera synchronization. |
+| Camera | Targeting, rig modes, smoothing, and probes. | `stageRuntime` USD synchronization and host rendering. |
 | Vehicle | Chassis, wheel, suspension, steering, and drivetrain composition. | Backend capabilities through `physicsCore`; thin Exec wrappers. |
 | Behavior | Stateful behavior-tree evaluation. | Thin host and OpenExec invocation. |
 | Schema | No runtime implementation. | Applied OpenUSD API schema definitions and parsing. |
+| Stage session | Prim-indexed system import, play-session execution, reset/rebuild, and dirty USD synchronization. | Host Stage acquisition, clock driving, UI, and backend selection. |
 
 ## Allowed dependency direction
 
@@ -52,6 +54,7 @@ inputCore      -> runtimeCore
 physicsCore    -> runtimeCore
 characterCore  -> runtimeCore + physicsCore
 cameraCore     -> runtimeCore
+stageRuntime   -> runtimeCore + inputCore + physicsCore + characterCore + cameraCore + OpenUSD
 behaviorCore   -> runtimeCore
 vehicleCore    -> runtimeCore + physicsCore
 
@@ -59,7 +62,7 @@ inputSdl       -> inputCore + SDL
 physicsJolt    -> physicsCore + Jolt
 runnerSchema   -> OpenUSD
 exec*          -> relevant core + runnerSchema + OpenExec
-stage_runner   -> composed runtime libraries
+stage_runner   -> stageRuntime + inputSdl + physicsJolt + OpenUSD plug
 ```
 
 Forbidden edges include:
@@ -71,6 +74,7 @@ characterCore -/-> Jolt
 vehicleCore  -/-> OpenExec
 behaviorCore -/-> OpenExec
 cameraCore   -/-> OpenExec or Jolt
+stageRuntime -/-> OpenExec, Jolt, or SDL
 ```
 
 The CMake target graph and CI should enforce these boundaries as targets are
@@ -91,6 +95,7 @@ usd-stage-runner/
 |  |- physicsCore/
 |  |- characterCore/
 |  |- cameraCore/
+|  |- stageRuntime/
 |  |- behaviorCore/
 |  `- vehicleCore/
 |- backends/
