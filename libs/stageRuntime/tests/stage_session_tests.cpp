@@ -61,6 +61,17 @@ int main() {
     return fail("reset must rebuild and synchronize the captured initial Stage state");
   }
 
+  if (!translate.Set(pxr::GfVec3d{4.0, 1.0, 0.0})) {
+    return fail("failed to author an external Stage transform edit");
+  }
+  session.reset();
+  const auto* externallyRestored = session.world().transform("/World/PlayerCube");
+  if (externallyRestored == nullptr || !close(externallyRestored->translation.x, 0.0) ||
+      !translate.Get(&authored) || !close(authored[0], 0.0) ||
+      session.stats().synchronizedTransforms != 1) {
+    return fail("reset must restore Stage edits made outside the runtime session");
+  }
+
   session.singleStep();
   const auto* stepped = session.world().transform("/World/PlayerCube");
   if (stepped == nullptr || !close(stepped->translation.x, 0.02) ||

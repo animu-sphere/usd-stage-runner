@@ -788,11 +788,15 @@ public:
       const auto primId = prim.GetPath().GetString();
       next->world.addPrim(primId);
       if (pxr::UsdGeomXformable(prim)) {
+        const auto authoredTransform = readTransform(prim);
         const auto initial = initialTransforms_.find(primId);
         const auto transform = restoreInitialState && initial != initialTransforms_.end()
                                    ? initial->second
-                                   : readTransform(prim);
+                                   : authoredTransform;
         next->world.emplaceTransform(primId, transform);
+        if (restoreInitialState && !transformsEqual(transform, authoredTransform)) {
+          next->world.markTransformDirty(primId);
+        }
       }
     }
 
@@ -812,17 +816,6 @@ public:
       importCharacters(stage_, *next, nextStats);
     }
     importCameraRigs(stage_, *next, nextStats);
-
-    if (restoreInitialState && state_) {
-      for (const auto& primId : next->world.prims()) {
-        const auto* restored = next->world.transform(primId);
-        const auto* previous = state_->world.transform(primId);
-        if (restored != nullptr &&
-            (previous == nullptr || !transformsEqual(*restored, *previous))) {
-          next->world.markTransformDirty(primId);
-        }
-      }
-    }
 
     state_ = std::move(next);
     stats_ = nextStats;
