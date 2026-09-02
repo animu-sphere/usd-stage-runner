@@ -1,7 +1,7 @@
 # Host Integration
 
-Status: reusable Stage play session, discardable runtime layer, and
-`stage_runner` adapter implemented; usdview and OST Plugin View planned
+Status: reusable Stage play session, discardable runtime layer,
+`stage_runner`, and usdview adapters implemented; OST Plugin View planned
 
 Runtime libraries remain host-independent so the same world and systems can be
 used from three hosts:
@@ -23,13 +23,15 @@ the host loop do not own domain behavior.
 
 ## usdview plugin
 
-The planned usdview plugin obtains the current Stage and provides:
+The implemented usdview plugin obtains the current Stage and provides:
 
 - play, pause, and stop;
-- frame ticking and fixed-step settings;
-- camera selection;
-- runtime settings; and
-- debug visualization toggles.
+- single-step and reset;
+- fixed 1/60-second frame ticking through a Qt timer; and
+- automatic session disposal when usdview replaces the current Stage.
+
+Camera selection, editable runtime settings, and debug visualization toggles
+remain later host-tooling work.
 
 Physics, behavior, camera, and vehicle logic remain in shared libraries. The
 plugin supplies usdview lifecycle, UI, and rendering integration only.
@@ -39,9 +41,11 @@ camera slices. A Stage that runs in `stage_runner` must use the same Runtime
 World, subsystem implementations, and fixed-step semantics when played in
 usdview. The plugin remains a thin lifecycle and UI adapter.
 
-The first usable controls are play, pause, stop, single-step, and reset. A small
-prototype may land earlier to prove host independence, but the milestone is not
-complete until usdview and OST Plugin View reuse the discardable
+The first usable controls—play, pause, stop, single-step, and reset—are exposed
+from a `Stage Runner` menu. A small native Python binding passes usdview's
+existing `Usd.Stage` directly into `StageSession`; the Python layer owns only
+commands, elapsed host time, redraw requests, and Stage replacement handling.
+The milestone is not complete until OST Plugin View also reuses the discardable
 [play-session layer](usd-integration.md#play-session-layer).
 
 The implemented `runtimeCore::PlaySession` defines lifecycle and timing
