@@ -20,12 +20,7 @@ CTestTestfile.cmake
 *.exp
 *.lib
 *.dll
-*.pyd
 *.exe
-
-# Generated payload for the runnerSchema bundle's Plugin View build intent.
-/plugins/runnerSchema/python/usdviewStageRunner/*
-!/plugins/runnerSchema/python/usdviewStageRunner/plugInfo.json
 
 # Editor and operating-system state.
 .vs/

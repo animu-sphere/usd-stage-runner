@@ -130,28 +130,6 @@ change persistent authored layers. See the
 [plugin README](plugins/usdviewStageRunner/README.md) for layout and runtime
 defaults.
 
-### OpenStrata Plugin View
-
-The `plugin-view` build intent stages that same usdview package and native
-`StageSession` binding into the `runnerSchema` bundle. OpenStrata then supplies
-the bundle's Python, plugin-discovery, and loader paths without changing the
-current shell:
-
-```powershell
-ost build --intent plugin-view
-ost plugin view plugins/runnerSchema tests/fixtures/character_walk.usda
-```
-
-This intentionally does not use `--with`: OpenStrata 0.22.8 requires every
-`--with` input to be a manifest-backed plugin bundle, but does not currently
-model a usdview Python host extension as a plugin kind. The `plugin-view`
-intent therefore stages the adapter inside the valid `runnerSchema` bundle.
-
-`third_person_camera.usda` can be opened the same way. The selected OpenStrata
-runtime must contain usdview, and a Jolt package must be discoverable at build
-time to execute physics declarations; otherwise the shared adapter reports the
-same unavailable-backend error as `stage_runner` and ordinary usdview.
-
 ## Host usage
 
 ```text

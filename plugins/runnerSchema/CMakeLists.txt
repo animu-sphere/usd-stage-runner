@@ -2,11 +2,6 @@ cmake_minimum_required(VERSION 3.20)
 
 project(runnerSchema_schema NONE)
 
-if(NOT DEFINED USD_STAGE_RUNNER_SCHEMA_INSTALL_DIR)
-  set(USD_STAGE_RUNNER_SCHEMA_INSTALL_DIR
-    "share/usd-stage-runner/runnerSchema")
-endif()
-
 set(_schema_source "${CMAKE_CURRENT_SOURCE_DIR}/schema.usda")
 set(_schema_resources "${CMAKE_CURRENT_SOURCE_DIR}/plugin/resources/runnerSchema")
 

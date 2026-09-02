@@ -1,7 +1,6 @@
 # Milestone 5: Host Integration
 
-Status: implementation complete; interactive Level 6 verification remains
-conditional on an OpenStrata runtime that contains usdview
+Status: in progress
 
 The standalone `stage_runner` path now implements physics, character control,
 camera following, collision avoidance, and incremental USD synchronization.
@@ -12,9 +11,8 @@ reusable `stageRuntime::StageSession` boundary rather than the standalone host.
 Simulation writes now use an owned anonymous runtime layer that reset, stop, and
 destruction can discard without changing persistent authored layers. The
 usdview adapter now drives that same session through a native Python binding
-and thin menu/timer layer. The OpenStrata `plugin-view` intent stages that same
-adapter into the `runnerSchema` bundle, allowing `ost plugin view` to compose
-and launch it without duplicating simulation logic.
+and thin menu/timer layer. This milestone next connects the safe play session
+to OST Plugin View without duplicating simulation logic.
 
 ## Outcome
 
@@ -41,18 +39,15 @@ layer, and root-layer preservation tests are implemented.
 
 - The thin `plugins/usdviewStageRunner` adapter over the shared session is
   implemented.
-- The same session boundary is connected to OST Plugin View through bundle
-  staging and plugin-info inclusion.
+- Connect the same session boundary to OST Plugin View.
 - Reuse `character_walk.usda` and `third_person_camera.usda` to verify
   equivalent fixed-step and synchronization results in each host.
 
 ## Recommended PR sequence
 
 The host-neutral lifecycle, reusable Stage session, discardable runtime layer,
-standalone adapter, usdview adapter, and OST Plugin View composition are
-implemented. The remaining milestone evidence is an interactive Level 6 launch
-on a runtime that ships usdview and, for the representative physics scenarios,
-a build with Jolt available.
+standalone adapter, and usdview adapter are implemented. The next PR connects
+OST Plugin View to the same boundary.
 
 ## Completion criteria
 
