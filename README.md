@@ -46,13 +46,17 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `stage_runner`, a thin standalone adapter that opens a Stage, selects Jolt and
   SDL adapters, polls input, and drives the shared `stageRuntime` session for an
   explicit frame bound;
+- `usdviewStageRunner`, a Python usdview menu and timer adapter backed by a
+  native binding to the same `StageSession`, with play, pause, stop,
+  single-step, and reset controls and bundled Runner schema registration;
 - minimal transform, falling-cube, character-import, runnable walk-and-jump,
   and obstructed first-/third-person camera-follow USDA fixtures plus
   dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
 The character-control and camera-rig milestones are implemented end to end.
-Host integration is the current roadmap milestone; behavior and OpenExec
+The standalone and usdview adapters of the host-integration milestone are
+implemented; OST Plugin View integration remains. Behavior and OpenExec
 integration are later slices.
 
 ## Build with OpenStrata
@@ -107,6 +111,24 @@ an SDL package through `CMAKE_PREFIX_PATH` for interactive builds. The Jolt
 adapter similarly uses a `Jolt::Jolt` or `Jolt` CMake package when available;
 set `USD_STAGE_RUNNER_REQUIRE_JOLT=ON` to require it. Without that package, the
 adapter remains buildable but reports that world creation is unavailable.
+
+## usdview plugin
+
+The usdview adapter is built when OpenUSD includes Python support. Add the
+generated package parent to `PYTHONPATH` and the package directory containing
+`plugInfo.json` to `PXR_PLUGINPATH_NAME`:
+
+```powershell
+$env:PYTHONPATH = "$PWD\build\cy2026-windows-x86_64-py313-usd\plugins\usdviewStageRunner\python;$env:PYTHONPATH"
+$env:PXR_PLUGINPATH_NAME = "$PWD\build\cy2026-windows-x86_64-py313-usd\plugins\usdviewStageRunner\python\usdviewStageRunner;$env:PXR_PLUGINPATH_NAME"
+usdview tests\fixtures\minimal.usda
+```
+
+The **Stage Runner** menu exposes Play, Pause, Stop, Single Step, and Reset.
+Stop and Reset discard the plugin-owned anonymous runtime layer; they do not
+change persistent authored layers. See the
+[plugin README](plugins/usdviewStageRunner/README.md) for layout and runtime
+defaults.
 
 ## Host usage
 

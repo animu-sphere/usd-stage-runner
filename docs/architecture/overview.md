@@ -11,10 +11,10 @@ jumping scenario, plus camera targeting, mode, collision probes, smoothing,
 fixed-step host evaluation, and incremental USD Camera pose synchronization.
 Runtime, input, physics,
 character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
-runtime-schema plugin, a thin OpenUSD-aware host executable,
+runtime-schema plugin, thin standalone and usdview host adapters,
 core/adapter/integration tests, and dual CMake/OpenStrata build configuration
-are present. Multi-host integration, OpenExec, behavior, and vehicle targets do
-not exist yet.
+are present. OST Plugin View integration, OpenExec, behavior, and vehicle
+targets do not exist yet.
 
 ## Implemented targets
 
@@ -30,6 +30,7 @@ not exist yet.
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
 | `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, `physicsJolt`; OpenUSD `plug` when available. |
+| `usdviewStageRunner` | `plugins/usdviewStageRunner` | Register Runner schemas, bind usdview's current Stage to `StageSession`, expose play/pause/stop/single-step/reset commands, drive elapsed host time, refresh the viewport, and dispose the session when the Stage changes. | `stageRuntime`, `physicsJolt`, OpenUSD Python bindings, and usdview Qt APIs. |
 
 The CTest suite covers clocks, play/pause/stop/single-step/reset lifecycle,
 registry and dirty-queue behavior, action and movement logic, physics-core
@@ -214,18 +215,39 @@ Before reset it clears the runtime layer, so prior simulation opinions are
 discarded. Stop clears the layer and rebuilds from persistent composed state;
 destruction detaches only the sublayer owned by that session.
 The standalone host only supplies time, actions, and the selected physics
-factory.
+factory. The usdview host supplies its current Stage, elapsed Qt timer duration,
+lifecycle commands, and viewport redraw requests through the same boundary.
 
 The default fixed interval is 1/60 second, the default frame bound is 300, and
 catch-up is limited to eight fixed updates per frame. `--deterministic` supplies
 exactly one fixed interval per host frame without sleeping.
 
+## usdview adapter
+
+`usdviewStageRunner` consists of a small OpenUSD Boost.Python module and a
+Python `PluginContainer`. The native module accepts usdview's existing
+`Usd.Stage`, constructs the same `StageSession` and physics-world factory used
+by the standalone host, and exposes only lifecycle, action, timing, and stats
+operations. The Python controller owns a 16 ms Qt host timer, measures elapsed
+frame time, requests viewport redraws, and releases the old session on
+`signalStageReplaced`. Its Stop and Reset commands therefore retain the shared
+discardable-layer semantics.
+
+The plugin package carries the codeless Runner schema resources and registers
+them at import time. A native binding smoke test opens the shared minimal Stage,
+advances play and single-step paths, stops the session, and confirms the root
+layer text is unchanged. Python sources are also compiled in CTest. A full
+interactive usdview launch remains conditional on a runtime with usdview, Qt,
+and a display.
+
 ## Build and verification
 
 The root CMake tree builds the eight compiled libraries, codeless schema plugin,
-host, and CTest suite. Each library installs headers and an exported CMake
-package. OpenUSD, SDL, and Jolt discovery remain isolated to schema,
-Stage-integration, adapter, and host directories.
+standalone host, optional usdview adapter, and CTest suite. Each library
+installs headers and an exported CMake package. The usdview adapter is enabled
+only when the selected OpenUSD SDK supplies Python targets. OpenUSD, SDL, and
+Jolt discovery remain isolated to schema, Stage-integration, adapter, and host
+directories.
 
 OpenStrata owns the pinned `cy2026`/`usd` environment. That profile supplies
 OpenUSD but not SDL or Jolt; interactive or Jolt-backed builds therefore need
@@ -276,6 +298,8 @@ stage_runner -----> OpenUSD plug + usd + usdGeom
  physicsJolt <----- stage_runner
       |
       `------------> Jolt (optional at configure time)
+
+usdviewStageRunner -> stageRuntime + physicsJolt + OpenUSD Python + usdview Qt
 ```
 
 The core targets include no OpenUSD, SDL, Jolt, or OpenExec headers. The

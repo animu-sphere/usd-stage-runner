@@ -14,6 +14,7 @@ set(USD_STAGE_RUNNER_SCHEMA_INSTALL_DIR
   "${CMAKE_INSTALL_DATADIR}/usd-stage-runner/runnerSchema")
 
 option(USD_STAGE_RUNNER_BUILD_APP "Build the stage_runner host" ON)
+option(USD_STAGE_RUNNER_BUILD_USDVIEW_PLUGIN "Build the usdview host adapter" ON)
 option(USD_STAGE_RUNNER_REQUIRE_OPENUSD "Fail configuration when OpenUSD is unavailable" OFF)
 
 set(USD_STAGE_RUNNER_OPENUSD_TARGET "")
@@ -69,6 +70,14 @@ add_subdirectory(backends/physicsJolt)
 add_subdirectory(plugins/runnerSchema)
 if(USD_STAGE_RUNNER_OPENUSD_TARGET)
   add_subdirectory(libs/stageRuntime)
+  if(USD_STAGE_RUNNER_BUILD_USDVIEW_PLUGIN)
+    if(TARGET python AND TARGET tf)
+      add_subdirectory(plugins/usdviewStageRunner)
+    else()
+      message(STATUS
+        "usdviewStageRunner: OpenUSD Python support unavailable; plugin disabled")
+    endif()
+  endif()
 endif()
 
 if(USD_STAGE_RUNNER_BUILD_APP)

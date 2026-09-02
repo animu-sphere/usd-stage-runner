@@ -9,9 +9,10 @@ with deterministic play, pause, stop, single-step, and reset semantics. Stage
 import, state rebuild, fixed updates, and incremental synchronization now live in the
 reusable `stageRuntime::StageSession` boundary rather than the standalone host.
 Simulation writes now use an owned anonymous runtime layer that reset, stop, and
-destruction can discard without changing persistent authored layers. This
-milestone next makes that same safe play session reusable from usdview and OST
-Plugin View without duplicating simulation logic.
+destruction can discard without changing persistent authored layers. The
+usdview adapter now drives that same session through a native Python binding
+and thin menu/timer layer. This milestone next connects the safe play session
+to OST Plugin View without duplicating simulation logic.
 
 ## Outcome
 
@@ -36,17 +37,17 @@ layer, and root-layer preservation tests are implemented.
 
 ### Host adapters
 
-- Add a thin `plugins/usdviewStageRunner` adapter over the shared session.
+- The thin `plugins/usdviewStageRunner` adapter over the shared session is
+  implemented.
 - Connect the same session boundary to OST Plugin View.
 - Reuse `character_walk.usda` and `third_person_camera.usda` to verify
   equivalent fixed-step and synchronization results in each host.
 
 ## Recommended PR sequence
 
-The host-neutral lifecycle, reusable Stage session, and discardable runtime
-layer are implemented, and `stage_runner` consumes them without changing its
-Stage behavior. The next PR adds the usdview adapter, followed by OST Plugin
-View integration over the same boundary.
+The host-neutral lifecycle, reusable Stage session, discardable runtime layer,
+standalone adapter, and usdview adapter are implemented. The next PR connects
+OST Plugin View to the same boundary.
 
 ## Completion criteria
 

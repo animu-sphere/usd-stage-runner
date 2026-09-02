@@ -1,7 +1,8 @@
 # Testing Strategy
 
 Status: runtime, play-session lifecycle, input, physics-core, character-core,
-camera-core, Stage-session rebuild and discardable-layer contracts,
+camera-core, Stage-session rebuild and discardable-layer contracts, usdview
+native-binding lifecycle smoke coverage,
 runtime-integration contracts, SDL mapping, Jolt bootstrap,
 ground queries, and
 collision segment queries,
