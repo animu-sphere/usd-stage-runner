@@ -41,7 +41,9 @@ class StageRunnerController:
 
     def singleStep(self):
         self._timer.stop()
-        self._ensureSession().singleStep()
+        session = self._ensureSession()
+        session.pause()
+        session.singleStep()
         self._refreshView()
         self._api.PrintStatus("Stage Runner: advanced one fixed step")
 

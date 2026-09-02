@@ -107,6 +107,13 @@ if(BUILD_TESTING AND Python3_EXECUTABLE)
     COMMAND "${Python3_EXECUTABLE}" -m py_compile
       "${CMAKE_CURRENT_SOURCE_DIR}/python/usdviewStageRunner/__init__.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/python/usdviewStageRunner/controller.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/controller_smoke.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/native_session_smoke.py"
+  )
+
+  add_test(
+    NAME usdviewStageRunner.controller
+    COMMAND "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/controller_smoke.py"
   )
 endif()
