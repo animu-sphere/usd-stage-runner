@@ -12,9 +12,9 @@ behavior are documented in [docs/README.md](docs/README.md).
 ## Current capabilities
 
 - `runtimeCore`, with an injectable frame clock, bounded fixed-step accumulator,
-  a host-facing play-session controller for play, pause, single-step, and reset,
-  a prim-indexed component registry, Runtime World, runtime transforms, and a
-  dirty synchronization queue;
+  a host-facing play-session controller for play, pause, stop, single-step, and
+  reset, a prim-indexed component registry, Runtime World, runtime transforms,
+  and a dirty synchronization queue;
 - `inputCore`, with named action state and backend-neutral movement intent;
 - `physicsCore`, with typed backend-neutral resource handles, descriptors for
   boxes, bodies, and fixed constraints, fixed-step commands, changed-body
@@ -38,7 +38,8 @@ behavior are documented in [docs/README.md](docs/README.md).
 - `stageRuntime`, a reusable OpenUSD-facing play session that imports the
   Runtime World and physics, character, and camera systems, owns fixed-step
   execution and reset/rebuild semantics, and incrementally synchronizes dirty
-  transforms for any host;
+  transforms into a discardable anonymous runtime layer for any host without
+  changing persistent authored layers;
 - `inputSdl`, which maps WASD, arrow keys, and the first gamepad's left stick to
   `move.x` and `move.y`, and maps Space or the gamepad south button to `jump`,
   without exposing SDL types to core consumers;

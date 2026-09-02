@@ -31,7 +31,7 @@ not exist yet.
 | `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, `physicsJolt`; OpenUSD `plug` when available. |
 
-The CTest suite covers clocks, play/pause/single-step/reset lifecycle,
+The CTest suite covers clocks, play/pause/stop/single-step/reset lifecycle,
 registry and dirty-queue behavior, action and movement logic, physics-core
 resource, deterministic-step, prim/body mapping,
 changed-transform synchronization, isolated character controller and camera
@@ -151,7 +151,10 @@ to Jolt world position until composed transform support lands. The importer
 creates and binds backend bodies through `PhysicsRuntime`; a physics-declaring
 Stage is rejected when Jolt is unavailable. After each host frame, `StageSession`
 sets the USD translate op only for dirty runtime transforms. Dirty camera rigs
-also write their runtime orientation through a dedicated orient op. Stage writes
+also write their runtime orientation through a dedicated orient op. These live
+values are authored in a scoped edit context to an owned anonymous layer placed
+first among the existing Stage session layer's sublayers; the host edit target,
+root layer, and unrelated session sublayers remain unchanged. Stage writes
 remain in `stageRuntime` and outside the backend-neutral core libraries. Authored
 body or collider attributes without their
 owning API schema are rejected instead of being silently interpreted through
@@ -202,9 +205,14 @@ host frame advances zero or more fixed steps and then invokes one synchronizatio
 callback. While paused, host time is ignored. Single-step clears any partial
 remainder, advances exactly one fixed interval, synchronizes once, and remains
 paused. Reset also clears the remainder, invokes the host-supplied state rebuild
-callback, synchronizes the restored state, and remains paused. `StageSession`
+callback, synchronizes the restored state, and remains paused. Stop pauses and
+clears the remainder without invoking lifecycle callbacks, leaving the host to
+discard its state. `StageSession`
 captures initial transforms, reconstructs the Runtime World and imported
 systems on reset, and restores those values through the same dirty write path.
+Before reset it clears the runtime layer, so prior simulation opinions are
+discarded. Stop clears the layer and rebuilds from persistent composed state;
+destruction detaches only the sublayer owned by that session.
 The standalone host only supplies time, actions, and the selected physics
 factory.
 

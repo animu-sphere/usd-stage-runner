@@ -1,7 +1,7 @@
 # Host Integration
 
-Status: reusable Stage play session and `stage_runner` adapter implemented;
-discardable layer, usdview, and OST Plugin View planned
+Status: reusable Stage play session, discardable runtime layer, and
+`stage_runner` adapter implemented; usdview and OST Plugin View planned
 
 Runtime libraries remain host-independent so the same world and systems can be
 used from three hosts:
@@ -39,9 +39,9 @@ camera slices. A Stage that runs in `stage_runner` must use the same Runtime
 World, subsystem implementations, and fixed-step semantics when played in
 usdview. The plugin remains a thin lifecycle and UI adapter.
 
-The first usable controls are play, pause, single-step, and reset. A small
+The first usable controls are play, pause, stop, single-step, and reset. A small
 prototype may land earlier to prove host independence, but the milestone is not
-complete until simulation writes use the discardable
+complete until usdview and OST Plugin View reuse the discardable
 [play-session layer](usd-integration.md#play-session-layer).
 
 The implemented `runtimeCore::PlaySession` defines lifecycle and timing
@@ -49,8 +49,10 @@ semantics without depending on OpenUSD or a host SDK. The implemented
 `stageRuntime::StageSession` binds its callbacks to Stage import, state rebuild,
 one fixed update, and dirty USD synchronization while accepting a
 backend-neutral physics-world factory. `stage_runner` drives this public
-boundary. The remaining safety work is the discardable layer required before
-editor adapters consume it.
+boundary. It writes simulation results to its own anonymous sublayer beneath
+the Stage session layer, discards live results on reset or stop, and detaches
+only that owned layer when destroyed. Editor adapters can consume this boundary
+without redirecting the host's persistent edit target.
 
 ## OST Plugin View and OpenStrata
 

@@ -27,6 +27,11 @@ void PlaySession::pause() noexcept {
   state_ = State::paused;
 }
 
+void PlaySession::stop() noexcept {
+  state_ = State::paused;
+  accumulator_.reset();
+}
+
 void PlaySession::singleStep() {
   if (state_ != State::paused) {
     throw std::logic_error("single-step requires a paused play session");

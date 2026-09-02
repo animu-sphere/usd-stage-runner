@@ -1,8 +1,8 @@
 # Runtime Model
 
-Status: intended contract; input, transform, reusable Stage play-session lifecycle, Jolt
-physics, complete character control, and camera following with collision
-avoidance implemented
+Status: intended contract; input, transform, reusable Stage play-session lifecycle,
+discardable runtime-layer synchronization, Jolt physics, complete character
+control, and camera following with collision avoidance implemented
 
 ## State ownership
 
@@ -88,7 +88,10 @@ play/pause state. It invokes host-supplied reset, fixed-step, and synchronizatio
 callbacks. Paused frames do not accumulate time; single-step advances exactly
 one fixed interval and synchronizes once; reset pauses the session, clears any
 partial remainder, rebuilds state through the callback, and synchronizes the
-restored result.
+restored result. `StageSession` clears its anonymous runtime layer before that
+reset path. Stop pauses and clears partial timing without invoking callbacks;
+`StageSession` then clears its runtime layer, rebuilds the persistent composed
+Stage exactly once, and leaves the reusable session paused.
 
 The reusable Stage session maps player movement and jump actions to `CharacterIntent` for
 an imported character controller. The controller owns desired horizontal and

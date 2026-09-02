@@ -29,6 +29,7 @@ public:
 
   void play() noexcept;
   void pause() noexcept;
+  void stop() noexcept;
   void singleStep();
   void reset();
 

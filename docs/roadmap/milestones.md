@@ -34,7 +34,7 @@ Targets: `plugins/usdviewStageRunner` and OST Plugin View integration
 - Reuse the same Runtime World and subsystem libraries as `stage_runner`.
 - Keep host adapters limited to lifecycle, frame driving, UI, rendering hooks,
   and Stage access.
-- Provide play, pause, single-step, and reset controls first.
+- Provide play, pause, stop, single-step, and reset controls first.
 - Put simulated values in a discardable session/runtime layer.
 - Discard the layer on reset or stop; defer authored-layer persistence to an
   explicit bake or commit operation.

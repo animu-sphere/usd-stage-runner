@@ -92,6 +92,17 @@ int main() {
     return fail("reset must clear the accumulated frame remainder");
   }
 
+  session.stop();
+  if (session.state() != PlaySession::State::paused || resets != 1 || synchronizations != 5 ||
+      steps != 3) {
+    return fail("stop must pause without invoking lifecycle callbacks");
+  }
+  session.play();
+  const auto afterStop = session.advance(PlaySession::Duration{0.005});
+  if (afterStop.steps != 0 || !near(afterStop.interpolationAlpha, 0.5)) {
+    return fail("stop must clear the accumulated frame remainder");
+  }
+
   try {
     PlaySession invalid({{}, [](const auto) {}, [] {}});
     return fail("a missing reset callback must be rejected");
