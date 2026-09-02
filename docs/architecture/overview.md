@@ -11,10 +11,10 @@ jumping scenario, plus camera targeting, mode, collision probes, smoothing,
 fixed-step host evaluation, and incremental USD Camera pose synchronization.
 Runtime, input, physics,
 character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
-runtime-schema plugin, thin standalone and usdview host adapters,
-core/adapter/integration tests, and dual CMake/OpenStrata build configuration
-are present. OST Plugin View integration, OpenExec, behavior, and vehicle
-targets do not exist yet.
+runtime-schema plugin, thin standalone and usdview host adapters, an
+OpenStrata Plugin View deployment path, core/adapter/integration tests, and
+dual CMake/OpenStrata build configuration are present. OpenExec, behavior, and
+vehicle targets do not exist yet.
 
 ## Implemented targets
 
@@ -31,6 +31,13 @@ targets do not exist yet.
 | `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, `physicsJolt`; OpenUSD `plug` when available. |
 | `usdviewStageRunner` | `plugins/usdviewStageRunner` | Register Runner schemas, bind usdview's current Stage to `StageSession`, expose play/pause/stop/single-step/reset commands, drive elapsed host time, refresh the viewport, and dispose the session when the Stage changes. | `stageRuntime`, `physicsJolt`, OpenUSD Python bindings, and usdview Qt APIs. |
+
+The OpenStrata `plugin-view` build intent stages `usdviewStageRunner` into the
+`runnerSchema` bundle's conventional `python/` root. An `Includes` entry in the
+schema `plugInfo.json` registers the Python `PluginContainer`; `ost plugin view`
+then activates the bundle paths and launches usdview. This is deployment
+composition only—the native module and Python controller are the same files
+used by the ordinary usdview path.
 
 The CTest suite covers clocks, play/pause/stop/single-step/reset lifecycle,
 registry and dirty-queue behavior, action and movement logic, physics-core
@@ -236,9 +243,11 @@ discardable-layer semantics.
 The plugin package carries the codeless Runner schema resources and registers
 them at import time. A native binding smoke test opens the shared minimal Stage,
 advances play and single-step paths, stops the session, and confirms the root
-layer text is unchanged. Python sources are also compiled in CTest. A full
-interactive usdview launch remains conditional on a runtime with usdview, Qt,
-and a display.
+layer text is unchanged. A separate OST-bundle smoke test resolves the Python
+plugin through the schema `plugInfo.json`, imports the staged native binding,
+advances one fixed step, and verifies the same root-layer invariant. Python
+sources are also compiled in CTest. A full interactive usdview launch remains
+conditional on a runtime with usdview, Qt, and a display.
 
 ## Build and verification
 
