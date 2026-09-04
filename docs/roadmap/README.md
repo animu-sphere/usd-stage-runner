@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2026-09-01
+Updated: 2026-09-04
 
 The roadmap contains incomplete delivery work only. Design rationale and
 contracts belong in [design](../design/); implemented behavior belongs in
@@ -8,7 +8,7 @@ contracts belong in [design](../design/); implemented behavior belongs in
 
 | Document | Contents |
 | --- | --- |
-| [current.md](current.md) | The host-integration vertical slice, completion criteria, and recommended PR sequence. |
+| [current.md](current.md) | The vehicle-composition vertical slice, completion criteria, and recommended PR sequence. |
 | [milestones.md](milestones.md) | Ordered Host-through-Tooling milestones, the representative demo, and cross-cutting follow-up work. |
 
 Status vocabulary: **in progress** or **not started**. A milestone is complete

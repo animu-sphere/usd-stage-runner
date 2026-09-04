@@ -1,13 +1,15 @@
 # Planned Milestones
 
-Status: Milestone 5 in progress; later milestones not started
+Status: Milestone 5 implemented with interactive verification conditional on a
+usdview-capable runtime; Milestone 6 in progress; later milestones not started
 
-Milestone 4, including camera collision avoidance, is implemented and recorded
-in the [current architecture](../architecture/overview.md). Host integration is
+Milestones 4 and 5, including camera collision avoidance and host integration,
+are implemented and recorded in the
+[current architecture](../architecture/overview.md). Vehicle composition is
 the current work; later milestones have not started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
-[host-integration vertical slice](current.md) is the current milestone.
+[vehicle-composition vertical slice](current.md) is the current milestone.
 Physics and the initial Runner physics schemas are already implemented and are
 recorded in the [current architecture](../architecture/overview.md), not as
 open roadmap work.
@@ -23,8 +25,7 @@ open roadmap work.
 | 9 | Animation integration | Runtime motion drives a USD Skeleton and animation state without redefining character control around one asset format. |
 | 10 | Runtime tooling | Hosts can inspect, debug, profile, and explicitly bake runtime state. |
 
-Host integration is the next implementation path. It proves that character
-and camera systems are reusable
+Host integration proved that character and camera systems are reusable
 libraries rather than features embedded in the standalone executable.
 
 ## Milestone 5: Host integration

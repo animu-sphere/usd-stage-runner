@@ -1,69 +1,81 @@
-# Milestone 5: Host Integration
+# Milestone 6: Vehicle Composition
 
-Status: implementation complete; interactive Level 6 verification remains
-conditional on an OpenStrata runtime that contains usdview
+Status: in progress
 
-The standalone `stage_runner` path now implements physics, character control,
-camera following, collision avoidance, and incremental USD synchronization.
-Its frame execution now passes through a host-neutral play-session controller
-with deterministic play, pause, stop, single-step, and reset semantics. Stage
-import, state rebuild, fixed updates, and incremental synchronization now live in the
-reusable `stageRuntime::StageSession` boundary rather than the standalone host.
-Simulation writes now use an owned anonymous runtime layer that reset, stop, and
-destruction can discard without changing persistent authored layers. The
-usdview adapter now drives that same session through a native Python binding
-and thin menu/timer layer. The OpenStrata `plugin-view` intent stages that same
-adapter into the `runnerSchema` bundle, allowing `ost plugin view` to compose
-and launch it without duplicating simulation logic.
+The first backend-neutral vehicle slice is implemented in `vehicleCore`.
+Normalized throttle, brake, steering, and handbrake intent is validated and
+distributed into per-wheel steering, drive-torque, service-brake, and
+handbrake commands. Wheel roles are expressed as independent ratios and
+weights, so the contract supports front-, rear-, and all-wheel drive, rear
+steering, and wheel counts other than four.
 
 ## Outcome
 
 ```text
-OpenUSD Stage
-    -> shared play-session runtime
-        -> Runtime World and imported systems
-        -> fixed-step execution
-        -> discardable runtime layer writes
-    -> stage_runner / usdview / OST Plugin View adapters
+named actions or behavior
+    -> VehicleIntent
+    -> vehicleCore wheel-command composition
+    -> physics vehicle capability (next)
+    -> Runtime World transform changes
+    -> incremental USD synchronization
 ```
 
-Each host owns lifecycle, UI, Stage access, and rendering hooks only. Physics,
-character, camera, timing, and synchronization behavior remains shared.
+The current slice covers the first two arrows. It deliberately does not expose
+Jolt types or author USD transforms directly.
 
-## Scope
+## Remaining scope
 
-### Shared play session
+### Physics application
 
-The reusable host-facing boundary, controlled lifecycle, anonymous runtime
-layer, and root-layer preservation tests are implemented.
+- Add the minimum backend-neutral physics capability needed to consume wheel
+  steering and torque commands.
+- Implement that capability in `physicsJolt` without leaking Jolt types into
+  `physicsCore` or `vehicleCore`.
+- Compose chassis, wheel, suspension, steering, powertrain, and braking behavior
+  without a monolithic four-wheel-only runtime object.
 
-### Host adapters
+### USD declarations and Stage integration
 
-- The thin `plugins/usdviewStageRunner` adapter over the shared session is
-  implemented.
-- The same session boundary is connected to OST Plugin View through bundle
-  staging and plugin-info inclusion.
-- Reuse `character_walk.usda` and `third_person_camera.usda` to verify
-  equivalent fixed-step and synchronization results in each host.
+- Introduce `RunnerVehicleAPI` and `RunnerWheelAPI` only with the importer that
+  consumes them.
+- Resolve vehicle and wheel prim relationships into the Runtime World and bind
+  the chassis to its physics body.
+- Convert named actions into `VehicleIntent` at the fixed-step boundary.
+- Synchronize changed runtime transforms through the existing dirty queue and
+  discardable runtime layer.
+
+### Representative scenario
+
+- Add `tests/fixtures/four_wheel_vehicle.usda`.
+- Verify deterministic steering, forward/reverse drive, service braking, and
+  handbraking through the complete Stage-to-runtime-to-Stage path.
+- Keep at least one core test with a non-four-wheel layout so the public
+  contract cannot accidentally narrow to a conventional car.
 
 ## Recommended PR sequence
 
-The host-neutral lifecycle, reusable Stage session, discardable runtime layer,
-standalone adapter, usdview adapter, and OST Plugin View composition are
-implemented. The remaining milestone evidence is an interactive Level 6 launch
-on a runtime that ships usdview and, for the representative physics scenarios,
-a build with Jolt available.
+1. `vehicleCore` intent, composition, validation, packaging, and unit tests
+   (implemented on the current feature branch).
+2. Backend-neutral physics vehicle capability and deterministic test double.
+3. Jolt implementation and focused adapter tests.
+4. Runner vehicle/wheel schemas and Stage importer.
+5. Input mapping, four-wheel fixture, full vertical-slice tests, and docs.
 
 ## Completion criteria
 
-- All three hosts execute the same Runtime World and subsystem libraries.
-- Live simulation values are isolated in a discardable layer.
-- Reset and stop leave persistent authored layers unchanged.
+- A USD-composed four-wheel vehicle is drivable with normalized input.
+- Chassis, wheels, suspension, steering, powertrain, and braking remain
+  independently configurable.
+- The runtime contract supports other wheel counts and layouts.
+- Vehicle motion uses physics and incremental runtime-layer synchronization.
+- Core, adapter, integration, and representative fixture tests are
+  deterministic.
 - Plain CMake and OpenStrata build paths remain valid in supported
   environments.
 
 The relevant contracts are documented in the
-[host integration design](../design/hosts.md),
 [runtime model](../design/runtime-model.md),
+[input design](../design/input.md),
+[module boundaries](../design/modules.md),
 [USD integration](../design/usd-integration.md), and
 [testing strategy](../design/testing.md).
