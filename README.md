@@ -28,6 +28,10 @@ behavior are documented in [docs/README.md](docs/README.md).
   optional third-person collision probes, live pose state, exponential
   smoothing, and dirty Runtime World translation updates without OpenUSD, Jolt,
   or a renderer;
+- `vehicleCore`, with normalized throttle, brake, steering, and handbrake
+  intent; explicit chassis identity; independently composed steering,
+  powertrain, service-brake, and handbrake configuration; and deterministic
+  per-wheel command distribution that does not assume four wheels;
 - `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
   box shapes and static or dynamic bodies, advances fixed simulation steps,
   extracts changed body state, and implements character ground shape casts and
@@ -54,10 +58,12 @@ behavior are documented in [docs/README.md](docs/README.md).
   dependency-free unit tests; and
 - dual build paths through plain CMake and OpenStrata.
 
-The character-control and camera-rig milestones are implemented end to end.
-The standalone and usdview adapters of the host-integration milestone are
-implemented; OST Plugin View integration remains. Behavior and OpenExec
-integration are later slices.
+The character-control, camera-rig, and host-integration milestones are
+implemented end to end, except for interactive host verification that depends
+on a runtime containing usdview. Vehicle composition is in progress: the core
+intent and wheel-command contract is implemented, while physics application,
+USD schemas, Stage import, and the representative fixture remain. Behavior and
+OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
