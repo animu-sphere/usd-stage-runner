@@ -132,6 +132,8 @@ usdview tests\fixtures\minimal.usda
 ```
 
 The **Stage Runner** menu exposes Play, Pause, Stop, Single Step, and Reset.
+After Play, click the viewport and use WASD or the arrow keys to move
+`/World/PlayerCube`; Space requests a jump in a Jolt-enabled character Stage.
 Stop and Reset discard the plugin-owned anonymous runtime layer; they do not
 change persistent authored layers. See the
 [plugin README](plugins/usdviewStageRunner/README.md) for layout and runtime

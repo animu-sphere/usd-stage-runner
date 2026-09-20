@@ -21,6 +21,13 @@ Stage declares physics bodies. It intentionally owns host lifecycle, timing,
 and UI only; import, simulation, camera evaluation, synchronization, and layer
 discard remain in shared libraries.
 
+Choose **Stage Runner > Play**, then click the viewport to give it keyboard
+focus. Use **WASD** or the arrow keys to move `/World/PlayerCube`; **Space**
+requests a jump for a character Stage. Releasing a key or moving focus away
+from the viewport clears that input. `minimal.usda` demonstrates movement
+without Jolt; physics and jumping in `character_walk.usda` require a Jolt-enabled
+build.
+
 For OpenStrata Plugin View, the root `plugin-view` intent stages this package
 inside the `runnerSchema` bundle, whose schema `plugInfo.json` includes the
 Python plugin registration:

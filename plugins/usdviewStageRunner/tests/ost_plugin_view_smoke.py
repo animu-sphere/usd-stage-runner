@@ -23,11 +23,18 @@ def main():
 
     root_before = stage.GetRootLayer().ExportToString()
     session = _usdviewStageRunner.createSession(stage, 1.0 / 60.0, 8)
+    translate = stage.GetPrimAtPath("/World/PlayerCube").GetAttribute("xformOp:translate")
+    x_before = translate.Get()[0]
+    session.setActions(1.0, 0.0, False)
     session.play()
     result = session.advance(session.fixedStep)
     if result["steps"] != 1 or session.stats["fixedSteps"] != 1:
         raise RuntimeError("OST-staged adapter did not advance one fixed step")
+    if translate.Get()[0] <= x_before:
+        raise RuntimeError("OST-staged movement action did not move PlayerCube")
     session.stop()
+    if translate.Get()[0] != x_before:
+        raise RuntimeError("stopping did not discard PlayerCube movement")
     if stage.GetRootLayer().ExportToString() != root_before:
         raise RuntimeError("OST-staged adapter changed the persistent root layer")
 
