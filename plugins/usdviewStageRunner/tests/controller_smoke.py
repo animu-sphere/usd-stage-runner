@@ -291,15 +291,30 @@ def main():
     if session.calls[-1] != ("advance", 0.02) or api.viewportUpdates != 1:
         raise RuntimeError("timer tick did not advance and refresh the Stage")
 
+    view.send(Event(1, 87))
+    controller.pause()
+    if session.calls[-2:] != [("actions", 0, 0, False), "pause"]:
+        raise RuntimeError("pause left a movement key held")
+    if view.send(Event(1, 87)):
+        raise RuntimeError("movement keys were consumed while paused")
+    controller.play()
+    if session.calls[-2:] != [("actions", 0, 0, False), "play"]:
+        raise RuntimeError("resuming replayed stale movement")
+
     controller.singleStep()
     if controller._timer.active or session.calls[-2:] != ["pause", "singleStep"]:
         raise RuntimeError("single-step did not pause a playing session before advancing")
 
+    controller.stop()
+    if view.send(Event(1, 87)):
+        raise RuntimeError("movement keys were consumed while stopped")
     controller.reset()
     controller.play()
+    view.send(Event(1, 87))
     session.failAdvance = True
     controller._timer.timeout.emit()
-    if controller._timer.active or session.state != "paused":
+    if (controller._timer.active or session.state != "paused" or
+            session.calls[-2:] != [("actions", 0, 0, False), "pause"]):
         raise RuntimeError("an update error did not pause the controller")
     if not api.statuses[-1].startswith("Stage Runner update failed:"):
         raise RuntimeError("an update error did not reach usdview status output")

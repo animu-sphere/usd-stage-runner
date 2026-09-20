@@ -47,6 +47,7 @@ class StageRunnerController(QtCore.QObject):
 
     def pause(self):
         self._timer.stop()
+        self._clearKeys()
         if self._session is not None:
             self._session.pause()
         self._api.PrintStatus("Stage Runner: paused")
@@ -90,6 +91,10 @@ class StageRunnerController(QtCore.QObject):
             return False
         key = event.key()
         if key not in _MOVEMENT_KEYS:
+            return False
+        if event.type() == QtCore.QEvent.KeyPress and (
+            self._session is None or self._session.state != "playing"
+        ):
             return False
         if not self._isInputWidget(watched, key, event.type()):
             return False
@@ -142,6 +147,7 @@ class StageRunnerController(QtCore.QObject):
             self._refreshView()
         except Exception as error:
             self._timer.stop()
+            self._clearKeys()
             if self._session is not None:
                 self._session.pause()
             Tf.Warn("Stage Runner paused after an update error: {}".format(error))
