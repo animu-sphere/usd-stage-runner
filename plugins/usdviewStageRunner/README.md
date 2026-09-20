@@ -30,9 +30,10 @@ ost build --intent plugin-view
 ost plugin view plugins/runnerSchema tests/fixtures/third_person_camera.usda
 ```
 
-`--with plugins/usdviewStageRunner` is not used because OpenStrata 0.22.8
-requires a manifest-backed plugin kind and does not model usdview Python host
-extensions. The adapter is staged into `runnerSchema` instead.
+OpenStrata 0.23.0 supports a dedicated `usdview-plugin` bundle. This repository
+continues staging the adapter into `runnerSchema` until its pinned runtime and
+CI lane provide usdview. The current `usd` profile cannot promise an
+independent host add-on with the required `usdview` capability.
 
 This path uses the same package and native module as the ordinary usdview
 adapter; it does not introduce another host implementation.

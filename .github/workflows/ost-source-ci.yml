@@ -12,12 +12,9 @@
 # Fork-PR safety: this workflow never publishes, never promotes, and uses no
 # secrets; keep it that way when editing the matrix.
 #
-# Repository adjustments retained after regeneration:
-# - OpenStrata 0.22.x emits a plugin-only graph command for every workspace
-#   cell. Skip it until this library/tool-only workspace contains a plugin.
-# - Build pinned Jolt beside the pinned USD runtime and run the root CMake
-#   integration tests so the combined OpenUSD + real-Jolt path cannot be
-#   silently skipped by the component-oriented workspace build.
+# Repository additions retained after regeneration: build pinned Jolt beside
+# the pinned USD runtime and require the root CMake suite to expose its real
+# OpenUSD/Jolt integration tests.
 name: ost source ci
 
 on:
@@ -46,6 +43,9 @@ jobs:
           - name: workspace-pr-windows
             lane: pull_request
             runtime_artifact: sha256:ebb0c7da509ee14ada19ee5b461de6996aad0024b5c9640f12dde76912e849b5
+            require_openusd: ""
+            require_openusd_version: ""
+            openusd_flags: ""
             target_trust: local
             minimum_trust: local
             require_evidence: all
@@ -55,7 +55,9 @@ jobs:
             runs_on: ["windows-2022"]
             hosted: true
             runner_profile: windows-hosted
-            verify: test
+            verify: pyramid
+            intent_flags: ""
+            up_to: 5
             runtime_remote: "oci://ghcr.io/animu-sphere/openstrata-runtime-cy2026-usd@sha256:d3ff79a6f330558c3b9a427a927d340fe3dcab1fe89107faa0ea9f66a104b7bf"
             host_python: "3.13"
             host_packages_apt: ""
@@ -73,7 +75,7 @@ jobs:
         if: ${{ matrix.hosted }}
         shell: bash
         run: echo "::notice title=OpenStrata hosted-runner usage::This job uses GitHub-hosted infrastructure. Private repositories may incur GitHub Actions usage charges. Review repository billing and Actions usage settings."
-      - name: Bootstrap ost 0.22.6 (pinned release asset, checksum-verified)
+      - name: Bootstrap ost 0.23.1 (pinned release asset, checksum-verified)
         if: ${{ matrix.hosted }}
         shell: bash
         run: |
@@ -91,7 +93,7 @@ jobs:
             *) : ;;
           esac
           asset="ost-cli-${triple}.${ext}"
-          base="https://github.com/animu-sphere/open-strata/releases/download/v0.22.6"
+          base="https://github.com/animu-sphere/open-strata/releases/download/v0.23.1"
           curl -fsSLo "$asset" "$base/$asset"
           curl -fsSLo "$asset.sha256" "$base/$asset.sha256"
           actual="$( (command -v sha256sum > /dev/null && sha256sum "$asset" || shasum -a 256 "$asset") | cut -d' ' -f1 )"
@@ -125,7 +127,7 @@ jobs:
           echo "$exported_path" >> "$GITHUB_PATH"
           json_executable="$(printf '%s' "$executable" | sed 's/\\/\\\\/g; s/"/\\"/g')"
           json_exported_path="$(printf '%s' "$exported_path" | sed 's/\\/\\\\/g; s/"/\\"/g')"
-          printf '{"schema":1,"pinned_version":"%s","asset":"%s","sha256":"%s","executable":"%s","exported_path":"%s"}\n' "0.22.6" "$asset" "$actual" "$json_executable" "$json_exported_path" > .ost-ci/bootstrap.json
+          printf '{"schema":1,"pinned_version":"%s","asset":"%s","sha256":"%s","executable":"%s","exported_path":"%s"}\n' "0.23.1" "$asset" "$actual" "$json_executable" "$json_exported_path" > .ost-ci/bootstrap.json
       - name: Check ost is available and record its version
         shell: bash
         run: |
@@ -138,8 +140,8 @@ jobs:
           fi
 
           echo "$version"
-          if [ "${{ matrix.hosted }}" = "true" ] && [ "$version" != "ost 0.22.6" ]; then
-            echo "::error title=ost bootstrap::expected 'ost 0.22.6', got '$version'" ; exit 1
+          if [ "${{ matrix.hosted }}" = "true" ] && [ "$version" != "ost 0.23.1" ]; then
+            echo "::error title=ost bootstrap::expected 'ost 0.23.1', got '$version'" ; exit 1
           fi
           printf '{"schema":1,"ost_version":"%s"}\n' "$version" > .ost-ci/ost-version.json
       - name: Validate the CI manifest
@@ -151,30 +153,47 @@ jobs:
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ost-ci-home/artifacts
-          key: ost-registry-0.22.6-${{ runner.os }}-${{ runner.arch }}-${{ matrix.name }}-${{ matrix.runtime_artifact }}
+          key: ost-registry-0.23.1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.name }}-${{ matrix.runtime_artifact }}
       - name: Pull the pinned runtime SDK from its remote reference
         if: ${{ matrix.runtime_remote != '' }}
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .ost-ci
+          set --
+          if [ -n "${{ matrix.require_openusd }}" ]; then
+            set -- "$@" --require-openusd "${{ matrix.require_openusd }}"
+          fi
+          if [ -n "${{ matrix.require_openusd_version }}" ]; then
+            set -- "$@" --require-openusd-version "${{ matrix.require_openusd_version }}"
+          fi
           if ost artifact show "${{ matrix.runtime_artifact }}" --json > /dev/null 2>&1 \
-             && ost artifact verify "${{ matrix.runtime_artifact }}" ${{ matrix.evidence_flags }} --json > .ost-ci/runtime-cache-verify.json; then
+             && ost artifact verify "${{ matrix.runtime_artifact }}" ${{ matrix.evidence_flags }} "$@" --json > .ost-ci/runtime-cache-verify.json; then
             echo "pinned runtime already present and verified (cache hit) -- skipping the remote pull"
           else
             if [ "${{ matrix.hosted }}" = "true" ] && [ -n "${OST_HOME:-}" ]; then
               rm -rf "${OST_HOME}/artifacts"
             fi
-            ost artifact pull "${{ matrix.runtime_remote }}" --expect-artifact "${{ matrix.runtime_artifact }}" --require-kind runtime --json | tee .ost-ci/runtime-pull.json
+            ost artifact pull "${{ matrix.runtime_remote }}" --expect-artifact "${{ matrix.runtime_artifact }}" --require-kind runtime "$@" --json | tee .ost-ci/runtime-pull.json
           fi
       - name: Verify and materialize the pinned runtime SDK
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p .ost-ci
-          printf '{"schema":1,"runtime_artifact":"%s","source":"%s"}\n' "${{ matrix.runtime_artifact }}" "${{ matrix.runtime_remote != '' && 'remote-pull' || 'local-registry' }}" > .ost-ci/runtime-source.json
-          ost artifact verify ${{ matrix.runtime_artifact }} --minimum-trust ${{ matrix.minimum_trust }} ${{ matrix.evidence_flags }}
+          printf '{"schema":1,"runtime_artifact":"%s","require_openusd":"%s","require_openusd_version":"%s","source":"%s"}\n' "${{ matrix.runtime_artifact }}" "${{ matrix.require_openusd }}" "${{ matrix.require_openusd_version }}" "${{ matrix.runtime_remote != '' && 'remote-pull' || 'local-registry' }}" > .ost-ci/runtime-source.json
+          set --
+          if [ -n "${{ matrix.require_openusd }}" ]; then
+            set -- "$@" --require-openusd "${{ matrix.require_openusd }}"
+          fi
+          if [ -n "${{ matrix.require_openusd_version }}" ]; then
+            set -- "$@" --require-openusd-version "${{ matrix.require_openusd_version }}"
+          fi
+          ost artifact verify ${{ matrix.runtime_artifact }} --minimum-trust ${{ matrix.minimum_trust }} ${{ matrix.evidence_flags }} "$@"
           ost runtime pull ${{ matrix.platform }} --profile ${{ matrix.profile }} --from-artifact ${{ matrix.runtime_artifact }} --force
+      - name: Pull digest-pinned external library artifacts
+        shell: bash
+        run: ost library pull --target ${{ matrix.platform }} --profile ${{ matrix.profile }} --json
       - name: Remove resumable transfer state before caching
         if: ${{ matrix.hosted && vars.OST_CI_DISABLE_CACHE != 'true' && steps.runtime-cache-restore.outputs.cache-hit != 'true' }}
         shell: bash
@@ -184,7 +203,7 @@ jobs:
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .ost-ci-home/artifacts
-          key: ost-registry-0.22.6-${{ runner.os }}-${{ runner.arch }}-${{ matrix.name }}-${{ matrix.runtime_artifact }}
+          key: ost-registry-0.23.1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.name }}-${{ matrix.runtime_artifact }}
       - name: Set up host Python for schema tooling
         if: ${{ matrix.hosted && matrix.host_python != '' }}
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -229,50 +248,14 @@ jobs:
           cmake --build .ci/jolt-build --config Release --target Jolt
           cmake --install .ci/jolt-build --config Release
           "JOLT_PREFIX=$joltPrefix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-      - name: Prepare the runtime for the combined integration build
-        shell: pwsh
-        run: |
-          $runtime = (& ost env ${{ matrix.platform }} --profile ${{ matrix.profile }} --json | ConvertFrom-Json).data
-          $pythonExecutable = (Get-Command python).Source
-          $pythonLibrary = Get-ChildItem (Join-Path $env:Python_ROOT_DIR "libs") -Filter "python3??.lib" | Select-Object -First 1 -ExpandProperty FullName
-          $pythonInclude = Join-Path $env:Python_ROOT_DIR "Include"
-
-          foreach ($path in @($pythonExecutable, $pythonLibrary, $pythonInclude)) {
-            if (-not (Test-Path -LiteralPath $path)) {
-              throw "Python Development artifact is missing: $path"
-            }
-          }
-
-          # The published runtime has the producer's Python include directory
-          # embedded in its imported targets. Repair only that exact, absent
-          # path in the materialized copy; pulling the runtime again restores it.
-          $pxrConfig = Join-Path $runtime.prefix "pxrConfig.cmake"
-          $pxrTargets = Join-Path $runtime.prefix "cmake/pxrTargets.cmake"
-          $configText = Get-Content -LiteralPath $pxrConfig -Raw
-          $bakedMatch = [regex]::Match($configText, 'set\(Python3_INCLUDE_DIR \[\[(.+?)\]\]\)')
-          if (-not $bakedMatch.Success) {
-            throw "pxrConfig.cmake does not expose its baked Python include directory"
-          }
-          $bakedInclude = $bakedMatch.Groups[1].Value
-          if (-not (Test-Path -LiteralPath $bakedInclude)) {
-            $replacement = $pythonInclude.Replace('\', '/')
-            $targetsText = Get-Content -LiteralPath $pxrTargets -Raw
-            $updatedTargets = $targetsText.Replace($bakedInclude, $replacement).Replace($bakedInclude.Replace('\', '/'), $replacement)
-            if ($updatedTargets -eq $targetsText) {
-              throw "pxrTargets.cmake does not contain the absent producer path: $bakedInclude"
-            }
-            [System.IO.File]::WriteAllText($pxrTargets, $updatedTargets, [System.Text.UTF8Encoding]::new($false))
-          }
-
       - name: Validate the workspace dependency graph
-        if: ${{ hashFiles('**/openstrata.plugin.yaml') != '' }}
         shell: bash
         run: ost plugin test --workspace --graph-only --json
       - name: Build the workspace from source
         shell: pwsh
         run: |
           $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
-          ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+          ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }} ${{ matrix.intent_flags }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           $build = Get-ChildItem build -Directory |
@@ -287,11 +270,19 @@ jobs:
             throw "The workspace configured without the real Jolt physics tests"
           }
       - name: Run the workspace test suite
-        if: ${{ matrix.verify == 'test' }}
+        if: ${{ matrix.verify != 'build' }}
         shell: pwsh
         run: |
           $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
-          ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }}
+          ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }} ${{ matrix.intent_flags }}
+      - name: Run the workspace verification pyramid
+        if: ${{ matrix.verify == 'pyramid' || matrix.verify == 'package' }}
+        shell: bash
+        run: ost plugin test --workspace --target ${{ matrix.platform }} --profile ${{ matrix.profile }} --up-to ${{ matrix.up_to }} --json
+      - name: Package the workspace and aggregate product (never published from this workflow)
+        if: ${{ matrix.verify == 'package' }}
+        shell: bash
+        run: ost plugin package --workspace --product --target ${{ matrix.platform }} --profile ${{ matrix.profile }} --json
       - name: Upload the build logs and CI evidence
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -299,4 +290,8 @@ jobs:
           name: report-${{ matrix.name }}
           path: |
             .strata/targets/
+            **/.strata/reports/
+            **/dist/plugins/
+            **/dist/tools/
+            dist/products/
             .ost-ci/
