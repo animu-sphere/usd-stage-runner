@@ -1,4 +1,8 @@
-# usd-stage-runner
+# OpenUSD Stage Runner
+
+[![CMake CI](https://github.com/animu-sphere/usd-stage-runner/actions/workflows/cmake.yml/badge.svg)](https://github.com/animu-sphere/usd-stage-runner/actions/workflows/cmake.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+[![OpenUSD: 26.08](https://img.shields.io/badge/OpenUSD-26.08-5C77A6.svg)](strata.lock)
 
 `usd-stage-runner` is an experimental C++ runtime that opens an OpenUSD Stage,
 derives a transient Runtime World from its prims, and advances that world in a
@@ -8,6 +12,28 @@ with collision avoidance are implemented.
 
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
+
+## Quick start: usdview via OpenStrata
+
+From the repository root in PowerShell, use an OpenUSD 26.08 install with
+`usdview` and Python 3.13, matching [strata.lock](strata.lock). On Windows,
+`python` must be on `PATH` because the OpenUSD `usdview.cmd` launcher calls it.
+Replace the example install path with your own:
+
+```powershell
+$usdRoot = 'C:\path\to\openusd-with-usdview'
+ost runtime pull cy2026 --profile usd --from-usd $usdRoot
+ost runtime pull cy2026 --profile lookdev --from-usd $usdRoot
+ost build --intent plugin-view
+$fixture = (Resolve-Path .\tests\fixtures\minimal.usda).Path
+ost plugin view plugins/runnerSchema $fixture --profile lookdev
+```
+
+If the runtimes and bundle are already built, only the last two lines are
+needed. Choose **Stage Runner > Play**, then use WASD to move `PlayerCube`.
+The fixture path is absolute because `ost plugin view` resolves relative fixture
+paths from the bundle directory. Physics and jumping in
+`character_walk.usda` require a Jolt-enabled build.
 
 ## Current capabilities
 
@@ -59,11 +85,11 @@ behavior are documented in [docs/README.md](docs/README.md).
 - dual build paths through plain CMake and OpenStrata.
 
 The character-control, camera-rig, and host-integration milestones are
-implemented end to end, except for interactive host verification that depends
-on a runtime containing usdview. Vehicle composition is in progress: the core
-intent and wheel-command contract is implemented, while physics application,
-USD schemas, Stage import, and the representative fixture remain. Behavior and
-OpenExec integration are later slices.
+implemented end to end. Interactive usdview verification uses a local runtime
+with usdview; CI does not yet cover that host. Vehicle composition is in
+progress: the core intent and wheel-command contract is implemented, while
+physics application, USD schemas, Stage import, and the representative fixture
+remain. Behavior and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
@@ -143,13 +169,8 @@ defaults.
 
 The `plugin-view` build intent stages that same usdview package and native
 `StageSession` binding into the `runnerSchema` bundle. OpenStrata then supplies
-the bundle's Python, plugin-discovery, and loader paths without changing the
-current shell:
-
-```powershell
-ost build --intent plugin-view
-ost plugin view plugins/runnerSchema tests/fixtures/character_walk.usda
-```
+the bundle's Python, plugin-discovery, and loader paths. Use the
+[quick-start command](#quick-start-usdview-via-openstrata) above to launch it.
 
 The `plugin-view` intent stages the adapter inside `runnerSchema`. OpenStrata
 0.23.0 added a first-class `usdview-plugin` bundle for `--with` composition,
