@@ -88,21 +88,27 @@ class StageRunnerController(QtCore.QObject):
         if event.type() in (QtCore.QEvent.ApplicationDeactivate, QtCore.QEvent.WindowDeactivate):
             self._clearKeys()
             return False
-        if event.type() not in (QtCore.QEvent.KeyPress, QtCore.QEvent.KeyRelease):
+        if event.type() not in (
+            QtCore.QEvent.ShortcutOverride, QtCore.QEvent.KeyPress,
+            QtCore.QEvent.KeyRelease,
+        ):
             return False
         key = event.key()
         if key not in _MOVEMENT_KEYS:
             return False
-        if event.type() == QtCore.QEvent.KeyPress and (
+        if event.type() != QtCore.QEvent.KeyRelease and (
             self._session is None or self._session.state != "playing"
         ):
             return False
         if not self._isInputWidget(watched, key, event.type()):
             return False
-        if event.type() == QtCore.QEvent.KeyPress and event.modifiers() & (
+        if event.type() != QtCore.QEvent.KeyRelease and event.modifiers() & (
             QtCore.Qt.ControlModifier | QtCore.Qt.AltModifier | QtCore.Qt.MetaModifier
         ):
             return False
+        if event.type() == QtCore.QEvent.ShortcutOverride:
+            event.accept()
+            return True
         if not event.isAutoRepeat():
             if event.type() == QtCore.QEvent.KeyPress:
                 self._pressedKeys.add(key)

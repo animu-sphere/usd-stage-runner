@@ -138,6 +138,7 @@ class Event:
         self._key = key
         self._modifiers = modifiers
         self._repeat = repeat
+        self.accepted = False
 
     def type(self):
         return self._type
@@ -150,6 +151,9 @@ class Event:
 
     def isAutoRepeat(self):
         return self._repeat
+
+    def accept(self):
+        self.accepted = True
 
 
 class StageView(Widget):
@@ -250,6 +254,7 @@ def loadController():
     eventTypes = types.SimpleNamespace(
         KeyPress=1, KeyRelease=2, FocusOut=3,
         ApplicationDeactivate=4, WindowDeactivate=5,
+        ShortcutOverride=6,
     )
     qt.QtCore = types.SimpleNamespace(
         QObject=Object, QTimer=Timer, QElapsedTimer=ElapsedTimer,
@@ -334,6 +339,14 @@ def main():
     text = TextWidget(api.qMainWindow)
     if Application.instance().eventFilter.eventFilter(text, Event(1, 87)):
         raise RuntimeError("typing in an editor was consumed as movement")
+    override = Event(6, 32)
+    if not Application.instance().eventFilter.eventFilter(tree, override) or not override.accepted:
+        raise RuntimeError("usdview's Space playback shortcut was not overridden")
+    override = Event(6, 16777234)
+    if not Application.instance().eventFilter.eventFilter(tree, override) or not override.accepted:
+        raise RuntimeError("usdview's Left arrow navigation was not overridden")
+    if Application.instance().eventFilter.eventFilter(text, Event(6, 32)):
+        raise RuntimeError("Space shortcut was overridden in a text editor")
     view.send(Event(2, 68))
     view.send(Event(2, 32))
     if not Application.instance().eventFilter.eventFilter(tree, Event(1, 16777234)) or session.calls[-1] != ("actions", -1, 0, False):
@@ -365,6 +378,8 @@ def main():
         raise RuntimeError("pause left a movement key held")
     if view.send(Event(1, 87)):
         raise RuntimeError("movement keys were consumed while paused")
+    if view.send(Event(6, 32)):
+        raise RuntimeError("Space shortcut was overridden while paused")
     selectedCamera = CameraPrim()
     api.dataModel.viewSettings.cameraPrim = selectedCamera
     controller.play()
