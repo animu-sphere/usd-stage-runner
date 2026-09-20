@@ -1,15 +1,12 @@
 schema: 1
 
-# OpenStrata 0.22.x generates a plugin graph step for every workspace cell,
-# while `ost plugin test --workspace --graph-only` rejects a workspace with no
-# plugin bundles. The generator also cannot yet express the pinned Jolt checkout
-# plus root-CMake combined OpenUSD/Jolt test. After regeneration, retain both
-# adjustments in .github/workflows/ost-source-ci.yml until the matrix supports
-# these workspace-specific test prerequisites.
+# The generated workflow still needs the pinned Jolt checkout and a root-CMake
+# check that the combined OpenUSD/Jolt integration tests are present. Retain
+# those repository-specific steps after regenerating the workflow.
 
 bootstrap:
   ost:
-    version: "0.22.6"
+    version: "0.23.1"
     repository: animu-sphere/open-strata
 
 runners:
@@ -31,4 +28,5 @@ cells:
     platform: cy2026
     profile: usd
     host_python: "3.13"
-    verify: test
+    verify: pyramid
+    up_to: 5

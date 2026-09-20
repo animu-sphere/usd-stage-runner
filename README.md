@@ -68,7 +68,8 @@ OpenExec integration are later slices.
 ## Build with OpenStrata
 
 [OpenStrata](https://github.com/animu-sphere/open-strata) supplies the pinned
-OpenUSD runtime and compiler environment. With `ost` installed:
+OpenUSD runtime and compiler environment. CI uses `ost 0.23.1`; use that
+version locally when reproducing its checks:
 
 ```powershell
 ost runtime pull cy2026 --profile usd
@@ -148,10 +149,11 @@ ost build --intent plugin-view
 ost plugin view plugins/runnerSchema tests/fixtures/character_walk.usda
 ```
 
-This intentionally does not use `--with`: OpenStrata 0.22.8 requires every
-`--with` input to be a manifest-backed plugin bundle, but does not currently
-model a usdview Python host extension as a plugin kind. The `plugin-view`
-intent therefore stages the adapter inside the valid `runnerSchema` bundle.
+The `plugin-view` intent stages the adapter inside `runnerSchema`. OpenStrata
+0.23.0 added a first-class `usdview-plugin` bundle for `--with` composition,
+but this repository's pinned `usd` profile does not promise usdview. Moving
+the adapter to its own bundle also requires a runtime artifact with the
+`usdview` capability and corresponding CI coverage.
 
 `third_person_camera.usda` can be opened the same way. The selected OpenStrata
 runtime must contain usdview, and a Jolt package must be discoverable at build
