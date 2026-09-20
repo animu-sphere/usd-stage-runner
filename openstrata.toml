@@ -11,6 +11,12 @@ cache = {
   USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR = { type = "PATH", value = "plugins/runnerSchema", portability = "portable" }
 }
 
+[build.intents.plugin-view-jolt]
+cache = {
+  USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR = { type = "PATH", value = "plugins/runnerSchema", portability = "portable" },
+  USD_STAGE_RUNNER_REQUIRE_JOLT = { type = "BOOL", value = true }
+}
+
 [workspace]
 members = [
   "libs/runtimeCore",

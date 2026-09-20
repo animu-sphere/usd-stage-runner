@@ -21,12 +21,14 @@ Stage declares physics bodies. It intentionally owns host lifecycle, timing,
 and UI only; import, simulation, camera evaluation, synchronization, and layer
 discard remain in shared libraries.
 
-Choose **Stage Runner > Play** to focus the viewport. Use **WASD** to move
-`/World/PlayerCube`; the arrow keys also work when the viewport has focus.
-**Space** requests a jump for a character Stage while the viewport has focus.
-Releasing a key or deactivating usdview clears that input. `minimal.usda`
-demonstrates movement without Jolt; physics and jumping in
-`character_walk.usda` require a build with Jolt.
+Choose **Stage Runner > Play** to focus the viewport. Use **WASD** or the arrow
+keys to move `/World/PlayerCube`; **Space** requests a jump for a character
+Stage. These keys work in the viewport and other usdview panels while playing,
+except in text editors, menus, and buttons. Releasing a key or deactivating
+usdview clears that input. `minimal.usda` demonstrates movement without Jolt.
+`character_follow_camera.usda` demonstrates jumping and third-person following
+with a Jolt-enabled build. Play selects its follow camera if usdview is using
+the free camera, and keeps any camera you explicitly selected.
 
 For OpenStrata Plugin View, the root `plugin-view` intent stages this package
 inside the `runnerSchema` bundle, whose schema `plugInfo.json` includes the

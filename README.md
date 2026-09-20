@@ -32,8 +32,22 @@ ost plugin view plugins/runnerSchema $fixture --profile lookdev
 If the runtimes and bundle are already built, only the last two lines are
 needed. Choose **Stage Runner > Play**, then use WASD to move `PlayerCube`.
 The fixture path is absolute because `ost plugin view` resolves relative fixture
-paths from the bundle directory. Physics and jumping in
-`character_walk.usda` require a Jolt-enabled build.
+paths from the bundle directory.
+
+To try jumping and a camera that follows `PlayerCube`, point CMake at an
+installed Jolt package and use the Jolt build intent:
+
+```powershell
+$env:CMAKE_PREFIX_PATH = 'C:\path\to\jolt-install'
+ost build --intent plugin-view-jolt
+$fixture = (Resolve-Path .\tests\fixtures\character_follow_camera.usda).Path
+ost plugin view plugins/runnerSchema $fixture --profile lookdev
+```
+
+Choose **Stage Runner > Play**. WASD and the arrow keys move the cube; Space
+jumps. Play selects the scene's third-person rig when usdview is using its free
+camera. The camera then follows the cube. If you have already chosen another
+scene camera, Play keeps that choice.
 
 ## Current capabilities
 

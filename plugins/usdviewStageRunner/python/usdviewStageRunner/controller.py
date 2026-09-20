@@ -1,6 +1,6 @@
 """Qt lifecycle adapter for the shared C++ Stage Runner session."""
 
-from pxr import Tf
+from pxr import Tf, UsdGeom
 from pxr.Usdviewq.qt import QtCore, QtWidgets
 from pxr.Usdviewq.stageView import StageView
 
@@ -40,6 +40,7 @@ class StageRunnerController(QtCore.QObject):
         session = self._ensureSession()
         self._sendActions()
         session.play()
+        self._selectFollowCamera()
         self._elapsed.start()
         self._timer.start()
         QtCore.QTimer.singleShot(0, self._stageView.setFocus)
@@ -118,11 +119,21 @@ class StageRunnerController(QtCore.QObject):
         if isinstance(widget, (
             QtWidgets.QLineEdit, QtWidgets.QTextEdit, QtWidgets.QPlainTextEdit,
             QtWidgets.QAbstractSpinBox, QtWidgets.QComboBox, QtWidgets.QMenu,
+            QtWidgets.QAbstractButton,
         )):
             return False
-        if widget == self._stageView or self._stageView.isAncestorOf(widget):
-            return True
-        return key in _LEFT_KEYS | _RIGHT_KEYS | _FORWARD_KEYS | _BACKWARD_KEYS
+        return True
+
+    def _selectFollowCamera(self):
+        viewSettings = self._api.dataModel.viewSettings
+        if viewSettings.cameraPrim:
+            return
+        for prim in self._api.stage.Traverse():
+            if (prim.IsA(UsdGeom.Camera)
+                    and "RunnerCameraRigAPI" in prim.GetAppliedSchemas()
+                    and prim.GetAttribute("runner:camera:mode").Get() == "thirdPerson"):
+                viewSettings.cameraPrim = prim
+                return
 
     def _clearKeys(self):
         if self._pressedKeys:

@@ -73,6 +73,52 @@ class TextWidget(Widget):
     pass
 
 
+class ButtonWidget(Widget):
+    pass
+
+
+class CameraPrim:
+    def __init__(self, mode="thirdPerson"):
+        self.mode = mode
+
+    def IsA(self, cameraType):
+        return cameraType is Camera
+
+    def GetAppliedSchemas(self):
+        return ["RunnerCameraRigAPI"]
+
+    def GetAttribute(self, name):
+        assert name == "runner:camera:mode"
+        return types.SimpleNamespace(Get=lambda: self.mode)
+
+
+class Camera:
+    pass
+
+
+class Stage:
+    def __init__(self):
+        self.prims = []
+
+    def Traverse(self):
+        return iter(self.prims)
+
+
+class ViewSettings:
+    def __init__(self):
+        self._cameraPrim = None
+
+    @property
+    def cameraPrim(self):
+        return self._cameraPrim
+
+    @cameraPrim.setter
+    def cameraPrim(self, value):
+        if value is not None and not value.IsA(Camera):
+            raise TypeError("usdview expects a camera Usd.Prim")
+        self._cameraPrim = value
+
+
 class Application:
     _instance = None
 
@@ -164,6 +210,7 @@ class DataModel:
     def __init__(self):
         self.signalStageReplaced = Signal()
         self.clearCount = 0
+        self.viewSettings = ViewSettings()
 
     def _clearCaches(self):
         self.clearCount += 1
@@ -171,7 +218,7 @@ class DataModel:
 
 class Api:
     def __init__(self):
-        self.stage = object()
+        self.stage = Stage()
         self.qMainWindow = MainWindow()
         self.dataModel = DataModel()
         self.statuses = []
@@ -190,6 +237,7 @@ def loadController():
     pxr = types.ModuleType("pxr")
     pxr.__path__ = []
     pxr.Tf = types.SimpleNamespace(Warn=lambda message: None)
+    pxr.UsdGeom = types.SimpleNamespace(Camera=Camera)
     usdviewq = types.ModuleType("pxr.Usdviewq")
     usdviewq.__path__ = []
     qt = types.ModuleType("pxr.Usdviewq.qt")
@@ -212,6 +260,7 @@ def loadController():
         QLineEdit=TextWidget, QTextEdit=TextWidget,
         QPlainTextEdit=TextWidget, QAbstractSpinBox=TextWidget,
         QComboBox=TextWidget, QMenu=TextWidget,
+        QAbstractButton=ButtonWidget,
     )
     stageView = types.ModuleType("pxr.Usdviewq.stageView")
     stageView.StageView = StageView
@@ -252,12 +301,16 @@ def loadController():
 def main():
     controllerModule, sessions = loadController()
     api = Api()
+    rig = CameraPrim()
+    api.stage.prims.append(rig)
     controller = controllerModule.StageRunnerController(api)
 
     controller.play()
     session = sessions[-1]
     if not controller._timer.active or session.calls != [("actions", 0, 0, False), "play"]:
         raise RuntimeError("play did not start both the session and timer")
+    if api.dataModel.viewSettings.cameraPrim is not rig:
+        raise RuntimeError("Play did not select the third-person follow camera")
 
     view = api.qMainWindow.stageView
     if not view.focused:
@@ -281,6 +334,21 @@ def main():
     text = TextWidget(api.qMainWindow)
     if Application.instance().eventFilter.eventFilter(text, Event(1, 87)):
         raise RuntimeError("typing in an editor was consumed as movement")
+    view.send(Event(2, 68))
+    view.send(Event(2, 32))
+    if not Application.instance().eventFilter.eventFilter(tree, Event(1, 16777234)) or session.calls[-1] != ("actions", -1, 0, False):
+        raise RuntimeError("Left arrow did not move from a usdview panel")
+    Application.instance().eventFilter.eventFilter(tree, Event(2, 16777234))
+    if not Application.instance().eventFilter.eventFilter(tree, Event(1, 16777236)) or session.calls[-1] != ("actions", 1, 0, False):
+        raise RuntimeError("Right arrow did not move from a usdview panel")
+    Application.instance().eventFilter.eventFilter(tree, Event(2, 16777236))
+    if not Application.instance().eventFilter.eventFilter(tree, Event(1, 32)) or session.calls[-1] != ("actions", 0, 0, True):
+        raise RuntimeError("Space did not request a jump from a usdview panel")
+    Application.instance().eventFilter.eventFilter(tree, Event(2, 32))
+    if Application.instance().eventFilter.eventFilter(ButtonWidget(api.qMainWindow), Event(1, 32)):
+        raise RuntimeError("Space on a button was consumed as jump")
+    if Application.instance().eventFilter.eventFilter(text, Event(1, 32)):
+        raise RuntimeError("Space in a text editor was consumed as jump")
     view.send(Event(4))
     if session.calls[-1] != ("actions", 0, 0, False):
         raise RuntimeError("focus loss left movement held")
@@ -297,9 +365,13 @@ def main():
         raise RuntimeError("pause left a movement key held")
     if view.send(Event(1, 87)):
         raise RuntimeError("movement keys were consumed while paused")
+    selectedCamera = CameraPrim()
+    api.dataModel.viewSettings.cameraPrim = selectedCamera
     controller.play()
     if session.calls[-2:] != [("actions", 0, 0, False), "play"]:
         raise RuntimeError("resuming replayed stale movement")
+    if api.dataModel.viewSettings.cameraPrim is not selectedCamera:
+        raise RuntimeError("Play replaced a camera selected by the user")
 
     controller.singleStep()
     if controller._timer.active or session.calls[-2:] != ["pause", "singleStep"]:
