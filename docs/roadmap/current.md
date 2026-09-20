@@ -12,7 +12,7 @@ steering, and wheel counts other than four.
 ## Outcome
 
 ```text
-named actions or behavior
+named actions or behavior (mapping planned)
     -> VehicleIntent
     -> vehicleCore wheel-command composition
     -> physics vehicle capability (next)
@@ -20,8 +20,10 @@ named actions or behavior
     -> incremental USD synchronization
 ```
 
-The current slice covers the first two arrows. It deliberately does not expose
-Jolt types or author USD transforms directly.
+The current slice covers only the `VehicleIntent` to wheel-command composition
+arrow. Action mapping and physics application remain future work. The core
+contract deliberately does not expose Jolt types or author USD transforms
+directly.
 
 ## Remaining scope
 
