@@ -21,14 +21,27 @@ Stage declares physics bodies. It intentionally owns host lifecycle, timing,
 and UI only; import, simulation, camera evaluation, synchronization, and layer
 discard remain in shared libraries.
 
+Choose **Stage Runner > Play** to focus the viewport. Use **WASD** or the arrow
+keys to move `/World/PlayerCube`; **Space** requests a jump for a character
+Stage. These keys work in the viewport and other usdview panels while playing,
+except in text editors, menus, and buttons. Releasing a key or deactivating
+usdview clears that input. `minimal.usda` demonstrates movement without Jolt.
+`character_follow_camera.usda` demonstrates jumping and third-person following
+with a Jolt-enabled build. Play selects its follow camera if usdview is using
+the free camera, and keeps any camera you explicitly selected.
+
 For OpenStrata Plugin View, the root `plugin-view` intent stages this package
 inside the `runnerSchema` bundle, whose schema `plugInfo.json` includes the
 Python plugin registration:
 
 ```powershell
 ost build --intent plugin-view
-ost plugin view plugins/runnerSchema tests/fixtures/third_person_camera.usda
+$fixture = (Resolve-Path .\tests\fixtures\minimal.usda).Path
+ost plugin view plugins/runnerSchema $fixture --profile lookdev
 ```
+
+The repository [quick start](../../README.md#quick-start-usdview-via-openstrata)
+shows how to adopt a usdview-capable OpenUSD runtime before these commands.
 
 OpenStrata 0.23.0 supports a dedicated `usdview-plugin` bundle. This repository
 continues staging the adapter into `runnerSchema` until its pinned runtime and

@@ -151,6 +151,7 @@ if(BUILD_TESTING AND Python3_EXECUTABLE)
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/controller_smoke.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/native_session_smoke.py"
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_smoke.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_character_smoke.py"
   )
 
   add_test(
@@ -171,5 +172,18 @@ if(BUILD_TESTING AND Python3_EXECUTABLE)
       ENVIRONMENT_MODIFICATION
         "PYTHONPATH=path_list_prepend:${_ost_bundle_dir}/python;PYTHONPATH=path_list_prepend:${pxr_DIR}/lib/python;PATH=path_list_prepend:${_ost_python_package_dir};PATH=path_list_prepend:${pxr_DIR}/lib;PATH=path_list_prepend:${pxr_DIR}/bin;PATH=path_list_prepend:${_python_runtime_dir};PXR_PLUGINPATH_NAME=path_list_prepend:${_ost_bundle_dir}/plugin/resources/runnerSchema;PYTHONDONTWRITEBYTECODE=set:1"
     )
+    if(USD_STAGE_RUNNER_REQUIRE_JOLT)
+      add_test(
+        NAME usdviewStageRunner.ost_plugin_view_character
+        COMMAND "${Python3_EXECUTABLE}"
+          "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_character_smoke.py"
+          "${_ost_bundle_dir}/plugin/resources/runnerSchema"
+          "${CMAKE_SOURCE_DIR}/tests/fixtures/character_follow_camera.usda"
+      )
+      set_tests_properties(usdviewStageRunner.ost_plugin_view_character PROPERTIES
+        ENVIRONMENT_MODIFICATION
+          "PYTHONPATH=path_list_prepend:${_ost_bundle_dir}/python;PYTHONPATH=path_list_prepend:${pxr_DIR}/lib/python;PATH=path_list_prepend:${_ost_python_package_dir};PATH=path_list_prepend:${pxr_DIR}/lib;PATH=path_list_prepend:${pxr_DIR}/bin;PATH=path_list_prepend:${_python_runtime_dir};PXR_PLUGINPATH_NAME=path_list_prepend:${_ost_bundle_dir}/plugin/resources/runnerSchema;PYTHONDONTWRITEBYTECODE=set:1"
+      )
+    endif()
   endif()
 endif()
