@@ -10,11 +10,14 @@ keyboard/gamepad/injected action mapping, runnable walking, grounding, and
 jumping scenario, plus camera targeting, mode, collision probes, smoothing,
 fixed-step host evaluation, and incremental USD Camera pose synchronization.
 Runtime, input, physics,
-character, and camera core libraries, SDL and Jolt adapters, a codeless OpenUSD
+character, camera, and initial vehicle core libraries, SDL and Jolt adapters, a codeless OpenUSD
 runtime-schema plugin, thin standalone and usdview host adapters, an
 OpenStrata Plugin View deployment path, core/adapter/integration tests, and
-dual CMake/OpenStrata build configuration are present. OpenExec, behavior, and
-vehicle targets do not exist yet.
+dual CMake/OpenStrata build configuration are present. `vehicleCore` currently
+maps normalized vehicle intent into deterministic per-wheel steering, drive,
+service-brake, and handbrake commands for arbitrary wheel layouts. Vehicle
+physics application, USD declarations, Stage integration, OpenExec, and behavior
+targets do not exist yet.
 
 ## Implemented targets
 
@@ -25,6 +28,7 @@ vehicle targets do not exist yet.
 | `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, character ground-query, and collision-segment query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
 | `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
 | `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; optional collision-probe callbacks and clearance; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera pose updates. | `runtimeCore`. |
+| `vehicleCore` | `libs/vehicleCore` | Normalized vehicle intent, chassis and wheel composition, independent steering/powertrain/brake configuration, validation, and deterministic per-wheel steering and torque command distribution without a four-wheel-only contract. | `runtimeCore`, `physicsCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, character ground shape casts, and first-hit segment ray casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
@@ -251,7 +255,7 @@ conditional on a runtime with usdview, Qt, and a display.
 
 ## Build and verification
 
-The root CMake tree builds the eight compiled libraries, codeless schema plugin,
+The root CMake tree builds the nine compiled libraries, codeless schema plugin,
 standalone host, optional usdview adapter, and CTest suite. Each library
 installs headers and an exported CMake package. The usdview adapter is enabled
 only when the selected OpenUSD SDK supplies Python targets. OpenUSD, SDL, and

@@ -1,8 +1,9 @@
 # Modules and Dependency Boundaries
 
 Status: intended contract; `runtimeCore`, `inputCore`, `physicsCore`,
-`characterCore`, `cameraCore`, `stageRuntime`, `inputSdl`, `physicsJolt`, and
-the physics, character, and camera contracts in `runnerSchema` implemented
+`characterCore`, `cameraCore`, the initial `vehicleCore` intent and wheel-command
+contract, `stageRuntime`, `inputSdl`, `physicsJolt`, and the physics, character,
+and camera contracts in `runnerSchema` implemented
 
 ## Core and adapter rule
 

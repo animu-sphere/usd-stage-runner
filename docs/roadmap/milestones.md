@@ -1,13 +1,14 @@
 # Planned Milestones
 
-Status: Milestone 5 in progress; later milestones not started
+Status: Milestone 6 in progress; later milestones not started
 
-Milestone 4, including camera collision avoidance, is implemented and recorded
-in the [current architecture](../architecture/overview.md). Host integration is
+Milestones 4 and 5, including camera collision avoidance and host integration,
+are implemented and recorded in the
+[current architecture](../architecture/overview.md). Vehicle composition is
 the current work; later milestones have not started.
 
 Work is ordered so every milestone adds a runnable, testable capability. The
-[host-integration vertical slice](current.md) is the current milestone.
+[vehicle-composition vertical slice](current.md) is the current milestone.
 Physics and the initial Runner physics schemas are already implemented and are
 recorded in the [current architecture](../architecture/overview.md), not as
 open roadmap work.
@@ -16,44 +17,11 @@ open roadmap work.
 
 | Milestone | Capability | Proof |
 | --- | --- | --- |
-| 5 | Host integration | The same Stage can play safely through `stage_runner`, usdview, and OST Plugin View. |
 | 6 | Vehicle composition | A USD-composed four-wheel vehicle is drivable without a four-wheel-only runtime contract. |
 | 7 | Behavior runtime | An AI character produces the same intent contract as a player. |
 | 8 | OpenExec integration | Small Exec nodes invoke operations already exposed by core libraries. |
 | 9 | Animation integration | Runtime motion drives a USD Skeleton and animation state without redefining character control around one asset format. |
 | 10 | Runtime tooling | Hosts can inspect, debug, profile, and explicitly bake runtime state. |
-
-Host integration is the next implementation path. It proves that character
-and camera systems are reusable
-libraries rather than features embedded in the standalone executable.
-
-## Milestone 5: Host integration
-
-Targets: `plugins/usdviewStageRunner` and OST Plugin View integration
-
-- Reuse the same Runtime World and subsystem libraries as `stage_runner`.
-- Keep host adapters limited to lifecycle, frame driving, UI, rendering hooks,
-  and Stage access.
-- Provide play, pause, stop, single-step, and reset controls first.
-- Put simulated values in a discardable session/runtime layer.
-- Discard the layer on reset or stop; defer authored-layer persistence to an
-  explicit bake or commit operation.
-- Verify equivalent fixed-step and synchronization semantics in each host.
-
-Success: a Stage that runs through `stage_runner` can be played in usdview and
-OST Plugin View without duplicating simulation logic or contaminating its root
-layer.
-
-At this point the representative demo is:
-
-```text
-open a USD Stage
-    -> press Play
-    -> control a character with keyboard or gamepad
-    -> move and collide through Jolt
-    -> follow it with a third-person camera
-    -> observe live Stage updates in the selected host
-```
 
 ## Milestone 6: Vehicle composition
 
