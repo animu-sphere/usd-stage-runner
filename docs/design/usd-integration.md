@@ -12,22 +12,38 @@ not contain simulation implementations or expose private backend state.
 
 Applied API schemas are preferred over a large typed-schema hierarchy because
 they compose with existing assets, references, vehicles, and characters.
+Standard OpenUSD schemas are preferred whenever they already express the
+required domain semantics.
 
-Domain contracts are introduced only when their runtime slice exists:
+Domain declarations are introduced only with the slice that consumes them:
 
-| Slice | Applied API schemas |
-| --- | --- |
-| Physics | `RunnerPhysicsBodyAPI`, `RunnerColliderAPI` |
-| Character | `RunnerCharacterAPI` |
-| Camera | `RunnerCameraRigAPI` |
-| Vehicle | `RunnerVehicleAPI`, `RunnerWheelAPI`, followed by focused suspension, steering, and drivetrain APIs as needed |
-| Behavior | `RunnerBehaviorAPI` |
+| Slice | Applied API schemas | Status |
+| --- | --- | --- |
+| Physics | `RunnerPhysicsBodyAPI`, `RunnerColliderAPI` | Implemented compatibility surface; migrate to standard `UsdPhysics`. |
+| Character | `RunnerCharacterAPI` | Implemented. |
+| Camera | `RunnerCameraRigAPI` | Implemented. |
+| Vehicle | `RunnerVehicleAPI`, `RunnerWheelAPI`, followed by focused suspension, steering, and drivetrain APIs as needed | Planned after the physics boundary stabilizes. |
+| Behavior | `RunnerBehaviorAPI` | Planned. |
+
+The physics row is a compatibility surface, not the target authored model.
+Under the proposed
+[physics repository boundary](proposed/0002-physics-repository-boundary.md),
+`usd-physics-plugins` interprets standard declarations such as
+`UsdPhysicsRigidBodyAPI`, `UsdPhysicsCollisionAPI`, `UsdPhysicsMassAPI`, joint
+schemas, `UsdPhysicsDriveAPI`, and `UsdPhysicsLimitAPI`. Stage Runner consumes
+the resulting backend-neutral runtime state.
+
+`RunnerPhysicsBodyAPI` and `RunnerColliderAPI` remain supported while existing
+fixtures and consumers migrate, then should be deprecated or removed. New
+Runner-specific physics schemas must not be added. Runner schemas remain valid
+for character, camera, vehicle, and other gameplay semantics that standard
+OpenUSD schemas cannot represent.
 
 Schema values are declarations that are parsed into prim-indexed runtime
 components. A schema instance is not itself the runtime object, and applying an
 API schema never transfers simulation ownership to USD.
 
-Example physics declaration:
+Current compatibility physics declaration:
 
 ```usda
 def Xform "Player"

@@ -13,7 +13,7 @@ The USD Stage and Runtime World own different kinds of state.
 | USD Stage | Hierarchy, composition, references, payloads, variants, authored configuration, persistent properties, and stable prim identity. |
 | Runtime World | Per-frame input, velocities, backend handles, character and vehicle state, behavior state, camera smoothing, and dirty synchronization state. |
 | OpenExec | Dependency evaluation over runtime-facing interfaces, not domain state or the host loop. |
-| Physics backend | Collision, constraints, and simulation behind `physicsCore` contracts. |
+| Physics subsystem | Collision, constraints, queries, and simulation behind backend-neutral contracts; proposed to be supplied by `usd-physics-plugins`. |
 
 High-frequency state must not travel between runtime systems by repeatedly
 reading and authoring USD attributes. The Stage is the source of truth for scene
@@ -111,6 +111,10 @@ They do not move by directly editing authored transforms. The contract is
 independent of a visual representation: a USD Skeleton, VRM asset, robot, or
 arbitrary composed asset can all represent the same runtime character.
 
+Character policy consumes capabilities such as ground queries, body state, and
+linear-velocity commands. It does not own collision implementation or expose
+Jolt types.
+
 ### Camera rigs
 
 A USD Camera prim represents a camera in the Stage. The implemented runtime rig
@@ -120,8 +124,8 @@ initial modes are free, first-person, third-person, and orbit, and its live
 smoothing state survives repeatable mode changes. Optional third-person
 collision configuration probes from the shifted rig origin toward the desired
 pose, shortens the distance by an authored clearance when blocked, and then
-applies smoothing. `StageSession` bridges the camera callback to the
-backend-neutral `physicsCore` collision query, evaluates rigs after fixed-step
+applies smoothing. `StageSession` bridges the camera callback to a
+backend-neutral physics collision query, evaluates rigs after fixed-step
 physics extraction, and synchronizes only dirty camera translations and
 orientations to USD. Springs, vehicle chase, cockpit, and cinematic modes
 follow later.
@@ -141,6 +145,12 @@ Vehicle
 
 The composition must support different wheel counts, trailers, motorcycles,
 and unusual vehicles without hard-coding a four-wheel layout.
+
+The implemented intent and wheel-command contract is frozen while reusable
+physics ownership is extracted. Vehicle physics resumes after the shared
+boundary stabilizes and should be assembled from rigid bodies, constraints,
+forces, torques, contact or friction data, and wheel or suspension queries
+rather than one backend-defined car object.
 
 ### Behavior and OpenExec
 

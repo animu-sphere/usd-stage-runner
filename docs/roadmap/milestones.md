@@ -1,111 +1,141 @@
-# Planned Milestones
+# Planned Delivery Phases
 
-Status: Milestone 6 in progress; later milestones not started
+Status: Phase A in progress; later phases not started
 
-Milestones 4 and 5, including camera collision avoidance and host integration,
-are implemented and recorded in the
-[current architecture](../architecture/overview.md). Vehicle composition is
-the current work; later milestones have not started.
-
-Work is ordered so every milestone adds a runnable, testable capability. The
-[vehicle-composition vertical slice](current.md) is the current milestone.
-Physics and the initial Runner physics schemas are already implemented and are
-recorded in the [current architecture](../architecture/overview.md), not as
-open roadmap work.
+Character, camera, host integration, and the backend-neutral `vehicleCore`
+composition slice are implemented and recorded in the
+[current architecture](../architecture/overview.md). The next delivery sequence
+establishes a reusable physics repository boundary before vehicle physics or
+new runtime systems expand the current coupling.
 
 ## Delivery order
 
-| Milestone | Capability | Proof |
+| Phase | Capability | Proof |
 | --- | --- | --- |
-| 6 | Vehicle composition | A USD-composed four-wheel vehicle is drivable without a four-wheel-only runtime contract. |
-| 7 | Behavior runtime | An AI character produces the same intent contract as a player. |
-| 8 | OpenExec integration | Small Exec nodes invoke operations already exposed by core libraries. |
-| 9 | Animation integration | Runtime motion drives a USD Skeleton and animation state without redefining character control around one asset format. |
-| 10 | Runtime tooling | Hosts can inspect, debug, profile, and explicitly bake runtime state. |
+| A | Physics boundary freeze | Current ownership and the minimum Character, Camera, and Vehicle capability contracts are documented and protected by deterministic tests. |
+| B | `usd-physics-plugins` extraction | The backend-neutral kernel and Jolt backend build and test independently of Stage Runner. |
+| C | `UsdPhysics` canonicalization | Standard OpenUSD physics declarations construct backend-neutral runtime state, with bounded compatibility for existing Runner declarations. |
+| D | Stage Runner consumer migration | CMake and OpenStrata compose the external package; Stage Runner no longer owns or directly depends on Jolt. |
+| E | Shared consumer validation | Stage Runner plus MMD and VRM requirements validate the reusable contracts. |
+| F | Vehicle physics | A USD-composed vehicle is drivable through composable physics capabilities without a four-wheel-only runtime contract. |
+| G | Behavior and richer runtime systems | Behavior, thin OpenExec adapters, animation integration, and runtime tooling grow on the stable substrate. |
 
-## Milestone 6: Vehicle composition
+## Phase A: Physics boundary freeze
 
-Targets: `libs/vehicleCore`, then focused schema declarations
+Audit `physicsCore`, `physicsJolt`, Stage physics import, Runner physics schemas,
+Character and Camera queries, Vehicle requirements, tests, builds, and host
+composition. Freeze the reusable public contract and stop adding
+Runner-specific physics schemas. Detailed work and completion criteria are in
+[the current milestone](current.md).
 
-- Compose chassis, wheels, suspension, steering, powertrain, and braking rather
-  than introducing a monolithic car object.
-- Add `VehicleIntent` for throttle, brake, steering, and handbrake.
-- Begin with `RunnerVehicleAPI` and `RunnerWheelAPI`; add narrower APIs when the
-  implementation needs them.
-- Reuse USD hierarchy, references, payloads, inheritance, and variants for
-  vehicle assembly.
-- Keep the runtime compatible with other wheel counts and layouts.
-- Add a deterministic `four_wheel_vehicle.usda` scenario.
+## Phase B: `usd-physics-plugins` extraction
 
-Success: a USD-composed four-wheel vehicle is drivable with normalized input,
-while its controller and physics path remain reusable by other vehicle forms.
+Move the minimum reusable kernel first:
 
-## Milestone 7: Behavior runtime
+- backend-neutral worlds, bodies, shapes, constraints, handles, commands, and
+  changed-state extraction;
+- optional ground and collision queries already proven by Character and
+  Camera;
+- the Jolt backend and its lifecycle, stepping, layers, and queries; and
+- deterministic contract and focused adapter tests.
 
-Targets: `libs/behaviorCore`, followed by `RunnerBehaviorAPI`
+Do not redesign every physics feature during the move. Preserve behavior and
+make ownership clear before adding capabilities.
 
-- Add stateful `Sequence`, `Selector`, `Condition`, `Action`, and `Decorator`
-  nodes.
-- Keep `BehaviorInstance`, blackboard values, and node state in the Runtime
-  World rather than forcing them into the USD prim hierarchy.
-- Let USD declarations refer to behavior assets without making the behavior
-  tree mirror the scene hierarchy.
-- Produce the same character and vehicle intent contracts used by human input.
-- Add a chase, guard, or wander scenario in `behavior_chase.usda`.
+Success: the physics package builds and tests without Stage Runner, and its
+public API exposes no Jolt types.
 
-Success: an AI-controlled character moves autonomously through the same
-controller and physics path as a player.
+## Phase C: `UsdPhysics` canonicalization
 
-## Milestone 8: OpenExec integration
+Teach the physics package to interpret standard declarations including rigid
+bodies, collisions, mass, joints, drives, and limits as demanded by working
+slices. Retain temporary compatibility with `RunnerPhysicsBodyAPI` and
+`RunnerColliderAPI` only as needed for migration.
 
-Targets: `plugins/execRunner`, `execPhysics`, `execCharacter`, `execVehicle`,
-and `execBehavior` as required by proven use cases
+Success: standard `UsdPhysics` is the primary authored representation and no
+new Runner-specific physics schema is required.
 
-- Start with thin nodes such as `ReadInputAction`, `ReadRuntimeTransform`,
-  `ReadVelocity`, `MoveCharacter`, `ApplyForce`, `SetCameraTarget`,
-  `DriveVehicle`, and `TickBehavior`.
-- Route every node through a documented core interface.
-- Keep host orchestration, behavior state, and domain algorithms outside node
-  implementations.
-- Preserve C++, Python, host UI, and test access to the same operations without
-  requiring OpenExec.
+## Phase D: Stage Runner consumer migration
 
-Success: OpenExec evaluation reads runtime state and changes intent or invokes
-an operation through the same public boundary used by non-Exec code.
+- Consume `usd-physics-plugins` through exported CMake packages.
+- Compose the repositories through OpenStrata for build, test, packaging, and
+  host workflows.
+- Remove repository-local Jolt ownership and direct Jolt selection from
+  `stageRuntime`.
+- Keep standalone and usdview on the same `StageSession`, fixed-step order, and
+  discardable runtime-layer policy.
 
-## Milestone 9: Animation integration
+Success: the Stage Runner repository contains orchestration and gameplay policy
+but no physics backend, while existing Character and Camera scenarios retain
+their behavior.
 
-Targets are selected only after the character and host slices expose a concrete
-animation use case.
+## Phase E: Shared consumer validation
 
-- Connect character state to USD Skeleton and animation playback.
-- Add the smallest useful locomotion-state and blending contract.
-- Keep retargeting, IK, facial expression, and format-specific features out of
-  the initial slice.
-- Treat VRM as one visual representation rather than the identity of the
-  character runtime.
+Validate abstractions against real requirements from:
 
-Success: the representative character visibly reflects its runtime locomotion
-state without coupling `characterCore` to one asset format.
+- `usd-stage-runner` for rigid bodies, Character, Camera, and later Vehicle;
+- `usd-mmd-plugins` for its physics-driven use cases; and
+- `usd-vrm-plugins` for secondary motion and related runtime needs.
 
-## Milestone 10: Runtime tooling
+Retain only abstractions that survive multiple consumers. Add narrow optional
+capabilities rather than widening the base interface speculatively.
 
-- Inspect prim-indexed runtime components and subsystem state.
-- Visualize colliders, contacts, velocity, grounded state, suspension, camera
-  probes, and behavior state through host-rendered diagnostics.
-- Add bounded timing and profiling data without putting UI in core libraries.
-- Add explicit simulation bake and selected-property commit workflows.
+Success: at least one non-Stage-Runner consumer uses the extracted package and
+the contracts cover the documented MMD and VRM requirements without format
+logic entering Stage Runner.
 
-Success: a developer can explain a running Stage's state, locate subsystem
-costs, and deliberately persist selected results.
+## Phase F: Vehicle physics
+
+Resume from the implemented, frozen `vehicleCore` contract:
+
+```text
+named actions or behavior
+    -> VehicleIntent
+    -> vehicleCore wheel-command composition
+    -> physics capabilities
+    -> usd-physics-plugins
+    -> runtime transform changes
+    -> incremental USD synchronization
+```
+
+Prefer rigid bodies, constraints, forces, torques, contact or friction data,
+and wheel or suspension queries over a monolithic backend vehicle object.
+Introduce `RunnerVehicleAPI`, wheel declarations, and narrower gameplay schemas
+only with the importer that consumes them. Preserve independent wheel roles and
+support for non-four-wheel layouts.
+
+Success: a USD-composed representative vehicle is drivable with deterministic
+input and tests, while its physics path remains reusable by other vehicle
+forms.
+
+## Phase G: Behavior and richer runtime systems
+
+### Behavior
+
+Add `behaviorCore`, blackboards, stateful composites, decorators, conditions,
+tasks, and events. Behavior produces the same Character and Vehicle intent
+contracts as player input and does not manipulate backend simulation objects.
+
+### OpenExec
+
+Add thin `execCharacter`, `execRunner`, `execVehicle`, and `execBehavior`
+wrappers only for proven use cases. Core algorithms remain callable without
+OpenExec, and OpenExec never owns the host loop or domain state.
+
+### Animation and tooling
+
+Connect runtime motion to USD Skeleton and animation state without making an
+avatar format the runtime identity. Add host-rendered inspection, debug
+primitives, profiling, explicit bake, and selected-property commit workflows.
 
 ## Cross-cutting follow-up
 
 - Incremental USD-to-runtime updates using Stage change notices.
-- CI checks for forbidden dependency edges.
+- CI checks for forbidden repository and target dependency edges.
 - Additional input and physics backends.
 - Richer camera collision, rig blending, and cinematic modes.
-- Vehicle variants such as motorcycles, trailers, and tracked vehicles.
+- Dedicated SDL/GLFW viewport, editor integration, headless simulation, and
+  remote or application hosts.
 - Packaging, compatibility policy, release records, task guides, and generated
   API/schema reference once real usage requires them.
 

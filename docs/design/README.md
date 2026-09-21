@@ -9,6 +9,7 @@ implementation inventory.
 | Document | Purpose |
 | --- | --- |
 | [spec.md](spec.md) | Entry point, system map, invariants, and links to the focused contracts below. |
+| [proposed/0002-physics-repository-boundary.md](proposed/0002-physics-repository-boundary.md) | Proposed split between Stage Runner orchestration and the reusable `usd-physics-plugins` package. |
 | [runtime-model.md](runtime-model.md) | State ownership, prim identity, frame execution, and intent flow. |
 | [input.md](input.md) | Physical input, named actions, action value types, and gameplay intent. |
 | [modules.md](modules.md) | Target topology, core/adapter boundaries, and allowed dependencies. |
@@ -38,6 +39,7 @@ made. Add a replacement decision and link both records.
 | Document | Purpose |
 | --- | --- |
 | [proposed/0001-runtime-boundaries.md](proposed/0001-runtime-boundaries.md) | Establish USD, Runtime World, OpenExec, core-library, and backend ownership boundaries. |
+| [proposed/0002-physics-repository-boundary.md](proposed/0002-physics-repository-boundary.md) | Make Stage Runner the runtime orchestrator and extract reusable physics ownership to `usd-physics-plugins`. |
 
 There are no accepted decisions yet. A proposal moves to `accepted/` only when
 its acceptance criteria are satisfied by the repository.

@@ -10,6 +10,14 @@ bounded real-time update loop. The project is being delivered as small vertical
 slices; physics, character control, and first- and third-person camera following
 with collision avoidance are implemented.
 
+The proposed long-term role is a lightweight runtime orchestration layer, not
+the owner of physics implementation. Reusable physics contracts, Jolt, and
+standard `UsdPhysics` interpretation are planned to move to
+`usd-physics-plugins`; Stage Runner will compose that package while retaining
+Runtime World, fixed-step scheduling, gameplay policy, host lifecycle, and
+discardable USD synchronization. See the
+[physics repository boundary](docs/design/proposed/0002-physics-repository-boundary.md).
+
 The intended architecture and the distinction between implemented and planned
 behavior are documented in [docs/README.md](docs/README.md).
 
@@ -100,10 +108,12 @@ scene camera, Play keeps that choice.
 
 The character-control, camera-rig, and host-integration milestones are
 implemented end to end. Interactive usdview verification uses a local runtime
-with usdview; CI does not yet cover that host. Vehicle composition is in
-progress: the core intent and wheel-command contract is implemented, while
-physics application, USD schemas, Stage import, and the representative fixture
-remain. Behavior and OpenExec integration are later slices.
+with usdview; CI does not yet cover that host. The backend-neutral vehicle
+intent and wheel-command contract is implemented and preserved. Vehicle physics
+application is paused while the current physics contracts and Jolt backend are
+prepared for extraction to `usd-physics-plugins`; standard `UsdPhysics` import,
+Stage Runner consumer migration, and shared MMD/VRM validation precede resumed
+vehicle integration. Behavior and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
@@ -212,7 +222,10 @@ and `--jump` holds the jump action for deterministic adapter-to-Stage tests.
 All three require `--deterministic`. Interactive runs use SDL keyboard and
 gamepad input.
 
-Physics prims apply both `RunnerPhysicsBodyAPI` and `RunnerColliderAPI`.
+The current compatibility importer expects physics prims to apply both
+`RunnerPhysicsBodyAPI` and `RunnerColliderAPI`. The target authored model uses
+standard `UsdPhysics`; existing Runner declarations remain documented here
+until that migration is implemented.
 `runner:physics:motionType` accepts `static` or `dynamic`, mass is authored with
 `runner:physics:mass`, and the initial collider contract uses
 `runner:physics:shape = "box"` plus positive local-space

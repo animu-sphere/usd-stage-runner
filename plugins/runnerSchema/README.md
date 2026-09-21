@@ -13,6 +13,13 @@
   mode, framing offset, distance, pitch, yaw, damping, collision enablement,
   and collision clearance.
 
+`RunnerPhysicsBodyAPI` and `RunnerColliderAPI` describe the current implemented
+compatibility contract. The proposed long-term boundary makes standard
+`UsdPhysics` schemas the canonical authored physics representation and moves
+their interpretation to `usd-physics-plugins`. No new Runner-specific physics
+schemas should be added; character, camera, and future vehicle schemas remain
+Stage Runner-owned gameplay declarations.
+
 The half extents are local-space values. Ordered scale ops are applied when the
 host creates the backend shape. The initial contract accepts only `box` shapes,
 `static` or `dynamic` motion, and positive finite mass and extents.

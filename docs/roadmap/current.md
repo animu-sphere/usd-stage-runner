@@ -1,83 +1,92 @@
-# Milestone 6: Vehicle Composition
+# Current Milestone: Physics Boundary Freeze
 
 Status: in progress
 
-The first backend-neutral vehicle slice is implemented in `vehicleCore`.
-Normalized throttle, brake, steering, and handbrake intent is validated and
-distributed into per-wheel steering, drive-torque, service-brake, and
-handbrake commands. Wheel roles are expressed as independent ratios and
-weights, so the contract supports front-, rear-, and all-wheel drive, rear
-steering, and wheel counts other than four.
+Stage Runner currently owns `physicsCore`, `physicsJolt`, physics-specific Stage
+import, and Runner physics schemas. The next milestone freezes and inventories
+those contracts before extracting the reusable kernel to
+`usd-physics-plugins`. This work takes priority over vehicle physics so the
+vehicle integration is built once against the intended shared substrate.
+
+The governing proposal is
+[0002: Physics Repository Boundary](../design/proposed/0002-physics-repository-boundary.md).
+Architecture pages continue to describe the repository-local implementation
+until the extraction actually lands.
 
 ## Outcome
 
 ```text
-named actions or behavior (mapping planned)
-    -> VehicleIntent
-    -> vehicleCore wheel-command composition
-    -> physics vehicle capability (next)
-    -> Runtime World transform changes
-    -> incremental USD synchronization
+OpenUSD Stage
+    -> stageRuntime orchestration
+    -> backend-neutral physics capabilities
+    -> usd-physics-plugins
+    -> selected backend such as Jolt
+    -> changed runtime state
+    -> discardable USD runtime layer
 ```
 
-The current slice covers only the `VehicleIntent` to wheel-command composition
-arrow. Action mapping and physics application remain future work. The core
-contract deliberately does not expose Jolt types or author USD transforms
-directly.
+Stage Runner remains responsible for Runtime World construction, fixed-step
+order, play-session lifecycle, character/camera/vehicle gameplay policy, host
+adapters, and incremental synchronization. The extracted package owns reusable
+physics contracts, the Jolt backend, and physics-specific USD interpretation.
 
-## Remaining scope
+## Phase A scope
 
-### Physics application
+### Freeze the current contract
 
-- Add the minimum backend-neutral physics capability needed to consume wheel
-  steering and torque commands.
-- Implement that capability in `physicsJolt` without leaking Jolt types into
-  `physicsCore` or `vehicleCore`.
-- Compose chassis, wheel, suspension, steering, powertrain, and braking behavior
-  without a monolithic four-wheel-only runtime object.
+- Document the public surface of `physicsCore`: handles, descriptors,
+  commands, state extraction, optional queries, and `PhysicsRuntime` mapping.
+- Preserve deterministic contract tests before files or packages move.
+- Do not add new Runner-specific physics schemas or Jolt-specific public
+  concepts.
 
-### USD declarations and Stage integration
+### Inventory ownership and consumers
 
-- Introduce `RunnerVehicleAPI` and `RunnerWheelAPI` only with the importer that
-  consumes them.
-- Resolve vehicle and wheel prim relationships into the Runtime World and bind
-  the chassis to its physics body.
-- Convert named actions into `VehicleIntent` at the fixed-step boundary.
-- Synchronize changed runtime transforms through the existing dirty queue and
-  discardable runtime layer.
+- Identify every direct physics responsibility in `stageRuntime`, standalone,
+  usdview, fixtures, CMake, and OpenStrata packaging.
+- Record the minimum ground, body-state, velocity, and collision capabilities
+  required by Character and Camera.
+- Record the additional rigid-body, constraint, force, torque, contact, wheel,
+  and suspension capabilities that Vehicle may require.
+- Separate reusable physics USD interpretation from Stage Runner-specific
+  character, camera, and vehicle import.
 
-### Representative scenario
+### Define migration seams
 
-- Add `tests/fixtures/four_wheel_vehicle.usda`.
-- Verify deterministic steering, forward/reverse drive, service braking, and
-  handbraking through the complete Stage-to-runtime-to-Stage path.
-- Keep at least one core test with a non-four-wheel layout so the public
-  contract cannot accidentally narrow to a conventional car.
+- Define the CMake package boundary used by Stage Runner.
+- Define OpenStrata composition for development, packaging, tests, and hosts.
+- Plan temporary compatibility for `RunnerPhysicsBodyAPI` and
+  `RunnerColliderAPI` while standard `UsdPhysics` import is introduced.
+- Keep standalone and usdview hosts on the same `StageSession` API.
 
-## Recommended PR sequence
+## Vehicle work during the freeze
 
-1. `vehicleCore` intent, composition, validation, packaging, and unit tests
-   (implemented on the current feature branch).
-2. Backend-neutral physics vehicle capability and deterministic test double.
-3. Jolt implementation and focused adapter tests.
-4. Runner vehicle/wheel schemas and Stage importer.
-5. Input mapping, four-wheel fixture, full vertical-slice tests, and docs.
+The implemented `vehicleCore` contract remains in Stage Runner and is not
+discarded. Freeze and retain:
+
+- normalized throttle, brake, steering, and handbrake `VehicleIntent`;
+- explicit chassis identity;
+- independent steering, powertrain, service-brake, and handbrake roles;
+- deterministic per-wheel command generation; and
+- arbitrary wheel counts and backend-neutral tests.
+
+Do not add vehicle physics, Jolt-specific vehicle types, or Runner vehicle
+schemas until the shared physics boundary is stable. Input mapping and Stage
+integration resume with the later vehicle phase.
 
 ## Completion criteria
 
-- A USD-composed four-wheel vehicle is drivable with normalized input.
-- Chassis, wheels, suspension, steering, powertrain, and braking remain
-  independently configurable.
-- The runtime contract supports other wheel counts and layouts.
-- Vehicle motion uses physics and incremental runtime-layer synchronization.
-- Core, adapter, integration, and representative fixture tests are
-  deterministic.
-- Plain CMake and OpenStrata build paths remain valid in supported
-  environments.
+- The reusable and Stage Runner-specific parts of `physicsCore`,
+  `physicsJolt`, physics import, schemas, tests, and packaging are explicitly
+  inventoried.
+- Character, Camera, and Vehicle capability requirements are documented
+  without Jolt types.
+- The extraction package and OpenStrata composition seams are agreed and
+  testable.
+- Existing physics, character, camera, host, and vehicle-core behavior remains
+  covered by deterministic tests.
+- No new Stage Runner-specific physics schema or backend coupling is added.
 
-The relevant contracts are documented in the
-[runtime model](../design/runtime-model.md),
-[input design](../design/input.md),
-[module boundaries](../design/modules.md),
-[USD integration](../design/usd-integration.md), and
-[testing strategy](../design/testing.md).
+After these criteria are met, continue with Phase B in
+[the planned delivery phases](milestones.md): extract the minimum reusable
+physics kernel and Jolt backend before redesigning or extending features.
