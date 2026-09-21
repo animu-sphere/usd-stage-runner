@@ -9,6 +9,8 @@ The current repository implements `runtimeCore`, `inputCore`, `physicsCore`,
 Jolt adapter, and physics-specific USD interpretation to
 `usd-physics-plugins`. See the
 [proposed repository-boundary decision](proposed/0002-physics-repository-boundary.md).
+The bounded hand-off details are in the
+[physics extraction contract](physics-extraction.md).
 
 ## Core, capability, and adapter rule
 

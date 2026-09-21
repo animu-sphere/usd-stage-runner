@@ -10,6 +10,7 @@ implementation inventory.
 | --- | --- |
 | [spec.md](spec.md) | Entry point, system map, invariants, and links to the focused contracts below. |
 | [proposed/0002-physics-repository-boundary.md](proposed/0002-physics-repository-boundary.md) | Proposed split between Stage Runner orchestration and the reusable `usd-physics-plugins` package. |
+| [physics-extraction.md](physics-extraction.md) | Frozen capability requirements, installed-package boundary, compatibility seam, and parity gate for the extraction. |
 | [runtime-model.md](runtime-model.md) | State ownership, prim identity, frame execution, and intent flow. |
 | [input.md](input.md) | Physical input, named actions, action value types, and gameplay intent. |
 | [modules.md](modules.md) | Target topology, core/adapter boundaries, and allowed dependencies. |
