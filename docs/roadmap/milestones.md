@@ -14,8 +14,8 @@ new runtime systems expand the current coupling.
 | --- | --- | --- |
 | A | Physics boundary freeze | Current ownership and the minimum Character, Camera, and Vehicle capability contracts are documented and protected by deterministic tests. |
 | B | `usd-physics-plugins` extraction | The backend-neutral kernel and Jolt backend build and test independently of Stage Runner. |
-| C | `UsdPhysics` canonicalization | Standard OpenUSD physics declarations construct backend-neutral runtime state, with bounded compatibility for existing Runner declarations. |
-| D | Stage Runner consumer migration | CMake and OpenStrata compose the external package; Stage Runner no longer owns or directly depends on Jolt. |
+| C | Stage Runner consumer migration | CMake and OpenStrata compose the external core and backend packages; Stage Runner no longer owns or directly depends on Jolt. |
+| D | `UsdPhysics` canonicalization | Standard OpenUSD physics declarations construct backend-neutral runtime state, with bounded compatibility for existing Runner declarations. |
 | E | Shared consumer validation | Stage Runner plus MMD and VRM requirements validate the reusable contracts. |
 | F | Vehicle physics | A USD-composed vehicle is drivable through composable physics capabilities without a four-wheel-only runtime contract. |
 | G | Behavior and richer runtime systems | Behavior, thin OpenExec adapters, animation integration, and runtime tooling grow on the stable substrate. |
@@ -45,17 +45,7 @@ make ownership clear before adding capabilities.
 Success: the physics package builds and tests without Stage Runner, and its
 public API exposes no Jolt types.
 
-## Phase C: `UsdPhysics` canonicalization
-
-Teach the physics package to interpret standard declarations including rigid
-bodies, collisions, mass, joints, drives, and limits as demanded by working
-slices. Retain temporary compatibility with `RunnerPhysicsBodyAPI` and
-`RunnerColliderAPI` only as needed for migration.
-
-Success: standard `UsdPhysics` is the primary authored representation and no
-new Runner-specific physics schema is required.
-
-## Phase D: Stage Runner consumer migration
+## Phase C: Stage Runner consumer migration
 
 - Consume `usd-physics-plugins` through exported CMake packages.
 - Compose the repositories through OpenStrata for build, test, packaging, and
@@ -68,6 +58,16 @@ new Runner-specific physics schema is required.
 Success: the Stage Runner repository contains orchestration and gameplay policy
 but no physics backend, while existing Character and Camera scenarios retain
 their behavior.
+
+## Phase D: `UsdPhysics` canonicalization
+
+Teach the physics package to interpret standard declarations including rigid
+bodies, collisions, mass, joints, drives, and limits as demanded by working
+slices. Retain temporary compatibility with `RunnerPhysicsBodyAPI` and
+`RunnerColliderAPI` only as needed while fixtures move to the standard form.
+
+Success: standard `UsdPhysics` is the primary authored representation and no
+new Runner-specific physics schema is required.
 
 ## Phase E: Shared consumer validation
 

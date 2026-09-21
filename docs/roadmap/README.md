@@ -9,7 +9,7 @@ contracts belong in [design](../design/); implemented behavior belongs in
 | Document | Contents |
 | --- | --- |
 | [current.md](current.md) | The physics-boundary freeze, ownership audit, migration seams, and vehicle-core hold point. |
-| [milestones.md](milestones.md) | Ordered extraction, `UsdPhysics`, consumer migration, validation, vehicle, and richer-runtime phases. |
+| [milestones.md](milestones.md) | Ordered extraction, consumer migration, `UsdPhysics`, validation, vehicle, and richer-runtime phases. |
 
 Status vocabulary: **in progress** or **not started**. A milestone is complete
 only when its runnable vertical slice and required tests exist.

@@ -16,7 +16,7 @@ physics API during the move.
 | `PhysicsRuntime` prim/body mapping, dirty synchronization, and fixed-step orchestration | Stage Runner's `stageRuntime`; do not pull `PrimId` or `RuntimeWorld` into the external core. |
 | Jolt initialization, resources, layers, stepping, queries, and native-ID maps | External `physicsJolt`; all Jolt types and configuration remain private. |
 | Runner physics schema interpretation and Stage-specific validation | Temporary Stage Runner compatibility importer. |
-| Standard `UsdPhysics` interpretation and reusable scene/resource mappings | External `physicsUsd` after core/backend extraction; its order relative to Stage Runner package migration remains open below. |
+| Standard `UsdPhysics` interpretation and reusable scene/resource mappings | External `physicsUsd` after core/backend extraction and Stage Runner package migration. |
 | Character, Camera, and Vehicle policy | Stage Runner core libraries. They consume only narrow physics capabilities. |
 
 The existing `physicsCore -> runtimeCore` edge is removed during extraction.
@@ -108,13 +108,13 @@ During the bounded compatibility period:
 5. Runner physics APIs are removed only after falling-body, Character, Camera,
    standalone, and usdview scenarios pass through the standard form.
 
-The two repositories must settle whether installed core/backend consumer
-migration precedes the first `physicsUsd` slice. Stage Runner's current roadmap
-places `UsdPhysics` canonicalization before final consumer migration, while the
-receiving repository's proposed roadmap uses Stage Runner package consumption
-to validate the extracted core and backend before `physicsUsd`. Either order
-must keep the compatibility importer local and must preserve the same parity
-gate; Phase A does not silently choose between them.
+The receiving repository's
+[Phase 0 roadmap](https://github.com/animu-sphere/usd-physics-plugins/blob/main/docs/roadmap/current.md)
+places Stage Runner package consumption before the first `physicsUsd` slice.
+Stage Runner therefore keeps the compatibility importer local while it
+migrates to the installed core and backend packages. The later `physicsUsd`
+phase introduces the standard authored path and preserves the same parity gate
+before Runner physics APIs are removed.
 
 ## Unresolved receiving-package decisions
 
@@ -126,9 +126,7 @@ The extraction does not pre-decide the receiving repository's open contracts:
 - stale and cross-world handle behavior;
 - semantic collision categories and masks;
 - changed-body extraction ordering across create, sleep, wake, teleport, and
-  destroy; and
-- delivery order between Stage Runner package migration and the first
-  `physicsUsd` slice.
+  destroy.
 
 Stage Runner may add a temporary local adapter after those decisions are made;
 it must not make its old namespace, numeric Jolt layers, or `runtimeCore` types

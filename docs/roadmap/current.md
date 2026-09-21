@@ -24,6 +24,14 @@ seams. Phase A remains in progress while the receiving package resolves the
 open public namespace, neutral math, error, collision-filter, and
 changed-state-ordering decisions.
 
+The receiving package's
+[Phase 0 roadmap](https://github.com/animu-sphere/usd-physics-plugins/blob/main/docs/roadmap/current.md)
+now fixes the cross-repository delivery order: extract and package
+`physicsCore` and `physicsJolt`, migrate Stage Runner against those installed
+packages, and then add the first `physicsUsd` slice. Stage Runner's later phases
+follow that order while retaining its local Runner schema compatibility
+importer through the migration.
+
 ## Outcome
 
 ```text
@@ -50,9 +58,6 @@ physics contracts, the Jolt backend, and physics-specific USD interpretation.
   `stageRuntime`.
 - Settle error transport, semantic collision filtering, stale-handle behavior,
   and changed-state ordering before accepting external public headers.
-- Coordinate whether Stage Runner consumes the installed core/backend before
-  or after the first `physicsUsd` slice; the two proposed roadmaps currently
-  order those validation steps differently.
 - Prove installed-package consumption in plain CMake and equivalent
   `physicsCore`/`physicsJolt` OpenStrata composition for tests, packaging,
   standalone, and usdview.

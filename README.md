@@ -111,9 +111,9 @@ implemented end to end. Interactive usdview verification uses a local runtime
 with usdview; CI does not yet cover that host. The backend-neutral vehicle
 intent and wheel-command contract is implemented and preserved. Vehicle physics
 application is paused while the current physics contracts and Jolt backend are
-prepared for extraction to `usd-physics-plugins`; standard `UsdPhysics` import,
-Stage Runner consumer migration, and shared MMD/VRM validation precede resumed
-vehicle integration. Behavior and OpenExec integration are later slices.
+prepared for extraction to `usd-physics-plugins`; Stage Runner consumer
+migration, standard `UsdPhysics` import, and shared MMD/VRM validation precede
+resumed vehicle integration. Behavior and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
