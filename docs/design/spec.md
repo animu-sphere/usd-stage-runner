@@ -8,9 +8,17 @@ implemented today, while the [roadmap](../roadmap/) orders the remaining work.
 
 ## Purpose
 
-`usd-stage-runner` treats an OpenUSD Stage as an interactive, real-time world.
-It connects USD composition to input, physics, characters, vehicles, cameras,
-behavior, and OpenExec evaluation through small reusable runtime libraries.
+`usd-stage-runner` is a lightweight real-time runtime and orchestration layer
+for turning an OpenUSD Stage into an interactive world. It constructs a
+transient Runtime World, advances it through bounded fixed steps, coordinates
+input, character, camera, vehicle, behavior, motion, and physics subsystems,
+and synchronizes runtime results into a discardable USD layer.
+
+It composes reusable subsystem packages rather than owning every
+implementation. In particular, the proposed
+[physics repository boundary](proposed/0002-physics-repository-boundary.md)
+makes Stage Runner a consumer of `usd-physics-plugins`, not the owner of the
+physics implementation.
 
 The project is not intended to become a complete game engine. It advances
 through runnable vertical slices that can be inspected and tested on a real
@@ -25,9 +33,9 @@ USD Stage
 Runtime World
     | transient state and prim-indexed components
     +--> Input and controller intent
-    +--> Physics, characters, and vehicles
+    +--> Characters, cameras, and vehicles
+    +--> Physics capabilities from usd-physics-plugins
     +--> Behavior and OpenExec evaluation
-    +--> Camera rigs
     `--> Incremental USD synchronization
              ^
              |
@@ -66,6 +74,10 @@ The focused specifications are:
 9. USD composition, references, and variants provide prefab-like composition.
 10. Standalone, usdview, and OST hosts reuse the same runtime libraries.
 11. New abstraction follows a working vertical slice rather than preceding it.
+12. Stage Runner orchestrates physics through backend-neutral capabilities and
+    does not own or expose Jolt-specific implementation.
+13. Standard `UsdPhysics` schemas are the preferred authored physics model;
+    Runner-specific schemas are reserved for semantics OpenUSD does not cover.
 
 Any proposal or implementation that breaks an invariant requires an explicit
 design decision explaining the replacement.

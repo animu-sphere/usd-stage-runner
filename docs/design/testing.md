@@ -28,6 +28,24 @@ backend should validate `physicsCore` contracts before or alongside the Jolt
 adapter. Wall-clock sleeps and physical devices are not required for core or
 integration coverage.
 
+Under the proposed physics extraction, the same test intent is split by
+ownership:
+
+- `usd-physics-plugins` owns backend-neutral contract tests, Jolt adapter tests,
+  and standard `UsdPhysics` interpretation tests;
+- Stage Runner owns tests for subsystem composition, Character and Camera
+  capability use, fixed-step order, lifecycle, and runtime-layer
+  synchronization; and
+- cross-repository OpenStrata tests prove package discovery, host composition,
+  and representative Stage execution without introducing a direct Jolt
+  dependency in `stageRuntime`.
+
+During migration, representative physics fixtures should gain standard
+`UsdPhysics` variants before Runner physics declarations are removed. Contract
+tests must continue to run without a concrete backend, and extraction is not
+complete until at least one non-Stage-Runner consumer exercises the shared
+package.
+
 ## Representative fixtures
 
 Fixtures are added with their implementation milestone rather than committed as

@@ -1,9 +1,9 @@
 # Overview
 
-`usd-stage-runner` is an experimental, thin runtime for treating an OpenUSD
-Stage as an interactive, real-time space rather than only as a scene to
-inspect. It executes a Stage; it does not convert the Stage into a separate
-game-engine scene.
+`usd-stage-runner` is an experimental, lightweight real-time runtime and
+orchestration layer for treating an OpenUSD Stage as an interactive world
+rather than only as a scene to inspect. It executes a Stage; it does not
+convert the Stage into a separate game-engine scene.
 
 The project aims to make it possible to:
 
@@ -14,10 +14,10 @@ The project aims to make it possible to:
   cameras; and
 - synchronize the resulting runtime state back to the Stage.
 
-It is not intended to become a full game engine. The central experiment is to
-combine OpenUSD composition, OpenExec evaluation, real-time physics, and small,
-composable runtime systems without making any one of them own the entire
-application.
+It is not intended to become a full game engine, physics engine, renderer, or
+avatar-format implementation. Its role is to construct a transient Runtime
+World, own real-time and fixed-step orchestration, coordinate reusable systems,
+and synchronize live results to a discardable USD runtime layer.
 
 ## The four-part model
 
@@ -25,14 +25,16 @@ application.
 USD Stage       structure, composition, authored values, persistence
 Runtime World   transient per-frame simulation state
 OpenExec        dependency and behavior evaluation
-Physics backend collision, constraints, and physical simulation
+Physics package collision, constraints, queries, and physical simulation
 ```
 
 The USD Stage remains authoritative for what exists and how it is composed. A
 Runtime World is derived from that description and owns fast-changing state.
 OpenExec is an optional execution surface over runtime-facing interfaces, not
-the runtime's foundation. A physics backend, initially Jolt Physics, performs
-physical simulation behind a backend-neutral boundary.
+the runtime's foundation. A reusable physics package performs physical
+simulation behind backend-neutral capabilities. The current repository still
+contains `physicsCore` and the Jolt adapter; the proposed direction extracts
+them to `usd-physics-plugins` and makes Stage Runner their consumer.
 
 ## Prim and component vocabulary
 

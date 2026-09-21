@@ -23,6 +23,11 @@ Adopt five ownership rules:
 5. OpenUSD and OpenExec plugins remain thin wrappers around ordinary C++
    libraries.
 
+The later
+[physics repository-boundary proposal](0002-physics-repository-boundary.md)
+refines rule 4 by moving reusable physics contracts and adapters to
+`usd-physics-plugins`; the backend-neutral interface rule remains unchanged.
+
 The dependency direction is core first, adapters second, composition last:
 
 ```text

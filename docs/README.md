@@ -17,7 +17,7 @@ matches the question you are trying to answer.
 
 For an implementation overview, read the
 [current architecture](architecture/overview.md), then the
-[current host-integration milestone](roadmap/current.md).
+[current delivery milestone](roadmap/current.md).
 
 For design work, begin with the [design specification](design/spec.md) and then
 open the focused contract for the area being changed:
@@ -25,6 +25,7 @@ open the focused contract for the area being changed:
 - [runtime model](design/runtime-model.md);
 - [input actions and intent](design/input.md);
 - [module and dependency boundaries](design/modules.md);
+- [proposed physics repository boundary](design/proposed/0002-physics-repository-boundary.md);
 - [USD declarations and synchronization](design/usd-integration.md);
 - [host integration](design/hosts.md); and
 - [testing strategy](design/testing.md).

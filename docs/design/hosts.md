@@ -15,11 +15,17 @@ runtime libraries
 
 ## Standalone host
 
-`stage_runner` registers schemas, opens a Stage, selects input and physics
-adapters, polls input, and runs the frame loop. `stageRuntime::StageSession`
+`stage_runner` registers schemas, opens a Stage, composes selected input and
+physics capabilities, polls input, and runs the frame loop.
+`stageRuntime::StageSession`
 builds the Runtime World, imports systems, executes fixed updates, rebuilds on
 reset, and coordinates incremental synchronization. Command-line parsing and
 the host loop do not own domain behavior.
+
+The current host selects the repository-local Jolt adapter. In the target
+topology it receives the same capabilities from `usd-physics-plugins` through
+CMake and OpenStrata composition; neither the host-facing session API nor
+`stageRuntime` exposes Jolt types.
 
 ## usdview plugin
 
