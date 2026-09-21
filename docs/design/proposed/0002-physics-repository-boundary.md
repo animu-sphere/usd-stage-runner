@@ -93,10 +93,11 @@ stageRuntime   -/-> Jolt directly
 
 1. Freeze and inventory the current physics contracts and direct ownership.
 2. Extract the minimum reusable physics kernel and Jolt backend.
-3. Add standard `UsdPhysics` interpretation with temporary Runner-schema
-   compatibility where needed.
-4. Migrate Stage Runner to consume `usd-physics-plugins` through CMake and
-   OpenStrata composition.
+3. Migrate Stage Runner to consume the extracted `physicsCore` and
+   `physicsJolt` packages through CMake and OpenStrata composition, retaining
+   the local Runner-schema compatibility importer.
+4. Add standard `UsdPhysics` interpretation and migrate authored fixtures while
+   keeping temporary Runner-schema compatibility where needed.
 5. Validate the contracts against Stage Runner, MMD, and VRM requirements.
 6. Resume vehicle physics using composable capabilities rather than a
    monolithic four-wheel abstraction.
