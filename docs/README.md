@@ -19,6 +19,13 @@ For an implementation overview, read the
 [current architecture](architecture/overview.md), then the
 [current delivery milestone](roadmap/current.md).
 
+For the physics hand-off, use the
+[physics extraction inventory](architecture/physics-extraction-inventory.md)
+as the source of truth for the current public surface, consumers, and test
+evidence, and the
+[physics extraction contract](design/physics-extraction.md) for the intended
+package and compatibility seams.
+
 For design work, begin with the [design specification](design/spec.md) and then
 open the focused contract for the area being changed:
 

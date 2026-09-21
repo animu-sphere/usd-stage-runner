@@ -93,6 +93,10 @@ to `cameraCore`.
 
 ## Physics boundary
 
+The source-revision-specific public surface, consumers, and deterministic
+evidence are frozen in the
+[physics extraction inventory](physics-extraction-inventory.md).
+
 `physicsCore` defines distinct `ShapeHandle`, `BodyHandle`, and
 `ConstraintHandle` types so backend resources cannot be accidentally mixed.
 Descriptors currently cover box half extents, static or dynamic bodies, mass,

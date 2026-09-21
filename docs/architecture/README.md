@@ -7,3 +7,4 @@ branch. Planned modules and future behavior belong in [design/](../design/) and
 | Document | Purpose |
 | --- | --- |
 | [overview.md](overview.md) | Current implementation inventory, runtime flow, dependencies, and verification coverage. |
+| [physics-extraction-inventory.md](physics-extraction-inventory.md) | Frozen physics public surface, ownership classification, consumers, authored compatibility, and deterministic evidence. |

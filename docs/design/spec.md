@@ -50,6 +50,9 @@ The focused specifications are:
   types, and the boundary between input and gameplay intent.
 - [Modules and dependencies](modules.md): reusable library boundaries, backend
   adapters, plugins, and intended repository topology.
+- [Physics extraction](physics-extraction.md): the capability, package,
+  compatibility, and verification seams for moving the proven physics
+  boundary out of this repository.
 - [USD integration](usd-integration.md): schema declarations, bidirectional
   synchronization, and non-destructive play sessions.
 - [Host integration](hosts.md): standalone, usdview, OST Plugin View, and

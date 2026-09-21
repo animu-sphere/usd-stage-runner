@@ -13,6 +13,17 @@ The governing proposal is
 Architecture pages continue to describe the repository-local implementation
 until the extraction actually lands.
 
+The implemented extraction baseline is frozen in the
+[physics extraction inventory](../architecture/physics-extraction-inventory.md)
+at source revision `12324992c7ddd0b016ace780acadc5f07903390c`. That inventory
+records the public contract, ownership classification, consumers,
+compatibility surface, and deterministic evidence. The
+[extraction contract](../design/physics-extraction.md) records Character,
+Camera, and Vehicle capability requirements plus the package and migration
+seams. Phase A remains in progress while the receiving package resolves the
+open public namespace, neutral math, error, collision-filter, and
+changed-state-ordering decisions.
+
 ## Outcome
 
 ```text
@@ -30,34 +41,24 @@ order, play-session lifecycle, character/camera/vehicle gameplay policy, host
 adapters, and incremental synchronization. The extracted package owns reusable
 physics contracts, the Jolt backend, and physics-specific USD interpretation.
 
-## Phase A scope
+## Remaining Phase A scope
 
-### Freeze the current contract
-
-- Document the public surface of `physicsCore`: handles, descriptors,
-  commands, state extraction, optional queries, and `PhysicsRuntime` mapping.
-- Preserve deterministic contract tests before files or packages move.
+- Resolve the receiving package's public namespace and include root without
+  retaining Stage Runner ownership names.
+- Replace `runtimeCore` math dependencies with receiving-package neutral math
+  while keeping `PrimId <-> BodyHandle` mapping and dirty synchronization in
+  `stageRuntime`.
+- Settle error transport, semantic collision filtering, stale-handle behavior,
+  and changed-state ordering before accepting external public headers.
+- Coordinate whether Stage Runner consumes the installed core/backend before
+  or after the first `physicsUsd` slice; the two proposed roadmaps currently
+  order those validation steps differently.
+- Prove installed-package consumption in plain CMake and equivalent
+  `physicsCore`/`physicsJolt` OpenStrata composition for tests, packaging,
+  standalone, and usdview.
+- Preserve the inventoried deterministic tests before files or packages move.
 - Do not add new Runner-specific physics schemas or Jolt-specific public
   concepts.
-
-### Inventory ownership and consumers
-
-- Identify every direct physics responsibility in `stageRuntime`, standalone,
-  usdview, fixtures, CMake, and OpenStrata packaging.
-- Record the minimum ground, body-state, velocity, and collision capabilities
-  required by Character and Camera.
-- Record the additional rigid-body, constraint, force, torque, contact, wheel,
-  and suspension capabilities that Vehicle may require.
-- Separate reusable physics USD interpretation from Stage Runner-specific
-  character, camera, and vehicle import.
-
-### Define migration seams
-
-- Define the CMake package boundary used by Stage Runner.
-- Define OpenStrata composition for development, packaging, tests, and hosts.
-- Plan temporary compatibility for `RunnerPhysicsBodyAPI` and
-  `RunnerColliderAPI` while standard `UsdPhysics` import is introduced.
-- Keep standalone and usdview hosts on the same `StageSession` API.
 
 ## Vehicle work during the freeze
 
