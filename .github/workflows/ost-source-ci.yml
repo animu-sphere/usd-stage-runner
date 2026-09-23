@@ -52,7 +52,7 @@ jobs:
             evidence_flags: "--require-sbom --require-provenance"
             platform: cy2026
             profile: usd
-            runs_on: ["windows-2022"]
+            runs_on: ["windows-2025-vs2026"]
             hosted: true
             runner_profile: windows-hosted
             verify: pyramid
