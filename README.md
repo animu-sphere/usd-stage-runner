@@ -130,7 +130,9 @@ $runtimeArtifact = 'sha256:ebb0c7da509ee14ada19ee5b461de6996aad0024b5c9640f12dde
 ost artifact pull 'oci://ghcr.io/animu-sphere/openstrata-runtime-cy2026-usd@sha256:d3ff79a6f330558c3b9a427a927d340fe3dcab1fe89107faa0ea9f66a104b7bf' `
   --expect-artifact $runtimeArtifact --require-kind runtime
 ost runtime pull cy2026 --profile usd --from-artifact $runtimeArtifact --force
-ost library pull
+$libraries = (ost library pull --json | ConvertFrom-Json).data.libraries
+$externalPrefixes = @($libraries | ForEach-Object { $_.prefix })
+$env:CMAKE_PREFIX_PATH = ($externalPrefixes + $env:CMAKE_PREFIX_PATH) -join ';'
 ost build
 ost test
 ```
