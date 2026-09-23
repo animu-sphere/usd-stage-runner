@@ -243,11 +243,14 @@ jobs:
           $joltPrefix = Join-Path $env:GITHUB_WORKSPACE ".ci/jolt-install"
           cmake -S .ci/jolt/Build -B .ci/jolt-build -A x64 `
             -DCMAKE_INSTALL_PREFIX="$joltPrefix" `
+            -DCMAKE_BUILD_TYPE=Release `
             -DINTERPROCEDURAL_OPTIMIZATION=OFF `
+            -DDOUBLE_PRECISION=OFF `
+            -DCROSS_PLATFORM_DETERMINISTIC=OFF `
             -DENABLE_ALL_WARNINGS=OFF `
             -DGENERATE_DEBUG_SYMBOLS=OFF `
-            -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=OFF `
-            -DPROFILER_IN_DEBUG_AND_RELEASE=OFF `
+            -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=ON `
+            -DPROFILER_IN_DEBUG_AND_RELEASE=ON `
             -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF `
             -DTARGET_UNIT_TESTS=OFF `
             -DTARGET_HELLO_WORLD=OFF `
