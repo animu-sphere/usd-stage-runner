@@ -252,6 +252,15 @@ jobs:
             -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=ON `
             -DPROFILER_IN_DEBUG_AND_RELEASE=ON `
             -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF `
+            -DUSE_SSE4_1=OFF `
+            -DUSE_SSE4_2=OFF `
+            -DUSE_AVX=OFF `
+            -DUSE_AVX2=OFF `
+            -DUSE_AVX512=OFF `
+            -DUSE_LZCNT=OFF `
+            -DUSE_TZCNT=OFF `
+            -DUSE_F16C=OFF `
+            -DUSE_FMADD=OFF `
             -DTARGET_UNIT_TESTS=OFF `
             -DTARGET_HELLO_WORLD=OFF `
             -DTARGET_PERFORMANCE_TEST=OFF `
