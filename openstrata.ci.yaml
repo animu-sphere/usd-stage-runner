@@ -12,7 +12,7 @@ bootstrap:
 runners:
   windows-hosted:
     kind: github-hosted
-    image: windows-2022
+    image: windows-2025-vs2026
     billing:
       acknowledgement: required
 

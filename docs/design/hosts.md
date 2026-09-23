@@ -22,10 +22,9 @@ builds the Runtime World, imports systems, executes fixed updates, rebuilds on
 reset, and coordinates incremental synchronization. Command-line parsing and
 the host loop do not own domain behavior.
 
-The current host selects the repository-local Jolt adapter. In the target
-topology it receives the same capabilities from `usd-physics-plugins` through
-CMake and OpenStrata composition; neither the host-facing session API nor
-`stageRuntime` exposes Jolt types.
+The current host selects the Jolt world factory exported by the installed
+`physicsJolt` package. CMake and OpenStrata compose that external capability;
+neither the host-facing session API nor `stageRuntime` exposes Jolt types.
 
 ## usdview plugin
 

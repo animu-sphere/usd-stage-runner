@@ -10,12 +10,12 @@ bounded real-time update loop. The project is being delivered as small vertical
 slices; physics, character control, and first- and third-person camera following
 with collision avoidance are implemented.
 
-The proposed long-term role is a lightweight runtime orchestration layer, not
-the owner of physics implementation. Reusable physics contracts, Jolt, and
-standard `UsdPhysics` interpretation are planned to move to
-`usd-physics-plugins`; Stage Runner will compose that package while retaining
-Runtime World, fixed-step scheduling, gameplay policy, host lifecycle, and
-discardable USD synchronization. See the
+The project is a lightweight runtime orchestration layer, not the owner of a
+physics implementation. Reusable physics contracts and the Jolt backend are
+consumed from installed `usd-physics-plugins` packages; Stage Runner retains
+Runtime World, fixed-step scheduling, gameplay policy, Stage-specific import,
+host lifecycle, and discardable USD synchronization. Standard `UsdPhysics`
+interpretation is a later package milestone. See the
 [physics repository boundary](docs/design/proposed/0002-physics-repository-boundary.md).
 
 The intended architecture and the distinction between implemented and planned
@@ -32,6 +32,7 @@ Replace the example install path with your own:
 $usdRoot = 'C:\path\to\openusd-with-usdview'
 ost runtime pull cy2026 --profile usd --from-usd $usdRoot
 ost runtime pull cy2026 --profile lookdev --from-usd $usdRoot
+ost library pull
 ost build --intent plugin-view
 $fixture = (Resolve-Path .\tests\fixtures\minimal.usda).Path
 ost plugin view plugins/runnerSchema $fixture --profile lookdev
@@ -42,11 +43,13 @@ needed. Choose **Stage Runner > Play**, then use WASD to move `PlayerCube`.
 The fixture path is absolute because `ost plugin view` resolves relative fixture
 paths from the bundle directory.
 
-To try jumping and a camera that follows `PlayerCube`, point CMake at an
-installed Jolt package and use the Jolt build intent:
+To try jumping and a camera that follows `PlayerCube`, make the pinned
+Jolt-enabled physics artifacts and their Jolt dependency discoverable, then use
+the Jolt build intent:
 
 ```powershell
 $env:CMAKE_PREFIX_PATH = 'C:\path\to\jolt-install'
+ost library pull
 ost build --intent plugin-view-jolt
 $fixture = (Resolve-Path .\tests\fixtures\character_follow_camera.usda).Path
 ost plugin view plugins/runnerSchema $fixture --profile lookdev
@@ -64,7 +67,7 @@ scene camera, Play keeps that choice.
   reset, a prim-indexed component registry, Runtime World, runtime transforms,
   and a dirty synchronization queue;
 - `inputCore`, with named action state and backend-neutral movement intent;
-- `physicsCore`, with typed backend-neutral resource handles, descriptors for
+- external `physicsCore`, with typed backend-neutral resource handles, descriptors for
   boxes, bodies, and fixed constraints, fixed-step commands, changed-body
   extraction contracts, character ground and collision-segment query
   extensions, and prim/body runtime synchronization;
@@ -80,15 +83,16 @@ scene camera, Play keeps that choice.
   intent; explicit chassis identity; independently composed steering,
   powertrain, service-brake, and handbrake configuration; and deterministic
   per-wheel command distribution that does not assume four wheels;
-- `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
+- external `physicsJolt`, which owns Jolt initialization and resource lifetime, creates
   box shapes and static or dynamic bodies, advances fixed simulation steps,
   extracts changed body state, and implements character ground shape casts and
   camera collision ray casts without exposing Jolt types publicly;
 - `runnerSchema`, a codeless OpenUSD plugin defining the single-apply
   `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and
   `RunnerCameraRigAPI` declaration contracts;
-- `stageRuntime`, a reusable OpenUSD-facing play session that imports the
-  Runtime World and physics, character, and camera systems, owns fixed-step
+- `stageRuntime`, a reusable OpenUSD-facing play session that owns the
+  prim/body bridge, imports the Runtime World and physics, character, and
+  camera systems, owns fixed-step
   execution and reset/rebuild semantics, and incrementally synchronizes dirty
   transforms into a discardable anonymous runtime layer for any host without
   changing persistent authored layers;
@@ -107,13 +111,13 @@ scene camera, Play keeps that choice.
 - dual build paths through plain CMake and OpenStrata.
 
 The character-control, camera-rig, and host-integration milestones are
-implemented end to end. Interactive usdview verification uses a local runtime
-with usdview; CI does not yet cover that host. The backend-neutral vehicle
-intent and wheel-command contract is implemented and preserved. Vehicle physics
-application is paused while the current physics contracts and Jolt backend are
-prepared for extraction to `usd-physics-plugins`; Stage Runner consumer
-migration, standard `UsdPhysics` import, and shared MMD/VRM validation precede
-resumed vehicle integration. Behavior and OpenExec integration are later slices.
+implemented end to end. The physics core and Jolt backend have been extracted,
+their pinned Windows packages are publicly available, and Stage Runner's local
+Windows package-consumer migration passes all 48 CTest scenarios. Equivalent
+Linux artifacts and hosted Windows/Linux Stage Runner evidence remain before
+that migration is complete. Vehicle physics application remains paused until
+standard `UsdPhysics` import and shared MMD/VRM validation advance.
+Behavior and OpenExec integration are later slices.
 
 ## Build with OpenStrata
 
@@ -122,10 +126,21 @@ OpenUSD runtime and compiler environment. CI uses `ost 0.23.1`; use that
 version locally when reproducing its checks:
 
 ```powershell
-ost runtime pull cy2026 --profile usd
+$runtimeArtifact = 'sha256:ebb0c7da509ee14ada19ee5b461de6996aad0024b5c9640f12dde76912e849b5'
+ost artifact pull 'oci://ghcr.io/animu-sphere/openstrata-runtime-cy2026-usd@sha256:d3ff79a6f330558c3b9a427a927d340fe3dcab1fe89107faa0ea9f66a104b7bf' `
+  --expect-artifact $runtimeArtifact --require-kind runtime
+ost runtime pull cy2026 --profile usd --from-artifact $runtimeArtifact --force
+$libraries = (ost library pull --json | ConvertFrom-Json).data.libraries
+$externalPrefixes = @($libraries | ForEach-Object { $_.prefix })
+$env:CMAKE_PREFIX_PATH = ($externalPrefixes + $env:CMAKE_PREFIX_PATH) -join ';'
 ost build
 ost test
 ```
+
+The migration pins both the physics artifact content digests and immutable
+public OCI `source` URIs. After materializing the matching pinned runtime as
+shown above, `ost library pull` can populate a fresh OpenStrata cache without
+repository-local package builds.
 
 The reusable core can also be built and tested as an isolated OpenStrata
 library member:
@@ -149,25 +164,29 @@ Then run the deterministic smoke path inside that shell:
 
 ## Build with plain CMake
 
-A C++17 compiler is sufficient for `runtimeCore`. Point `CMAKE_PREFIX_PATH` at
-an OpenUSD installation to enable real Stage loading in `stage_runner`:
+A C++17 compiler is sufficient for `runtimeCore`. The complete repository build
+requires installed `physicsCore` and `physicsJolt` packages. Point
+`CMAKE_PREFIX_PATH` at those packages and OpenUSD; a Jolt-enabled
+`physicsJolt` package also requires its Jolt SDK dependency to be discoverable:
 
 ```powershell
-cmake --preset dev -DCMAKE_PREFIX_PATH=C:\path\to\openusd
+cmake --preset dev -DCMAKE_PREFIX_PATH="C:\path\to\usd-physics-plugins;C:\path\to\jolt;C:\path\to\openusd"
 cmake --build --preset dev
 ctest --preset dev
 ```
 
-Without OpenUSD, the host still compiles but reports that Stage loading is
-unavailable; the backend-neutral unit tests remain buildable. Set
+The two physics packages are required at configure time. Without OpenUSD, the
+host still compiles but reports that Stage loading is unavailable; the
+backend-neutral unit tests remain buildable. Set
 `USD_STAGE_RUNNER_REQUIRE_OPENUSD=ON` when a missing SDK should be a configure
 error. Interactive input is enabled when CMake can find `SDL3::SDL3` or
 `SDL2::SDL2`; set `USD_STAGE_RUNNER_REQUIRE_SDL=ON` to require a real SDL-backed
 demo build. The OpenStrata `usd` profile does not currently bundle SDL, so pass
-an SDL package through `CMAKE_PREFIX_PATH` for interactive builds. The Jolt
-adapter similarly uses a `Jolt::Jolt` or `Jolt` CMake package when available;
-set `USD_STAGE_RUNNER_REQUIRE_JOLT=ON` to require it. Without that package, the
-adapter remains buildable but reports that world creation is unavailable.
+an SDL package through `CMAKE_PREFIX_PATH` for interactive builds. Set
+`USD_STAGE_RUNNER_REQUIRE_JOLT=ON` to reject an installed `physicsJolt` package
+whose exported metadata reports that the backend was built without Jolt
+support. Otherwise that package remains usable for honest
+unavailable-backend behavior.
 
 ## usdview plugin
 
@@ -203,9 +222,10 @@ the adapter to its own bundle also requires a runtime artifact with the
 `usdview` capability and corresponding CI coverage.
 
 `third_person_camera.usda` can be opened the same way. The selected OpenStrata
-runtime must contain usdview, and a Jolt package must be discoverable at build
-time to execute physics declarations; otherwise the shared adapter reports the
-same unavailable-backend error as `stage_runner` and ordinary usdview.
+runtime must contain usdview, and the installed `physicsJolt` package must have
+backend support to execute physics declarations; otherwise the shared adapter
+reports the same unavailable-backend error as `stage_runner` and ordinary
+usdview.
 
 ## Host usage
 

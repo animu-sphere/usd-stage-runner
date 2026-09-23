@@ -52,6 +52,7 @@ else()
 endif()
 
 add_library(stageRuntime
+  src/physics_runtime.cpp
   src/stage_session.cpp
 )
 add_library(stageRuntime::stageRuntime ALIAS stageRuntime)

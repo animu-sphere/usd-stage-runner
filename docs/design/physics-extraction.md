@@ -1,12 +1,14 @@
 # Physics Extraction Contract
 
-Status: intended migration contract; extraction not implemented
+Status: extraction and local Stage Runner migration implemented; hosted
+artifact evidence pending
 
 The [current inventory](../architecture/physics-extraction-inventory.md)
 freezes the Stage Runner source boundary at revision
 `12324992c7ddd0b016ace780acadc5f07903390c`. This page defines how that boundary
-is split between Stage Runner and `usd-physics-plugins` without widening the
-physics API during the move.
+was split between Stage Runner and `usd-physics-plugins` without widening the
+physics API during the move. The inventory remains the revision-specific
+pre-extraction record; the current implementation consumes installed packages.
 
 ## Ownership split
 
@@ -83,7 +85,7 @@ Plain CMake consumes installed packages. OpenStrata uses the same
 edge. Development, CI, packaging, the standalone host, and usdview Plugin View
 must resolve the same graph.
 
-The first Stage Runner consumer migration is bounded to:
+The first Stage Runner consumer migration implemented this bounded scope:
 
 - remove repository-local `libs/physicsCore` and `backends/physicsJolt` only
   after external package parity is proven;
@@ -108,34 +110,33 @@ During the bounded compatibility period:
 5. Runner physics APIs are removed only after falling-body, Character, Camera,
    standalone, and usdview scenarios pass through the standard form.
 
-The receiving repository's
-[Phase 0 roadmap](https://github.com/animu-sphere/usd-physics-plugins/blob/main/docs/roadmap/current.md)
-places Stage Runner package consumption before the first `physicsUsd` slice.
-Stage Runner therefore keeps the compatibility importer local while it
-migrates to the installed core and backend packages. The later `physicsUsd`
-phase introduces the standard authored path and preserves the same parity gate
-before Runner physics APIs are removed.
+The receiving repository completed extraction and hosted backend verification
+before the first `physicsUsd` slice. Stage Runner keeps the compatibility
+importer local while consuming the installed core and backend packages. The
+later `physicsUsd` phase introduces the standard authored path and preserves
+the same parity gate before Runner physics APIs are removed.
 
-## Unresolved receiving-package decisions
+## Accepted receiving-package decisions
 
-The extraction does not pre-decide the receiving repository's open contracts:
+The extracted packages resolved the migration-facing contracts:
 
-- public namespace and include root;
-- neutral math ownership;
-- validation and backend error transport;
-- stale and cross-world handle behavior;
-- semantic collision categories and masks;
-- changed-body extraction ordering across create, sleep, wake, teleport, and
-  destroy.
+- public headers use `usd_physics/` and public names use
+  `usd_physics::core` or `usd_physics::jolt`;
+- neutral vector, quaternion, and transform values belong to `physicsCore`;
+- validation and backend failures use the package's typed error surface;
+- descriptors use semantic collision category/mask filters rather than Jolt
+  layer numbers; and
+- the Stage-owned bridge converts values explicitly and keeps `PrimId` and
+  `RuntimeWorld` out of the package.
 
-Stage Runner may add a temporary local adapter after those decisions are made;
-it must not make its old namespace, numeric Jolt layers, or `runtimeCore` types
-the permanent external surface.
+The receiving package remains authoritative for detailed handle lifecycle and
+changed-body ordering contracts.
 
 ## Parity gate
 
-The external packages are not ready for Stage Runner migration until the
-inventory's neutral, Jolt, Character, Camera, Stage-session, standalone,
-usdview, plain-CMake, and OpenStrata evidence passes against installed
-packages. Mapping and dirty-synchronization assertions remain in Stage Runner
-when the neutral contract tests move.
+Local Windows parity now passes for the neutral, Jolt, Character, Camera,
+Stage-session, standalone, usdview, plain-CMake, and OpenStrata paths against
+installed packages. Mapping and dirty-synchronization assertions remain in
+Stage Runner. The immutable Windows artifact sources are public and verified
+from a fresh cache; the remaining parity gate is hosted Windows and Linux Stage
+Runner evidence, including equivalent Linux artifacts.

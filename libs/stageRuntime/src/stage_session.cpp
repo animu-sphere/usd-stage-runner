@@ -3,9 +3,9 @@
 #include "usd_stage_runner/camera/camera_rig.h"
 #include "usd_stage_runner/character/character_controller.h"
 #include "usd_stage_runner/input/movement_controller.h"
-#include "usd_stage_runner/physics/collision_query.h"
-#include "usd_stage_runner/physics/ground_query.h"
-#include "usd_stage_runner/physics/physics_runtime.h"
+#include "usd_stage_runner/stage/physics_runtime.h"
+#include "usd_physics/core/ground_query.h"
+#include "usd_physics/core/segment_query.h"
 
 #include <algorithm>
 #include <cmath>
@@ -36,7 +36,6 @@ namespace {
 
 using physics::BodyDescriptor;
 using physics::MotionType;
-using physics::PhysicsRuntime;
 using physics::PhysicsWorld;
 using physics::ShapeDescriptor;
 using runtime::PrimId;
@@ -66,6 +65,14 @@ const pxr::TfToken cameraCollisionEnabledAttribute{"runner:camera:collisionEnabl
 const pxr::TfToken cameraCollisionClearanceAttribute{"runner:camera:collisionClearance"};
 const pxr::TfToken cameraRuntimeOrientationSuffix{"runnerCamera"};
 const pxr::TfToken cameraRuntimeOrientationOp{"xformOp:orient:runnerCamera"};
+
+physics::Vector3 toPhysicsVector(runtime::Vec3d value) noexcept {
+  return {value.x, value.y, value.z};
+}
+
+physics::Transform toPhysicsTransform(const RuntimeTransform& value) noexcept {
+  return {toPhysicsVector(value.translation), {}};
+}
 
 struct SessionState {
   // The runtime world can contain components that reference the physics world,
@@ -500,12 +507,14 @@ void importPhysicsBodies(const pxr::UsdStageRefPtr& stage, SessionState& state,
     validatePhysicsTransform(prim, xformable);
     const auto primId = prim.GetPath().GetString();
     const auto shape = state.physicsWorld->createShape(
-        ShapeDescriptor{physics::ShapeType::box, readBoxHalfExtents(prim, xformable)});
+        ShapeDescriptor{physics::ShapeType::box,
+                        toPhysicsVector(readBoxHalfExtents(prim, xformable))});
     ++stats.physicsShapeCount;
     const bool dynamic = *motionType == MotionType::dynamicBody;
     const auto body = state.physicsWorld->createBody(BodyDescriptor{
-        shape, *motionType, *state.world.transform(primId), readBodyMass(prim, *motionType),
-        dynamic ? config.dynamicCollisionLayer : config.staticCollisionLayer});
+        shape, *motionType, toPhysicsTransform(*state.world.transform(primId)),
+        readBodyMass(prim, *motionType),
+        dynamic ? config.dynamicCollisionFilter : config.staticCollisionFilter});
     state.physicsRuntime->bindBody(primId, body);
     ++stats.physicsBodyCount;
   }
@@ -596,7 +605,7 @@ void importCameraRigs(const pxr::UsdStageRefPtr& stage, SessionState& state,
 
 std::size_t updateCameraRigs(SessionState& state, camera::CameraRig::Duration elapsed) {
   const auto* collisionQuery =
-      dynamic_cast<const physics::CollisionQuery*>(state.physicsWorld.get());
+      dynamic_cast<const physics::SegmentQuery*>(state.physicsWorld.get());
   std::size_t updated = 0;
   for (const auto& prim : state.cameraPrims) {
     const auto* rig = state.world.component<camera::CameraRig>(prim);
@@ -612,7 +621,8 @@ std::size_t updateCameraRigs(SessionState& state, camera::CameraRig::Duration el
                   const auto& target) -> std::optional<double> {
         const auto ignoredBody =
             physicsRuntime == nullptr ? physics::BodyHandle{} : physicsRuntime->bodyForPrim(target);
-        const auto hit = collisionQuery->segmentHit(origin, desired, ignoredBody);
+        const auto hit = collisionQuery->segmentHit(toPhysicsVector(origin),
+                                                    toPhysicsVector(desired), ignoredBody);
         return hit.has_value() ? std::optional<double>{hit->fraction} : std::nullopt;
       };
     }

@@ -11,3 +11,8 @@ requires:
       version: ">=0.1,<0.2"
     - id: physicsCore
       version: ">=0.1,<0.2"
+      artifact:
+        targets:
+          cy2026-windows-x86_64-py313-usd:
+            digest: sha256:48586c60e8e9678c52c80ab831000b403787f84678b1bd69b944e86c0d0bdef9
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:bc6e405c128375dce390e95b0e2103b4a86e47cc02dcd266fb61a1c66d0a761a

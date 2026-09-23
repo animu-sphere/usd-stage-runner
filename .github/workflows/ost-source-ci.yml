@@ -52,7 +52,7 @@ jobs:
             evidence_flags: "--require-sbom --require-provenance"
             platform: cy2026
             profile: usd
-            runs_on: ["windows-2022"]
+            runs_on: ["windows-2025-vs2026"]
             hosted: true
             runner_profile: windows-hosted
             verify: pyramid
@@ -192,8 +192,17 @@ jobs:
           ost artifact verify ${{ matrix.runtime_artifact }} --minimum-trust ${{ matrix.minimum_trust }} ${{ matrix.evidence_flags }} "$@"
           ost runtime pull ${{ matrix.platform }} --profile ${{ matrix.profile }} --from-artifact ${{ matrix.runtime_artifact }} --force
       - name: Pull digest-pinned external library artifacts
-        shell: bash
-        run: ost library pull --target ${{ matrix.platform }} --profile ${{ matrix.profile }} --json
+        shell: pwsh
+        run: |
+          $result = ost library pull --target ${{ matrix.platform }} --profile ${{ matrix.profile }} --json |
+            ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $prefixes = @($result.data.libraries | ForEach-Object { $_.prefix })
+          if ($prefixes.Count -eq 0) {
+            throw "OpenStrata did not materialize any external library prefixes"
+          }
+          "OST_EXTERNAL_LIBRARY_PREFIXES=$($prefixes -join ';')" |
+            Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Remove resumable transfer state before caching
         if: ${{ matrix.hosted && vars.OST_CI_DISABLE_CACHE != 'true' && steps.runtime-cache-restore.outputs.cache-hit != 'true' }}
         shell: bash
@@ -234,12 +243,24 @@ jobs:
           $joltPrefix = Join-Path $env:GITHUB_WORKSPACE ".ci/jolt-install"
           cmake -S .ci/jolt/Build -B .ci/jolt-build -A x64 `
             -DCMAKE_INSTALL_PREFIX="$joltPrefix" `
+            -DCMAKE_BUILD_TYPE=Release `
             -DINTERPROCEDURAL_OPTIMIZATION=OFF `
+            -DDOUBLE_PRECISION=OFF `
+            -DCROSS_PLATFORM_DETERMINISTIC=OFF `
             -DENABLE_ALL_WARNINGS=OFF `
             -DGENERATE_DEBUG_SYMBOLS=OFF `
-            -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=OFF `
-            -DPROFILER_IN_DEBUG_AND_RELEASE=OFF `
+            -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=ON `
+            -DPROFILER_IN_DEBUG_AND_RELEASE=ON `
             -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF `
+            -DUSE_SSE4_1=OFF `
+            -DUSE_SSE4_2=OFF `
+            -DUSE_AVX=OFF `
+            -DUSE_AVX2=OFF `
+            -DUSE_AVX512=OFF `
+            -DUSE_LZCNT=OFF `
+            -DUSE_TZCNT=OFF `
+            -DUSE_F16C=OFF `
+            -DUSE_FMADD=OFF `
             -DTARGET_UNIT_TESTS=OFF `
             -DTARGET_HELLO_WORLD=OFF `
             -DTARGET_PERFORMANCE_TEST=OFF `
@@ -254,7 +275,7 @@ jobs:
       - name: Build the workspace from source
         shell: pwsh
         run: |
-          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          $env:CMAKE_PREFIX_PATH = "$env:OST_EXTERNAL_LIBRARY_PREFIXES;$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
           ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }} ${{ matrix.intent_flags }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -273,7 +294,7 @@ jobs:
         if: ${{ matrix.verify != 'build' }}
         shell: pwsh
         run: |
-          $env:CMAKE_PREFIX_PATH = "$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          $env:CMAKE_PREFIX_PATH = "$env:OST_EXTERNAL_LIBRARY_PREFIXES;$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
           ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }} ${{ matrix.intent_flags }}
       - name: Run the workspace verification pyramid
         if: ${{ matrix.verify == 'pyramid' || matrix.verify == 'package' }}

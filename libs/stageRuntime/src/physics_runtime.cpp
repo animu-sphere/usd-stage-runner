@@ -1,25 +1,32 @@
-#include "usd_stage_runner/physics/physics_runtime.h"
+#include "usd_stage_runner/stage/physics_runtime.h"
 
 #include <algorithm>
 #include <stdexcept>
 
-namespace usd_stage_runner::physics {
+namespace usd_stage_runner::stage {
 namespace {
 
-bool sameTransform(const runtime::RuntimeTransform& left,
-                   const runtime::RuntimeTransform& right) noexcept {
+bool sameTranslation(const runtime::RuntimeTransform& left,
+                     const usd_physics::core::Transform& right) noexcept {
   return left.translation.x == right.translation.x &&
          left.translation.y == right.translation.y &&
          left.translation.z == right.translation.z;
 }
 
+runtime::RuntimeTransform
+toRuntimeTransform(const usd_physics::core::Transform& transform) noexcept {
+  return {{transform.translation.x, transform.translation.y,
+           transform.translation.z}};
+}
+
 } // namespace
 
-PhysicsRuntime::PhysicsRuntime(PhysicsWorld& physicsWorld,
+PhysicsRuntime::PhysicsRuntime(usd_physics::core::PhysicsWorld& physicsWorld,
                                runtime::RuntimeWorld& runtimeWorld) noexcept
     : physicsWorld_(physicsWorld), runtimeWorld_(runtimeWorld) {}
 
-bool PhysicsRuntime::bindBody(const runtime::PrimId& prim, BodyHandle body) {
+bool PhysicsRuntime::bindBody(const runtime::PrimId& prim,
+                              usd_physics::core::BodyHandle body) {
   if (!body) {
     throw std::invalid_argument("cannot bind an invalid physics body handle");
   }
@@ -27,7 +34,8 @@ bool PhysicsRuntime::bindBody(const runtime::PrimId& prim, BodyHandle body) {
     throw std::out_of_range("cannot bind a physics body to an unknown prim: " + prim);
   }
   if (runtimeWorld_.transform(prim) == nullptr) {
-    throw std::out_of_range("cannot bind a physics body to a prim without a transform: " + prim);
+    throw std::out_of_range(
+        "cannot bind a physics body to a prim without a transform: " + prim);
   }
 
   (void)physicsWorld_.bodyState(body);
@@ -63,9 +71,8 @@ bool PhysicsRuntime::unbindBody(const runtime::PrimId& prim) noexcept {
   const auto* body = runtimeWorld_.component<PhysicsBody>(prim);
   if (body == nullptr) {
     const auto staleMapping =
-        std::find_if(bodyToPrim_.begin(), bodyToPrim_.end(), [&](const auto& entry) {
-          return entry.second == prim;
-        });
+        std::find_if(bodyToPrim_.begin(), bodyToPrim_.end(),
+                     [&](const auto& entry) { return entry.second == prim; });
     if (staleMapping == bodyToPrim_.end()) {
       return false;
     }
@@ -79,13 +86,13 @@ bool PhysicsRuntime::unbindBody(const runtime::PrimId& prim) noexcept {
   return runtimeWorld_.removeComponent<PhysicsBody>(prim);
 }
 
-BodyHandle PhysicsRuntime::bodyForPrim(const runtime::PrimId& prim) const noexcept {
+usd_physics::core::BodyHandle
+PhysicsRuntime::bodyForPrim(const runtime::PrimId& prim) const noexcept {
   const auto* body = runtimeWorld_.component<PhysicsBody>(prim);
   if (body == nullptr) {
     const auto staleMapping =
-        std::find_if(bodyToPrim_.begin(), bodyToPrim_.end(), [&](const auto& entry) {
-          return entry.second == prim;
-        });
+        std::find_if(bodyToPrim_.begin(), bodyToPrim_.end(),
+                     [&](const auto& entry) { return entry.second == prim; });
     if (staleMapping != bodyToPrim_.end()) {
       bodyToPrim_.erase(staleMapping);
     }
@@ -103,9 +110,11 @@ BodyHandle PhysicsRuntime::bodyForPrim(const runtime::PrimId& prim) const noexce
   return body->handle;
 }
 
-std::optional<runtime::PrimId> PhysicsRuntime::primForBody(BodyHandle body) const {
+std::optional<runtime::PrimId>
+PhysicsRuntime::primForBody(usd_physics::core::BodyHandle body) const {
   const auto found = bodyToPrim_.find(body);
-  if (found == bodyToPrim_.end() || !isMappingCurrent(found->first, found->second)) {
+  if (found == bodyToPrim_.end() ||
+      !isMappingCurrent(found->first, found->second)) {
     if (found != bodyToPrim_.end()) {
       bodyToPrim_.erase(found);
     }
@@ -125,7 +134,8 @@ std::size_t PhysicsRuntime::bodyCount() const noexcept {
   return bodyToPrim_.size();
 }
 
-std::size_t PhysicsRuntime::step(PhysicsWorld::Duration fixedStep) {
+std::size_t
+PhysicsRuntime::step(usd_physics::core::PhysicsWorld::Duration fixedStep) {
   physicsWorld_.step(fixedStep);
   return synchronizeChangedBodyStates();
 }
@@ -144,22 +154,24 @@ std::size_t PhysicsRuntime::synchronizeChangedBodyStates() {
     }
     const auto& prim = mappedPrim->second;
     auto* transform = runtimeWorld_.transform(prim);
-    if (sameTransform(*transform, state.transform)) {
+    if (sameTranslation(*transform, state.transform)) {
       continue;
     }
 
-    *transform = state.transform;
+    *transform = toRuntimeTransform(state.transform);
     runtimeWorld_.markTransformDirty(prim);
     ++synchronized;
   }
   return synchronized;
 }
 
-bool PhysicsRuntime::isMappingCurrent(BodyHandle body,
-                                      const runtime::PrimId& prim) const noexcept {
+bool PhysicsRuntime::isMappingCurrent(
+    usd_physics::core::BodyHandle body,
+    const runtime::PrimId& prim) const noexcept {
   const auto* boundBody = runtimeWorld_.component<PhysicsBody>(prim);
-  return runtimeWorld_.containsPrim(prim) && runtimeWorld_.transform(prim) != nullptr &&
-         boundBody != nullptr && boundBody->handle == body;
+  return runtimeWorld_.containsPrim(prim) &&
+         runtimeWorld_.transform(prim) != nullptr && boundBody != nullptr &&
+         boundBody->handle == body;
 }
 
-} // namespace usd_stage_runner::physics
+} // namespace usd_stage_runner::stage

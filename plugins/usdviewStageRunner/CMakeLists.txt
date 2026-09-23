@@ -45,6 +45,13 @@ set_target_properties(usdviewStageRunnerPython PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${_python_package_dir}"
   RUNTIME_OUTPUT_DIRECTORY "${_python_package_dir}"
 )
+foreach(_configuration IN ITEMS Debug Release RelWithDebInfo MinSizeRel)
+  string(TOUPPER "${_configuration}" _configuration_upper)
+  set_target_properties(usdviewStageRunnerPython PROPERTIES
+    "LIBRARY_OUTPUT_DIRECTORY_${_configuration_upper}" "${_python_package_dir}"
+    "RUNTIME_OUTPUT_DIRECTORY_${_configuration_upper}" "${_python_package_dir}"
+  )
+endforeach()
 if(WIN32)
   set_target_properties(usdviewStageRunnerPython PROPERTIES SUFFIX ".pyd")
 endif()

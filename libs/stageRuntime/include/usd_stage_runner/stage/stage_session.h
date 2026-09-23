@@ -1,10 +1,10 @@
 #pragma once
 
 #include "usd_stage_runner/input/action_state.h"
-#include "usd_stage_runner/physics/physics_body.h"
-#include "usd_stage_runner/physics/physics_world.h"
 #include "usd_stage_runner/runtime/play_session.h"
 #include "usd_stage_runner/runtime/runtime_world.h"
+#include "usd_physics/core/descriptors.h"
+#include "usd_physics/core/world.h"
 
 #include <cstddef>
 #include <functional>
@@ -14,13 +14,15 @@
 
 namespace usd_stage_runner::stage {
 
+namespace physics = usd_physics::core;
+
 struct StageSessionConfig {
   runtime::PlaySession::Duration fixedStep{1.0 / 60.0};
   std::size_t maxFixedStepsPerFrame{8};
   runtime::PrimId playerPrim{"/World/PlayerCube"};
   double playerSpeed{3.0};
-  physics::CollisionLayer staticCollisionLayer{0};
-  physics::CollisionLayer dynamicCollisionLayer{1};
+  physics::CollisionFilter staticCollisionFilter{1, 2};
+  physics::CollisionFilter dynamicCollisionFilter{2, 3};
 };
 
 struct StageSessionStats {

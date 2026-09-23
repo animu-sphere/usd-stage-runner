@@ -1,5 +1,5 @@
 #include "usd_stage_runner/input/action_state.h"
-#include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
+#include "usd_physics/jolt/availability.h"
 #include "usd_stage_runner/runtime/play_session.h"
 #include "usd_stage_runner/stage/stage_session.h"
 
@@ -26,13 +26,13 @@ public:
       : session_(std::move(stage),
                  makeConfig(fixedStepSeconds, maxFixedStepsPerFrame, std::move(playerPrim),
                             playerSpeed),
-                 []() -> std::unique_ptr<usd_stage_runner::physics::PhysicsWorld> {
-                   if (!usd_stage_runner::physics_jolt::isJoltPhysicsAvailable()) {
+                 []() -> std::unique_ptr<usd_physics::core::PhysicsWorld> {
+                   if (!usd_physics::jolt::backendAvailable()) {
                      throw std::runtime_error(
                          "Stage declares physics bodies, but Jolt Physics is unavailable in this "
                          "build");
                    }
-                   return usd_stage_runner::physics_jolt::createJoltPhysicsWorld();
+                   return usd_physics::jolt::createWorld();
                  }) {}
 
   void play() noexcept {
@@ -106,8 +106,6 @@ private:
     config.maxFixedStepsPerFrame = maxFixedStepsPerFrame;
     config.playerPrim = usd_stage_runner::runtime::PrimId{std::move(playerPrim)};
     config.playerSpeed = playerSpeed;
-    config.staticCollisionLayer = usd_stage_runner::physics_jolt::nonMovingCollisionLayer;
-    config.dynamicCollisionLayer = usd_stage_runner::physics_jolt::movingCollisionLayer;
     return config;
   }
 
