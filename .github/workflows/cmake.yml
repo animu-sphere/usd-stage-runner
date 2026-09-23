@@ -13,17 +13,40 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - name: Check out usd-physics-plugins
+        uses: actions/checkout@v4
+        with:
+          repository: animu-sphere/usd-physics-plugins
+          ref: 9e980e1888636b7b96cde9288e2e7df2c7586508
+          path: usd-physics-plugins
+      - name: Build and install physics packages
+        run: >-
+          cmake -S usd-physics-plugins -B physics-build
+          -DUSDPHYSICS_BUILD_TESTS=OFF
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/physics-install
+      - run: cmake --build physics-build --config Release
+      - run: cmake --install physics-build --config Release
       - name: Configure
-        run: cmake -S . -B build -DBUILD_TESTING=ON -DUSD_STAGE_RUNNER_BUILD_APP=OFF
+        run: >-
+          cmake -S . -B build
+          -DBUILD_TESTING=ON
+          -DUSD_STAGE_RUNNER_BUILD_APP=OFF
+          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/physics-install
       - name: Build
-        run: cmake --build build --config Debug
+        run: cmake --build build --config Release
       - name: Test
-        run: ctest --test-dir build -C Debug --output-on-failure
+        run: ctest --test-dir build -C Release --output-on-failure
 
   physics-jolt:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - name: Check out usd-physics-plugins
+        uses: actions/checkout@v4
+        with:
+          repository: animu-sphere/usd-physics-plugins
+          ref: 9e980e1888636b7b96cde9288e2e7df2c7586508
+          path: usd-physics-plugins
       - name: Check out Jolt Physics 5.5.0
         uses: actions/checkout@v4
         with:
@@ -47,14 +70,24 @@ jobs:
           -DTARGET_VIEWER=OFF
       - run: cmake --build jolt-build --config Release --target Jolt
       - run: cmake --install jolt-build --config Release
+      - name: Build and install Jolt-enabled physics packages
+        run: >-
+          cmake -S usd-physics-plugins -B physics-build
+          -DCMAKE_BUILD_TYPE=Release
+          -DUSDPHYSICS_BUILD_TESTS=OFF
+          -DPHYSICSJOLT_REQUIRE_JOLT=ON
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/physics-install
+          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/jolt-install
+      - run: cmake --build physics-build --config Release
+      - run: cmake --install physics-build --config Release
       - name: Configure with required Jolt Physics
         run: >-
           cmake -S . -B build-jolt
           -DBUILD_TESTING=ON
           -DUSD_STAGE_RUNNER_BUILD_APP=OFF
           -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON
-          -DCMAKE_PREFIX_PATH=${{ github.workspace }}/jolt-install
+          -DCMAKE_PREFIX_PATH="${{ github.workspace }}/physics-install;${{ github.workspace }}/jolt-install"
       - name: Build
-        run: cmake --build build-jolt --config Debug
+        run: cmake --build build-jolt --config Release
       - name: Test
-        run: ctest --test-dir build-jolt -C Debug --output-on-failure
+        run: ctest --test-dir build-jolt -C Release --output-on-failure
