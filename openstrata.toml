@@ -21,26 +21,22 @@ cache = {
 members = [
   "libs/runtimeCore",
   "libs/inputCore",
-  "libs/physicsCore",
   "libs/characterCore",
   "libs/cameraCore",
   "libs/vehicleCore",
   "libs/stageRuntime",
   "backends/inputSdl",
-  "backends/physicsJolt",
   "plugins/runnerSchema",
   "apps/stage_runner",
 ]
 release_members = [
   "runtimeCore",
   "inputCore",
-  "physicsCore",
   "characterCore",
   "cameraCore",
   "vehicleCore",
   "stageRuntime",
   "inputSdl",
-  "physicsJolt",
   "runnerSchema",
   "stage_runner",
 ]

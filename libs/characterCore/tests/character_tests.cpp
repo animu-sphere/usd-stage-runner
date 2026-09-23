@@ -12,6 +12,7 @@
 namespace {
 
 using namespace usd_stage_runner;
+namespace physics = usd_physics::core;
 
 class CharacterPhysicsDouble final : public physics::PhysicsWorld,
                                      public physics::GroundQuery {
@@ -43,11 +44,11 @@ public:
     return true;
   }
 
-  bool applyForce(physics::BodyHandle body, runtime::Vec3d) override {
+  bool applyForce(physics::BodyHandle body, physics::Vector3) override {
     return states_.find(body) != states_.end();
   }
 
-  bool setLinearVelocity(physics::BodyHandle body, runtime::Vec3d velocity) override {
+  bool setLinearVelocity(physics::BodyHandle body, physics::Vector3 velocity) override {
     const auto found = states_.find(body);
     if (found == states_.end()) {
       return false;
@@ -88,7 +89,7 @@ public:
     contact_ = contact;
   }
 
-  void setVelocity(physics::BodyHandle body, runtime::Vec3d velocity) {
+  void setVelocity(physics::BodyHandle body, physics::Vector3 velocity) {
     states_.at(body).linearVelocity = velocity;
   }
 
@@ -132,6 +133,7 @@ template <typename Function> bool rejectsInvalidArgument(Function&& function) {
 
 int main() {
   using namespace usd_stage_runner;
+  namespace physics = usd_physics::core;
 
   CharacterPhysicsDouble physicsWorld;
   const physics::BodyHandle support{99};

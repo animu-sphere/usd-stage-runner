@@ -7,6 +7,14 @@
 namespace usd_stage_runner::character {
 namespace {
 
+physics::Vector3 toPhysicsVector(runtime::Vec3d value) noexcept {
+  return {value.x, value.y, value.z};
+}
+
+runtime::Vec3d toRuntimeVector(physics::Vector3 value) noexcept {
+  return {value.x, value.y, value.z};
+}
+
 double lengthSquared(runtime::Vec3d value) noexcept {
   return value.x * value.x + value.y * value.y + value.z * value.z;
 }
@@ -54,8 +62,10 @@ runtime::Vec3d movementOnGround(runtime::Vec3d desiredVelocity,
 } // namespace
 
 void validateCharacterIntent(const CharacterIntent& intent) {
-  physics::validatePhysicsVector(intent.desiredVelocity, "character desired velocity");
-  physics::validatePhysicsVector(intent.facingDirection, "character facing direction");
+  physics::validatePhysicsVector(toPhysicsVector(intent.desiredVelocity),
+                                 "character desired velocity");
+  physics::validatePhysicsVector(toPhysicsVector(intent.facingDirection),
+                                 "character facing direction");
 }
 
 void validateCharacterControllerConfig(const CharacterControllerConfig& config) {
@@ -83,7 +93,7 @@ CharacterController::CharacterController(physics::BodyHandle body,
     throw std::invalid_argument("character controller requires a body");
   }
   validateCharacterControllerConfig(config_);
-  state_.velocity = physicsWorld_->bodyState(body_).linearVelocity;
+  state_.velocity = toRuntimeVector(physicsWorld_->bodyState(body_).linearVelocity);
   state_.jumpState = state_.velocity.y > 0.0 ? JumpState::rising : JumpState::falling;
 }
 
@@ -103,9 +113,9 @@ bool CharacterController::update(const CharacterIntent& intent, Duration fixedSt
     if (contact->distance > config_.groundProbeDistance) {
       throw std::invalid_argument("ground contact exceeds the requested probe distance");
     }
-    groundNormal = normalized(contact->normal);
+    groundNormal = normalized(toRuntimeVector(contact->normal));
     const bool separatesFromGround =
-        movingAwayFromGround(bodyState.linearVelocity, groundNormal);
+        movingAwayFromGround(toRuntimeVector(bodyState.linearVelocity), groundNormal);
     walkableGround = !separatesFromGround &&
                      groundNormal.y >= std::cos(config_.maximumSlopeAngleRadians);
   }
@@ -129,7 +139,7 @@ bool CharacterController::update(const CharacterIntent& intent, Duration fixedSt
     nextState.facing = normalized(horizontalFacing);
   }
 
-  if (!physicsWorld_->setLinearVelocity(body_, velocity)) {
+  if (!physicsWorld_->setLinearVelocity(body_, toPhysicsVector(velocity))) {
     return false;
   }
 

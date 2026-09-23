@@ -123,7 +123,8 @@ usd-physics-plugins/
 `- deterministic contract and adapter tests
 ```
 
-Directories and adapters are added only with a working vertical slice. During
-migration, the existing local `libs/physicsCore` and `backends/physicsJolt`
-remain the authoritative implementation and the architecture documentation
-continues to describe them as current state.
+Directories and adapters are added only with a working vertical slice. The
+local `libs/physicsCore` and `backends/physicsJolt` implementations have been
+removed; installed `usd-physics-plugins` packages are now the authoritative
+physics implementation. Stage Runner keeps only its Stage-owned prim/body
+bridge and gameplay or host policy.

@@ -3,7 +3,7 @@
 #include "usd_stage_runner/input/action_state.h"
 #include "usd_stage_runner/input_sdl/physical_input.h"
 #include "usd_stage_runner/input_sdl/sdl_input_source.h"
-#include "usd_stage_runner/physics_jolt/jolt_physics_world.h"
+#include "usd_physics/jolt/availability.h"
 #include "usd_stage_runner/runtime/frame_clock.h"
 
 #if USD_STAGE_RUNNER_HAS_OPENUSD
@@ -194,15 +194,13 @@ int run(const Options& options) {
   usd_stage_runner::stage::StageSessionConfig sessionConfig;
   sessionConfig.fixedStep = usd_stage_runner::stage::StageSession::Duration{options.fixedDt};
   sessionConfig.maxFixedStepsPerFrame = options.maxFixedSteps;
-  sessionConfig.staticCollisionLayer = usd_stage_runner::physics_jolt::nonMovingCollisionLayer;
-  sessionConfig.dynamicCollisionLayer = usd_stage_runner::physics_jolt::movingCollisionLayer;
   usd_stage_runner::stage::StageSession session(
-      stage, sessionConfig, []() -> std::unique_ptr<usd_stage_runner::physics::PhysicsWorld> {
-        if (!usd_stage_runner::physics_jolt::isJoltPhysicsAvailable()) {
+      stage, sessionConfig, []() -> std::unique_ptr<usd_physics::core::PhysicsWorld> {
+        if (!usd_physics::jolt::backendAvailable()) {
           throw std::runtime_error(
               "Stage declares physics bodies, but Jolt Physics is unavailable in this build");
         }
-        return usd_stage_runner::physics_jolt::createJoltPhysicsWorld();
+        return usd_physics::jolt::createWorld();
       });
 
   FrameClock clock;

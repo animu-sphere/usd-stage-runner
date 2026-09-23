@@ -8,6 +8,8 @@
 
 namespace {
 
+namespace physics = usd_physics::core;
+
 int fail(const char* message) {
   std::cerr << message << '\n';
   return 1;
@@ -44,6 +46,7 @@ usd_stage_runner::vehicle::VehicleControllerConfig fourWheelDriveConfig() {
 
 int main() {
   using namespace usd_stage_runner;
+  namespace physics = usd_physics::core;
 
   vehicle::VehicleController controller(fourWheelDriveConfig());
   controller.update({0.75, 0.5, -0.4, true});

@@ -16,6 +16,15 @@ set(USD_STAGE_RUNNER_SCHEMA_INSTALL_DIR
 option(USD_STAGE_RUNNER_BUILD_APP "Build the stage_runner host" ON)
 option(USD_STAGE_RUNNER_BUILD_USDVIEW_PLUGIN "Build the usdview host adapter" ON)
 option(USD_STAGE_RUNNER_REQUIRE_OPENUSD "Fail configuration when OpenUSD is unavailable" OFF)
+option(USD_STAGE_RUNNER_REQUIRE_JOLT "Fail configuration when physicsJolt has no Jolt backend" OFF)
+
+find_package(physicsCore 0.1 CONFIG REQUIRED)
+find_package(physicsJolt 0.1 CONFIG REQUIRED)
+set(USD_STAGE_RUNNER_JOLT_AVAILABLE ${physicsJolt_BACKEND_AVAILABLE})
+if(USD_STAGE_RUNNER_REQUIRE_JOLT AND NOT physicsJolt_BACKEND_AVAILABLE)
+  message(FATAL_ERROR
+    "Jolt Physics was requested but the installed physicsJolt package has no backend")
+endif()
 
 set(USD_STAGE_RUNNER_OPENUSD_TARGET "")
 set(USD_STAGE_RUNNER_USDGEOM_TARGET "")
@@ -62,12 +71,10 @@ endif()
 
 add_subdirectory(libs/runtimeCore)
 add_subdirectory(libs/inputCore)
-add_subdirectory(libs/physicsCore)
 add_subdirectory(libs/characterCore)
 add_subdirectory(libs/cameraCore)
 add_subdirectory(libs/vehicleCore)
 add_subdirectory(backends/inputSdl)
-add_subdirectory(backends/physicsJolt)
 add_subdirectory(plugins/runnerSchema)
 if(USD_STAGE_RUNNER_OPENUSD_TARGET)
   add_subdirectory(libs/stageRuntime)

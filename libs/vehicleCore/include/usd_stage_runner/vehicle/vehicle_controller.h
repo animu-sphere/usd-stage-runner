@@ -1,11 +1,13 @@
 #pragma once
 
-#include "usd_stage_runner/physics/handles.h"
+#include "usd_physics/core/handles.h"
 #include "usd_stage_runner/runtime/component_registry.h"
 
 #include <vector>
 
 namespace usd_stage_runner::vehicle {
+
+namespace physics = usd_physics::core;
 
 struct VehicleIntent {
   // Signed normalized demand: positive drives forward and negative drives in

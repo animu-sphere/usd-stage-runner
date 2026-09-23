@@ -15,8 +15,16 @@ requires:
       version: ">=0.1,<0.2"
     - id: physicsCore
       version: ">=0.1,<0.2"
+      artifact:
+        targets:
+          cy2026-windows-x86_64-py313-usd:
+            digest: sha256:48586c60e8e9678c52c80ab831000b403787f84678b1bd69b944e86c0d0bdef9
     - id: physicsJolt
       version: ">=0.1,<0.2"
+      artifact:
+        targets:
+          cy2026-windows-x86_64-py313-usd:
+            digest: sha256:a10333cc2d898c07091f21f3ab5c406c5a55cd24f1e0c163863bae1b05c32334
     - id: characterCore
       version: ">=0.1,<0.2"
     - id: cameraCore

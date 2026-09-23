@@ -4,20 +4,21 @@
 
 The repository implements the input-to-physics-to-USD vertical slice and its
 formal authored-data contract, the complete character-control slice, and the
-camera-rig slice with collision avoidance. It contains the character controller,
-Jolt ground and collision-query adapters, a reusable Stage play session,
+camera-rig slice with collision avoidance. The reusable physics contract and
+Jolt adapter are installed packages from `usd-physics-plugins`; this repository
+owns gameplay policy, Stage import, prim/body synchronization, and host
+composition. It contains a reusable Stage play session,
 keyboard/gamepad/injected action mapping, runnable walking, grounding, and
-jumping scenario, plus camera targeting, mode, collision probes, smoothing,
+jumping scenarios, plus camera targeting, mode, collision probes, smoothing,
 fixed-step host evaluation, and incremental USD Camera pose synchronization.
-Runtime, input, physics,
-character, camera, and initial vehicle core libraries, SDL and Jolt adapters, a codeless OpenUSD
-runtime-schema plugin, thin standalone and usdview host adapters, an
-OpenStrata Plugin View deployment path, core/adapter/integration tests, and
-dual CMake/OpenStrata build configuration are present. `vehicleCore` currently
-maps normalized vehicle intent into deterministic per-wheel steering, drive,
+Runtime, input, character, camera, and initial vehicle core libraries, an SDL
+adapter, a codeless OpenUSD runtime-schema plugin, thin standalone and usdview
+host adapters, an OpenStrata Plugin View deployment path, tests, and dual
+CMake/OpenStrata build configuration are present. `vehicleCore` currently maps
+normalized vehicle intent into deterministic per-wheel steering, drive,
 service-brake, and handbrake commands for arbitrary wheel layouts. Vehicle
-physics application, USD declarations, Stage integration, OpenExec, and behavior
-targets do not exist yet.
+physics application, USD declarations, Stage integration, OpenExec, and
+behavior targets do not exist yet.
 
 ## Implemented targets
 
@@ -25,16 +26,16 @@ targets do not exist yet.
 | --- | --- | --- | --- |
 | `runtimeCore` | `libs/runtimeCore` | Frame timing, bounded fixed stepping, host-facing play-session lifecycle, prim identity, runtime components, runtime transforms, dirty transform queue, and Runtime World lifetime. | C++ standard library only. |
 | `inputCore` | `libs/inputCore` | Named action state, movement intent, and deterministic movement integration. | `runtimeCore`. |
-| `physicsCore` | `libs/physicsCore` | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, character ground-query, and collision-segment query contracts; prim/body mapping and Runtime transform synchronization. | `runtimeCore`. |
+| `physicsCore::physicsCore` | installed `usd-physics-plugins` package | Typed resource handles; box, body, and fixed-constraint descriptors; force, velocity, fixed-step, state-query, changed-body extraction, ground-query, and segment-query contracts. | C++ standard library only. |
 | `characterCore` | `libs/characterCore` | Character intent, controller configuration and live state, walkable-ground and slope evaluation, desired velocity, facing, jump-edge handling, and rising/falling transitions. | `runtimeCore`, `physicsCore`. |
 | `cameraCore` | `libs/cameraCore` | Prim-indexed target and optional anchor resolution; free, first-person, third-person, and orbit poses; optional collision-probe callbacks and clearance; configuration validation; live desired/current pose state; deterministic exponential smoothing; and dirty camera pose updates. | `runtimeCore`. |
 | `vehicleCore` | `libs/vehicleCore` | Normalized vehicle intent, chassis and wheel composition, independent steering/powertrain/brake configuration, validation, and deterministic per-wheel steering and torque command distribution without a four-wheel-only contract. | `runtimeCore`, `physicsCore`. |
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
-| `physicsJolt` | `backends/physicsJolt` | Own Jolt initialization and shutdown, box shapes, static and dynamic bodies, fixed constraints, the initial moving/non-moving layers, fixed stepping, changed-body extraction, character ground shape casts, and first-hit segment ray casts behind `physicsCore`. | `physicsCore`; Jolt when available. |
+| `physicsJolt::physicsJolt` | installed `usd-physics-plugins` package | Own Jolt initialization and shutdown, shapes, bodies, constraints, semantic collision filtering, fixed stepping, changed-body extraction, ground shape casts, and first-hit segment ray casts behind `physicsCore`. | `physicsCore`; Jolt when the package is backend-enabled. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
-| `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
-| `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, `physicsJolt`; OpenUSD `plug` when available. |
-| `usdviewStageRunner` | `plugins/usdviewStageRunner` | Register Runner schemas, bind usdview's current Stage to `StageSession`, expose play/pause/stop/single-step/reset commands, drive elapsed host time, refresh the viewport, and dispose the session when the Stage changes. | `stageRuntime`, `physicsJolt`, OpenUSD Python bindings, and usdview Qt APIs. |
+| `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, own the prim/body bridge, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, external `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
+| `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and external Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, external `physicsJolt`; OpenUSD `plug` when available. |
+| `usdviewStageRunner` | `plugins/usdviewStageRunner` | Register Runner schemas, bind usdview's current Stage to `StageSession`, expose play/pause/stop/single-step/reset commands, drive elapsed host time, refresh the viewport, and dispose the session when the Stage changes. | `stageRuntime`, external `physicsJolt`, OpenUSD Python bindings, and usdview Qt APIs. |
 
 The OpenStrata `plugin-view` build intent stages `usdviewStageRunner` into the
 `runnerSchema` bundle's conventional `python/` root. An `Includes` entry in the
@@ -44,9 +45,9 @@ composition only—the native module and Python controller are the same files
 used by the ordinary usdview path.
 
 The CTest suite covers clocks, play/pause/stop/single-step/reset lifecycle,
-registry and dirty-queue behavior, action and movement logic, physics-core
-resource, deterministic-step, prim/body mapping,
-changed-transform synchronization, isolated character controller and camera
+registry and dirty-queue behavior, action and movement logic, the Stage-owned
+prim/body bridge and changed-transform synchronization, isolated character
+controller and camera
 rig contracts, camera target following, collision adjustment, and smoothing,
 physical-control mapping, Jolt ground and segment queries, host option validation,
 Stage-session import, reset/rebuild and synchronization, Stage loading, and
@@ -97,10 +98,10 @@ The source-revision-specific public surface, consumers, and deterministic
 evidence are frozen in the
 [physics extraction inventory](physics-extraction-inventory.md).
 
-`physicsCore` defines distinct `ShapeHandle`, `BodyHandle`, and
+The installed `physicsCore` package defines distinct `ShapeHandle`, `BodyHandle`, and
 `ConstraintHandle` types so backend resources cannot be accidentally mixed.
 Descriptors currently cover box half extents, static or dynamic bodies, mass,
-collision layers, initial transforms, and fixed constraints. Shared validation
+semantic collision filters, initial transforms, and fixed constraints. Shared validation
 rejects invalid dimensions, transforms, masses, handles, forces, velocities,
 and timesteps before they reach an SDK adapter.
 
@@ -120,29 +121,29 @@ jumping. The Jolt world implements the capability with a downward shape cast
 that excludes the queried body and translates the hit back to stable runtime
 body handles.
 
-`CollisionQuery` is a second optional capability. It reports the first tracked
+`SegmentQuery` is a second optional capability. It reports the first tracked
 body and normalized hit fraction along a finite world-space segment, with an
 optional ignored body handle. The Jolt implementation uses a narrow-phase ray
 cast and translates its result back to backend-neutral handles.
 
-`PhysicsRuntime` owns the one-to-one mapping between runtime prims and backend
+Stage Runner's `stageRuntime::PhysicsRuntime` owns the one-to-one mapping
+between runtime prims and backend
 bodies. Its fixed-step boundary drains changed body states, updates only mapped
 `RuntimeTransform` values that actually changed, and marks only those prims
 dirty for USD synchronization. Missing or removed prims are safely discarded
 from extraction, and binding never exposes a backend-specific type.
 
-`physicsJolt` implements that contract behind a factory boundary: its public
-header exposes only `physicsCore` and standard-library types. The adapter maps
-static bodies to collision layer 0 (`nonMovingCollisionLayer`) and dynamic
-bodies to collision layer 1 (`movingCollisionLayer`), rejecting mismatched
-descriptors. It owns Jolt's process-wide type registration while adapter worlds
-exist and drains changed dynamic body state after fixed steps. Jolt update
-capacity failures are surfaced rather than silently accepting dropped
-contacts. Its focused adapter test probes an elevated body, drops a cube onto a
-static floor, verifies settled ground contact, and checks explicit resource
-cleanup. When no Jolt CMake package is available,
-a small unavailable implementation preserves backend-neutral builds; requiring
-Jolt is an explicit configure option.
+The installed `physicsJolt` package implements that contract behind a factory
+boundary: its public header exposes only `physicsCore` and standard-library
+types. Semantic category/mask filters replace knowledge of backend collision
+layer numbers in Stage Runner. The adapter owns Jolt's process-wide type
+registration while worlds exist and drains changed dynamic body state after
+fixed steps. Jolt update capacity failures are surfaced rather than silently
+accepting dropped contacts. Its package tests probe an elevated body, drop a
+cube onto a static floor, verify settled ground contact, and check explicit
+resource cleanup. The package exports `physicsJolt_BACKEND_AVAILABLE`; setting
+`USD_STAGE_RUNNER_REQUIRE_JOLT=ON` rejects a package built without backend
+support at configure time.
 
 ## Runtime World and transforms
 
@@ -259,17 +260,20 @@ conditional on a runtime with usdview, Qt, and a display.
 
 ## Build and verification
 
-The root CMake tree builds the nine compiled libraries, codeless schema plugin,
-standalone host, optional usdview adapter, and CTest suite. Each library
-installs headers and an exported CMake package. The usdview adapter is enabled
-only when the selected OpenUSD SDK supplies Python targets. OpenUSD, SDL, and
-Jolt discovery remain isolated to schema, Stage-integration, adapter, and host
+The root CMake tree builds seven repository-owned compiled libraries, the
+codeless schema plugin, standalone host, optional usdview adapter, and CTest
+suite. `physicsCore` and `physicsJolt` are required installed CMake packages;
+they are not built from repository source. The usdview adapter is enabled only
+when the selected OpenUSD SDK supplies Python targets. OpenUSD and SDL
+discovery remain isolated to schema, Stage-integration, adapter, and host
 directories.
 
-OpenStrata owns the pinned `cy2026`/`usd` environment. That profile supplies
-OpenUSD but not SDL or Jolt; interactive or Jolt-backed builds therefore need
-those packages on `CMAKE_PREFIX_PATH`. Backend-neutral deterministic tests do
-not require either SDK or physical devices.
+OpenStrata owns the pinned `cy2026`/`usd` environment and composes immutable
+external `physicsCore` and `physicsJolt` artifacts into affected members. The
+profile supplies OpenUSD but not SDL or the Jolt SDK dependency. The migration
+branch has locally validated Windows artifacts; OCI source publication, Linux
+artifacts, and hosted Stage Runner evidence remain. Backend-neutral
+deterministic tests do not require SDL or physical devices.
 
 The committed `tests/fixtures/minimal.usda` Stage contains `/World/Ground`,
 `/World/PlayerCube`, and `/World/Camera`. The synchronization integration test
@@ -296,27 +300,20 @@ moving poses use incremental USD writes. The multi-frame
 The realized graph is:
 
 ```text
-runnerSchema -----> OpenUSD resource-plugin registry
-      ^
-      |
-stage_runner -----> OpenUSD plug + usd + usdGeom
-      |  |  |  \
-      |  |  |   `----> inputSdl -----> SDL2 or SDL3 (optional at configure time)
-      |  |  `--------> inputCore
-      |  `-----------> characterCore
-      v
- runtimeCore
-      ^  ^
-      |  `---------------- cameraCore
-      |
- physicsCore <----- characterCore
-      ^
-      |
- physicsJolt <----- stage_runner
-      |
-      `------------> Jolt (optional at configure time)
+runnerSchema --------> OpenUSD resource-plugin registry
 
-usdviewStageRunner -> stageRuntime + physicsJolt + OpenUSD Python + usdview Qt
+stage_runner --------> stageRuntime + inputSdl + external physicsJolt
+usdviewStageRunner --> stageRuntime + external physicsJolt
+                       + OpenUSD Python + usdview Qt
+
+stageRuntime --------> runtimeCore + inputCore + characterCore + cameraCore
+                       + external physicsCore + OpenUSD usd/usdGeom
+characterCore -------> runtimeCore + external physicsCore
+vehicleCore ---------> runtimeCore + external physicsCore
+cameraCore ----------> runtimeCore
+inputSdl ------------> inputCore + SDL2 or SDL3 (optional)
+
+external physicsJolt -> external physicsCore + Jolt
 ```
 
 The core targets include no OpenUSD, SDL, Jolt, or OpenExec headers. The

@@ -1,5 +1,8 @@
 # Physics Extraction Inventory
 
+> Historical baseline: this inventory records the pre-extraction source tree.
+> See [Architecture](overview.md) for the current external-package topology.
+
 This page freezes the implemented physics boundary that will be handed to
 `usd-physics-plugins`. It describes the tree at source revision
 `12324992c7ddd0b016ace780acadc5f07903390c`; later implementation changes must

@@ -1,6 +1,6 @@
 # Planned Delivery Phases
 
-Status: Phase A in progress; later phases not started
+Status: Phase C in progress; Phases A and B complete; later phases not started
 
 Character, camera, host integration, and the backend-neutral `vehicleCore`
 composition slice are implemented and recorded in the
@@ -20,7 +20,7 @@ new runtime systems expand the current coupling.
 | F | Vehicle physics | A USD-composed vehicle is drivable through composable physics capabilities without a four-wheel-only runtime contract. |
 | G | Behavior and richer runtime systems | Behavior, thin OpenExec adapters, animation integration, and runtime tooling grow on the stable substrate. |
 
-## Phase A: Physics boundary freeze
+## Phase A: Physics boundary freeze (complete)
 
 Audit `physicsCore`, `physicsJolt`, Stage physics import, Runner physics schemas,
 Character and Camera queries, Vehicle requirements, tests, builds, and host
@@ -28,7 +28,7 @@ composition. Freeze the reusable public contract and stop adding
 Runner-specific physics schemas. Detailed work and completion criteria are in
 [the current milestone](current.md).
 
-## Phase B: `usd-physics-plugins` extraction
+## Phase B: `usd-physics-plugins` extraction (complete)
 
 Move the minimum reusable kernel first:
 
@@ -45,7 +45,7 @@ make ownership clear before adding capabilities.
 Success: the physics package builds and tests without Stage Runner, and its
 public API exposes no Jolt types.
 
-## Phase C: Stage Runner consumer migration
+## Phase C: Stage Runner consumer migration (in progress)
 
 - Consume `usd-physics-plugins` through exported CMake packages.
 - Compose the repositories through OpenStrata for build, test, packaging, and

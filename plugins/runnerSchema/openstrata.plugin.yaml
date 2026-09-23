@@ -7,6 +7,14 @@ plugin:
 license: Apache-2.0
 runtime:
   openusd: ">=25.05,<27.0"
+requires:
+  libraries:
+    - id: physicsJolt
+      version: ">=0.1,<0.2"
+      artifact:
+        targets:
+          cy2026-windows-x86_64-py313-usd:
+            digest: sha256:a10333cc2d898c07091f21f3ab5c406c5a55cd24f1e0c163863bae1b05c32334
 schema:
   codeless: true
   contract: 1

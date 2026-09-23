@@ -1,12 +1,14 @@
 #pragma once
 
-#include "usd_stage_runner/physics/ground_query.h"
-#include "usd_stage_runner/physics/physics_world.h"
+#include "usd_physics/core/ground_query.h"
+#include "usd_physics/core/world.h"
 #include "usd_stage_runner/runtime/runtime_transform.h"
 
 #include <chrono>
 
 namespace usd_stage_runner::character {
+
+namespace physics = usd_physics::core;
 
 struct CharacterIntent {
   // X/Z are desired planar velocity. Vertical motion is owned by grounding,
