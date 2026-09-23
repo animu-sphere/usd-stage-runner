@@ -112,10 +112,11 @@ scene camera, Play keeps that choice.
 
 The character-control, camera-rig, and host-integration milestones are
 implemented end to end. The physics core and Jolt backend have been extracted,
-and Stage Runner's local Windows package-consumer migration passes all 48 CTest
-scenarios. Publishing the artifacts and obtaining hosted Windows/Linux evidence
-remain before that migration is complete. Vehicle physics application remains
-paused until standard `UsdPhysics` import and shared MMD/VRM validation advance.
+their pinned Windows packages are publicly available, and Stage Runner's local
+Windows package-consumer migration passes all 48 CTest scenarios. Equivalent
+Linux artifacts and hosted Windows/Linux Stage Runner evidence remain before
+that migration is complete. Vehicle physics application remains paused until
+standard `UsdPhysics` import and shared MMD/VRM validation advance.
 Behavior and OpenExec integration are later slices.
 
 ## Build with OpenStrata
@@ -125,15 +126,19 @@ OpenUSD runtime and compiler environment. CI uses `ost 0.23.1`; use that
 version locally when reproducing its checks:
 
 ```powershell
-ost runtime pull cy2026 --profile usd
+$runtimeArtifact = 'sha256:ebb0c7da509ee14ada19ee5b461de6996aad0024b5c9640f12dde76912e849b5'
+ost artifact pull 'oci://ghcr.io/animu-sphere/openstrata-runtime-cy2026-usd@sha256:d3ff79a6f330558c3b9a427a927d340fe3dcab1fe89107faa0ea9f66a104b7bf' `
+  --expect-artifact $runtimeArtifact --require-kind runtime
+ost runtime pull cy2026 --profile usd --from-artifact $runtimeArtifact --force
 ost library pull
 ost build
 ost test
 ```
 
-The migration currently pins the physics artifact digests. Until immutable OCI
-`source` URIs are added to the manifests, the matching artifacts must already
-exist in the configured OpenStrata cache.
+The migration pins both the physics artifact content digests and immutable
+public OCI `source` URIs. After materializing the matching pinned runtime as
+shown above, `ost library pull` can populate a fresh OpenStrata cache without
+repository-local package builds.
 
 The reusable core can also be built and tested as an isolated OpenStrata
 library member:

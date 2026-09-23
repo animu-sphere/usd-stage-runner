@@ -137,5 +137,6 @@ changed-body ordering contracts.
 Local Windows parity now passes for the neutral, Jolt, Character, Camera,
 Stage-session, standalone, usdview, plain-CMake, and OpenStrata paths against
 installed packages. Mapping and dirty-synchronization assertions remain in
-Stage Runner. The remaining parity gate is publication of immutable artifact
-sources followed by hosted Windows and Linux Stage Runner evidence.
+Stage Runner. The immutable Windows artifact sources are public and verified
+from a fresh cache; the remaining parity gate is hosted Windows and Linux Stage
+Runner evidence, including equivalent Linux artifacts.

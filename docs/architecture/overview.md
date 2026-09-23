@@ -271,9 +271,9 @@ directories.
 OpenStrata owns the pinned `cy2026`/`usd` environment and composes immutable
 external `physicsCore` and `physicsJolt` artifacts into affected members. The
 profile supplies OpenUSD but not SDL or the Jolt SDK dependency. The migration
-branch has locally validated Windows artifacts; OCI source publication, Linux
-artifacts, and hosted Stage Runner evidence remain. Backend-neutral
-deterministic tests do not require SDL or physical devices.
+branch pins publicly available Windows artifact sources and has validated them
+from a fresh cache; Linux artifacts and hosted Stage Runner evidence remain.
+Backend-neutral deterministic tests do not require SDL or physical devices.
 
 The committed `tests/fixtures/minimal.usda` Stage contains `/World/Ground`,
 `/World/PlayerCube`, and `/World/Camera`. The synchronization integration test

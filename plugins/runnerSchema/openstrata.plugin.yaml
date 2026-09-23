@@ -15,6 +15,7 @@ requires:
         targets:
           cy2026-windows-x86_64-py313-usd:
             digest: sha256:a10333cc2d898c07091f21f3ab5c406c5a55cd24f1e0c163863bae1b05c32334
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:77477f6b89d88dfb8d22d1e419b1ac1b0f2cba2e232c9f8e3d386af9fba314a8
 schema:
   codeless: true
   contract: 1

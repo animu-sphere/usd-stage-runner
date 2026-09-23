@@ -32,8 +32,6 @@ repository.
 
 ### Remaining
 
-- publish the pinned Windows physics artifacts to immutable OCI locations and
-  add their `source` URIs to the Stage Runner manifests;
 - produce and pin equivalent Linux artifacts;
 - run hosted Windows and Linux Stage Runner CI against those published
   artifacts;
