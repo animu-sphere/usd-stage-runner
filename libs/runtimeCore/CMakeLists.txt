@@ -24,6 +24,7 @@ add_library(runtimeCore
   src/runtime_world.cpp
 )
 add_library(runtimeCore::runtimeCore ALIAS runtimeCore)
+set_target_properties(runtimeCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_compile_features(runtimeCore PUBLIC cxx_std_17)
 target_include_directories(runtimeCore

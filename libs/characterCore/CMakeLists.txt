@@ -20,6 +20,7 @@ endif()
 
 add_library(characterCore src/character_controller.cpp)
 add_library(characterCore::characterCore ALIAS characterCore)
+set_target_properties(characterCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(characterCore PUBLIC cxx_std_17)
 target_include_directories(characterCore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

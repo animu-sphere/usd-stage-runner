@@ -322,6 +322,8 @@ jobs:
               '-DUSE_LZCNT=OFF', '-DUSE_TZCNT=OFF',
               '-DUSE_F16C=OFF', '-DUSE_FMADD=OFF'
             )
+          } else {
+            $configure += '-DCMAKE_POSITION_INDEPENDENT_CODE=ON'
           }
           cmake @configure
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

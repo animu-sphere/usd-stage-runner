@@ -20,6 +20,7 @@ endif()
 
 add_library(vehicleCore src/vehicle_controller.cpp)
 add_library(vehicleCore::vehicleCore ALIAS vehicleCore)
+set_target_properties(vehicleCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(vehicleCore PUBLIC cxx_std_17)
 target_include_directories(vehicleCore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

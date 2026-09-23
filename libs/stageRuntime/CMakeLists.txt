@@ -56,6 +56,7 @@ add_library(stageRuntime
   src/stage_session.cpp
 )
 add_library(stageRuntime::stageRuntime ALIAS stageRuntime)
+set_target_properties(stageRuntime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_compile_features(stageRuntime PUBLIC cxx_std_17)
 target_include_directories(stageRuntime
