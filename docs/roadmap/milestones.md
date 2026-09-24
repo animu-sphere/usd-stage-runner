@@ -1,6 +1,6 @@
 # Planned Delivery Phases
 
-Status: Phase C in progress; Phases A and B complete; later phases not started
+Status: Phases A-C complete; Phases D-G not started
 
 Character, camera, host integration, and the backend-neutral `vehicleCore`
 composition slice are implemented and recorded in the
@@ -25,8 +25,8 @@ new runtime systems expand the current coupling.
 Audit `physicsCore`, `physicsJolt`, Stage physics import, Runner physics schemas,
 Character and Camera queries, Vehicle requirements, tests, builds, and host
 composition. Freeze the reusable public contract and stop adding
-Runner-specific physics schemas. Detailed work and completion criteria are in
-[the current milestone](current.md).
+Runner-specific physics schemas. The historical boundary is recorded in the
+[physics extraction inventory](../architecture/physics-extraction-inventory.md).
 
 ## Phase B: `usd-physics-plugins` extraction (complete)
 
@@ -45,7 +45,7 @@ make ownership clear before adding capabilities.
 Success: the physics package builds and tests without Stage Runner, and its
 public API exposes no Jolt types.
 
-## Phase C: Stage Runner consumer migration (in progress)
+## Phase C: Stage Runner consumer migration (complete)
 
 - Consume `usd-physics-plugins` through exported CMake packages.
 - Compose the repositories through OpenStrata for build, test, packaging, and

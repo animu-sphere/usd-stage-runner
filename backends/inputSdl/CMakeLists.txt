@@ -37,6 +37,7 @@ endif()
 
 add_library(inputSdl src/physical_input.cpp src/sdl_input_source.cpp)
 add_library(inputSdl::inputSdl ALIAS inputSdl)
+set_target_properties(inputSdl PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(inputSdl PUBLIC cxx_std_17)
 target_include_directories(inputSdl PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

@@ -40,6 +40,28 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - name: workspace-pr-linux
+            lane: pull_request
+            runtime_artifact: sha256:3bf31789daa60ef650df35ab276bd67d0c0ee44a960311f78835cc0962efe261
+            require_openusd: ""
+            require_openusd_version: ""
+            openusd_flags: ""
+            target_trust: local
+            minimum_trust: local
+            require_evidence: all
+            evidence_flags: "--require-sbom --require-provenance"
+            platform: cy2026
+            profile: usd
+            runs_on: ["ubuntu-24.04"]
+            hosted: true
+            runner_profile: linux-hosted
+            verify: pyramid
+            intent_flags: ""
+            up_to: 5
+            runtime_remote: "oci://ghcr.io/animu-sphere/openstrata-runtime-cy2026-usd@sha256:8d2d599489ee623044f4360ad3a2b979e2966e6ad2f949e5aa9083570e59cc4f"
+            host_python: "3.13"
+            host_packages_apt: "libx11-dev libxt-dev"
+            host_packages_brew: ""
           - name: workspace-pr-windows
             lane: pull_request
             runtime_artifact: sha256:ebb0c7da509ee14ada19ee5b461de6996aad0024b5c9640f12dde76912e849b5
@@ -201,7 +223,7 @@ jobs:
           if ($prefixes.Count -eq 0) {
             throw "OpenStrata did not materialize any external library prefixes"
           }
-          "OST_EXTERNAL_LIBRARY_PREFIXES=$($prefixes -join ';')" |
+          "OST_EXTERNAL_LIBRARY_PREFIXES=$($prefixes -join [IO.Path]::PathSeparator)" |
             Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Remove resumable transfer state before caching
         if: ${{ matrix.hosted && vars.OST_CI_DISABLE_CACHE != 'true' && steps.runtime-cache-restore.outputs.cache-hit != 'true' }}
@@ -213,6 +235,37 @@ jobs:
         with:
           path: .ost-ci-home/artifacts
           key: ost-registry-0.23.1-${{ runner.os }}-${{ runner.arch }}-${{ matrix.name }}-${{ matrix.runtime_artifact }}
+      - name: Install the host packages this runtime needs to be consumed
+        if: ${{ matrix.host_packages_apt != '' || matrix.host_packages_brew != '' }}
+        shell: bash
+        env:
+          HOST_PACKAGES_APT: ${{ matrix.host_packages_apt }}
+          HOST_PACKAGES_BREW: ${{ matrix.host_packages_brew }}
+        run: |
+          set -euo pipefail
+          case "$RUNNER_OS" in
+            Linux)
+              packages="$HOST_PACKAGES_APT"
+              if [ -z "$packages" ]; then
+                echo "error: this cell declares host_packages but nothing under 'apt'; a Linux runner installs from the 'apt' list" >&2
+                exit 1
+              fi
+              sudo apt-get update
+              sudo apt-get install -y --no-install-recommends $packages
+              ;;
+            macOS)
+              packages="$HOST_PACKAGES_BREW"
+              if [ -z "$packages" ]; then
+                echo "error: this cell declares host_packages but nothing under 'brew'; a macOS runner installs from the 'brew' list" >&2
+                exit 1
+              fi
+              brew install $packages
+              ;;
+            *)
+              echo "error: host_packages has no installer for $RUNNER_OS; provision the dependency on the runner image instead" >&2
+              exit 1
+              ;;
+          esac
       - name: Set up host Python for schema tooling
         if: ${{ matrix.hosted && matrix.host_python != '' }}
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -241,33 +294,43 @@ jobs:
         shell: pwsh
         run: |
           $joltPrefix = Join-Path $env:GITHUB_WORKSPACE ".ci/jolt-install"
-          cmake -S .ci/jolt/Build -B .ci/jolt-build -A x64 `
-            -DCMAKE_INSTALL_PREFIX="$joltPrefix" `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DINTERPROCEDURAL_OPTIMIZATION=OFF `
-            -DDOUBLE_PRECISION=OFF `
-            -DCROSS_PLATFORM_DETERMINISTIC=OFF `
-            -DENABLE_ALL_WARNINGS=OFF `
-            -DGENERATE_DEBUG_SYMBOLS=OFF `
-            -DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=ON `
-            -DPROFILER_IN_DEBUG_AND_RELEASE=ON `
-            -DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF `
-            -DUSE_SSE4_1=OFF `
-            -DUSE_SSE4_2=OFF `
-            -DUSE_AVX=OFF `
-            -DUSE_AVX2=OFF `
-            -DUSE_AVX512=OFF `
-            -DUSE_LZCNT=OFF `
-            -DUSE_TZCNT=OFF `
-            -DUSE_F16C=OFF `
-            -DUSE_FMADD=OFF `
-            -DTARGET_UNIT_TESTS=OFF `
-            -DTARGET_HELLO_WORLD=OFF `
-            -DTARGET_PERFORMANCE_TEST=OFF `
-            -DTARGET_SAMPLES=OFF `
-            -DTARGET_VIEWER=OFF
+          $configure = @(
+            '-S', '.ci/jolt/Build', '-B', '.ci/jolt-build',
+            "-DCMAKE_INSTALL_PREFIX=$joltPrefix",
+            '-DCMAKE_BUILD_TYPE=Release',
+            '-DINTERPROCEDURAL_OPTIMIZATION=OFF',
+            '-DDOUBLE_PRECISION=OFF',
+            '-DCROSS_PLATFORM_DETERMINISTIC=OFF',
+            '-DENABLE_ALL_WARNINGS=OFF',
+            '-DGENERATE_DEBUG_SYMBOLS=OFF',
+            '-DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=OFF',
+            '-DPROFILER_IN_DEBUG_AND_RELEASE=OFF',
+            '-DUSE_STATIC_MSVC_RUNTIME_LIBRARY=OFF',
+            '-DTARGET_UNIT_TESTS=OFF',
+            '-DTARGET_HELLO_WORLD=OFF',
+            '-DTARGET_PERFORMANCE_TEST=OFF',
+            '-DTARGET_SAMPLES=OFF',
+            '-DTARGET_VIEWER=OFF'
+          )
+          if ($env:RUNNER_OS -eq 'Windows') {
+            $configure += @(
+              '-A', 'x64',
+              '-DDEBUG_RENDERER_IN_DEBUG_AND_RELEASE=ON',
+              '-DPROFILER_IN_DEBUG_AND_RELEASE=ON',
+              '-DUSE_SSE4_1=OFF', '-DUSE_SSE4_2=OFF',
+              '-DUSE_AVX=OFF', '-DUSE_AVX2=OFF', '-DUSE_AVX512=OFF',
+              '-DUSE_LZCNT=OFF', '-DUSE_TZCNT=OFF',
+              '-DUSE_F16C=OFF', '-DUSE_FMADD=OFF'
+            )
+          } else {
+            $configure += '-DCMAKE_POSITION_INDEPENDENT_CODE=ON'
+          }
+          cmake @configure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cmake --build .ci/jolt-build --config Release --target Jolt
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cmake --install .ci/jolt-build --config Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           "JOLT_PREFIX=$joltPrefix" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Validate the workspace dependency graph
         shell: bash
@@ -275,7 +338,8 @@ jobs:
       - name: Build the workspace from source
         shell: pwsh
         run: |
-          $env:CMAKE_PREFIX_PATH = "$env:OST_EXTERNAL_LIBRARY_PREFIXES;$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          $env:CMAKE_PREFIX_PATH = @($env:OST_EXTERNAL_LIBRARY_PREFIXES, $env:JOLT_PREFIX, $env:CMAKE_PREFIX_PATH) |
+            Where-Object { $_ } | Join-String -Separator ([IO.Path]::PathSeparator)
           ost build --target ${{ matrix.platform }} --profile ${{ matrix.profile }} ${{ matrix.intent_flags }}
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -294,8 +358,10 @@ jobs:
         if: ${{ matrix.verify != 'build' }}
         shell: pwsh
         run: |
-          $env:CMAKE_PREFIX_PATH = "$env:OST_EXTERNAL_LIBRARY_PREFIXES;$env:JOLT_PREFIX;$env:CMAKE_PREFIX_PATH"
+          $env:CMAKE_PREFIX_PATH = @($env:OST_EXTERNAL_LIBRARY_PREFIXES, $env:JOLT_PREFIX, $env:CMAKE_PREFIX_PATH) |
+            Where-Object { $_ } | Join-String -Separator ([IO.Path]::PathSeparator)
           ost test --target ${{ matrix.platform }} --profile ${{ matrix.profile }} ${{ matrix.intent_flags }}
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Run the workspace verification pyramid
         if: ${{ matrix.verify == 'pyramid' || matrix.verify == 'package' }}
         shell: bash

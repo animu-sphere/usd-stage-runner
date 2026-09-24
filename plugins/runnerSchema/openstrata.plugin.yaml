@@ -13,6 +13,9 @@ requires:
       version: ">=0.1,<0.2"
       artifact:
         targets:
+          cy2026-linux-x86_64-py313-usd:
+            digest: sha256:81a3433b759e6ec817188a2137f8da24ff8dbebed09a176f48a7ec2596d6f5ad
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:f050253cea8f6db163b67c9860e88bdf213c8ef400956c29fec130bc4b6726d7
           cy2026-windows-x86_64-py313-usd:
             digest: sha256:48586c60e8e9678c52c80ab831000b403787f84678b1bd69b944e86c0d0bdef9
             source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:bc6e405c128375dce390e95b0e2103b4a86e47cc02dcd266fb61a1c66d0a761a
@@ -20,6 +23,9 @@ requires:
       version: ">=0.1,<0.2"
       artifact:
         targets:
+          cy2026-linux-x86_64-py313-usd:
+            digest: sha256:2be1f995f3e59d29fcc5a3db66321d4022fd83965d68f09e9b82b5b73bf2703b
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:e51df5e3815cbbe57034a390c6218f7467be70f92500b437eb7c77f2feda9020
           cy2026-windows-x86_64-py313-usd:
             digest: sha256:a10333cc2d898c07091f21f3ab5c406c5a55cd24f1e0c163863bae1b05c32334
             source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:77477f6b89d88dfb8d22d1e419b1ac1b0f2cba2e232c9f8e3d386af9fba314a8

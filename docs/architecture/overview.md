@@ -270,9 +270,12 @@ directories.
 
 OpenStrata owns the pinned `cy2026`/`usd` environment and composes immutable
 external `physicsCore` and `physicsJolt` artifacts into affected members. The
-profile supplies OpenUSD but not SDL or the Jolt SDK dependency. The migration
-branch pins publicly available Windows artifact sources and has validated them
-from a fresh cache; Linux artifacts and hosted Stage Runner evidence remain.
+profile supplies OpenUSD but not SDL or the Jolt SDK dependency. Both Windows
+and Linux artifact sources are public and digest-pinned. Hosted OpenStrata
+builds and tests pass on both platforms with artifact caches disabled; the
+[dated report](../reports/ost/04-2026-09-23-phase-c-hosted-physics-consumer.md)
+records the evidence. On Linux the static libraries and the CI-built Jolt SDK
+are compiled as position-independent code so the usdview module can link them.
 Backend-neutral deterministic tests do not require SDL or physical devices.
 
 The committed `tests/fixtures/minimal.usda` Stage contains `/World/Ground`,

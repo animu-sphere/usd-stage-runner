@@ -17,6 +17,7 @@ endif()
 
 add_library(inputCore src/action_state.cpp src/movement_controller.cpp)
 add_library(inputCore::inputCore ALIAS inputCore)
+set_target_properties(inputCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_features(inputCore PUBLIC cxx_std_17)
 target_include_directories(inputCore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
