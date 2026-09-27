@@ -4,26 +4,27 @@
 
 ### Status
 
-Not started. Phase C's installed-package migration is complete. The
+In progress: the optional standard Box slice is implemented. Phase C's
+installed-package migration is complete. The
 [hosted consumer report](../reports/ost/04-2026-09-23-phase-c-hosted-physics-consumer.md)
 records Windows and Linux CMake and OpenStrata results, including a successful
 run with artifact caches disabled.
 
-Stage Runner still imports `RunnerPhysicsBodyAPI` and `RunnerColliderAPI` as a
-compatibility path. The next slice makes standard `UsdPhysics` declarations the
-primary source for runtime physics without changing the Stage-owned
-`PhysicsRuntime` bridge or the shared `StageSession` host path.
+The [current architecture](../architecture/overview.md#standard-box-physics-import)
+records the optional installed `physicsUsd` path. The default build retains
+Runner compatibility until the new package enters the pinned artifact graph.
 
 ### Next slice
 
-- Implement the reusable standard-declaration interpretation in the sibling
-  `usd-physics-plugins` package, starting with the rigid bodies and colliders
-  needed by existing Stage Runner scenarios.
-- Compose that package at the Stage boundary and keep the current Runner-schema
-  importer temporarily for existing fixtures.
-- Migrate representative falling-body, Character, Camera, standalone, and
-  usdview fixtures to the standard path and compare their behavior with the
-  compatibility path before removing Runner physics schemas.
+- Publish and pin Windows/Linux `physicsUsd` artifacts, add the package to
+  Stage Runner's OpenStrata requirements, then enable it by default.
+- Run standard/compatibility parity in hosted CMake/OpenStrata on both
+  platforms. Local Windows coverage includes falling bodies, Character,
+  Camera, standalone, and the usdview native adapter.
+- Switch default host examples to standard fixtures after that delivery gate;
+  retain compatibility fixtures until Runner physics schemas can be removed.
+- Extend the sibling parser through working fixtures for gravity, additional
+  shapes, mass inference, joints, drives, and limits.
 - Keep generic physics contracts and backend implementation in the sibling
   repository; Stage Runner retains Stage/session orchestration and gameplay
   policy.

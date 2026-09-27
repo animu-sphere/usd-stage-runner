@@ -14,8 +14,9 @@ The project is a lightweight runtime orchestration layer, not the owner of a
 physics implementation. Reusable physics contracts and the Jolt backend are
 consumed from installed `usd-physics-plugins` packages; Stage Runner retains
 Runtime World, fixed-step scheduling, gameplay policy, Stage-specific import,
-host lifecycle, and discardable USD synchronization. Standard `UsdPhysics`
-interpretation is a later package milestone. See the
+host lifecycle, and discardable USD synchronization. Optional installed
+`physicsUsd` now supports standard Box declarations; broader support and
+artifact rollout remain in progress. See the
 [physics repository boundary](docs/design/proposed/0002-physics-repository-boundary.md).
 
 The intended architecture and the distinction between implemented and planned
@@ -112,11 +113,10 @@ scene camera, Play keeps that choice.
 
 The character-control, camera-rig, and host-integration milestones are
 implemented end to end. The physics core and Jolt backend have been extracted,
-their pinned Windows packages are publicly available, and Stage Runner's local
-Windows package-consumer migration passes all 48 CTest scenarios. Equivalent
-Linux artifacts and hosted Windows/Linux Stage Runner evidence remain before
-that migration is complete. Vehicle physics application remains paused until
-standard `UsdPhysics` import and shared MMD/VRM validation advance.
+their pinned Windows/Linux packages are publicly available, and Stage Runner's
+package migration has passed hosted verification. Optional standard Box import
+now has local Windows parity coverage. Vehicle physics application remains
+paused until standard physics delivery and shared MMD/VRM validation advance.
 Behavior and OpenExec integration are later slices.
 
 ## Build with OpenStrata
@@ -175,7 +175,15 @@ cmake --build --preset dev
 ctest --preset dev
 ```
 
-The two physics packages are required at configure time. Without OpenUSD, the
+For standard Box declarations, install the sibling repository with
+`USDPHYSICS_BUILD_USD=ON`, add its prefix and the same OpenUSD SDK to
+`CMAKE_PREFIX_PATH`, then configure Stage Runner with
+`USD_STAGE_RUNNER_ENABLE_PHYSICS_USD=ON`. Try
+`tests/fixtures/standard_falling_cube.usda` or
+`tests/fixtures/standard_character_follow_camera.usda` with either host.
+See the [supported subset](docs/architecture/overview.md#standard-box-physics-import).
+
+The two core/backend physics packages are required at configure time. Without OpenUSD, the
 host still compiles but reports that Stage loading is unavailable; the
 backend-neutral unit tests remain buildable. Set
 `USD_STAGE_RUNNER_REQUIRE_OPENUSD=ON` when a missing SDK should be a configure

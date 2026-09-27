@@ -161,6 +161,17 @@ if(BUILD_TESTING AND Python3_EXECUTABLE)
       "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_character_smoke.py"
   )
 
+  if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD AND USD_STAGE_RUNNER_JOLT_AVAILABLE)
+    add_test(NAME usdviewStageRunner.standard_character
+      COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_character_smoke.py"
+        "${USD_STAGE_RUNNER_SCHEMA_RESOURCE_PATH}"
+        "${CMAKE_SOURCE_DIR}/tests/fixtures/standard_character_follow_camera.usda")
+    get_test_property(usdviewStageRunner.native_session ENVIRONMENT_MODIFICATION _standard_environment)
+    set_tests_properties(usdviewStageRunner.standard_character PROPERTIES
+      ENVIRONMENT_MODIFICATION "${_standard_environment}")
+  endif()
+
   add_test(
     NAME usdviewStageRunner.controller
     COMMAND "${Python3_EXECUTABLE}"

@@ -58,8 +58,9 @@ through incremental USD translation and orientation writes.
 `ost plugin test plugins/runnerSchema` additionally verifies schema
 registration and authored-property flatten round-tripping.
 
-`RunnerCharacterAPI` is valid only on a prim that also applies both physics APIs
-and declares dynamic motion. Its ground-probe distance, maximum slope angle in
+`RunnerCharacterAPI` is valid on an imported dynamic standard Box body, or on
+a compatibility prim that applies both Runner physics APIs and declares dynamic
+motion. Its ground-probe distance, maximum slope angle in
 radians, and jump speed are read into a `CharacterControllerConfig`. The host
 attaches the resulting controller to the same Runtime World prim and binds it
 to the already imported body and Jolt ground-query capability. Character
@@ -176,6 +177,33 @@ remain in `stageRuntime` and outside the backend-neutral core libraries. Authore
 body or collider attributes without their
 owning API schema are rejected instead of being silently interpreted through
 the removed temporary convention.
+
+## Standard Box physics import
+
+With `USD_STAGE_RUNNER_ENABLE_PHYSICS_USD=ON`, `stageRuntime` consumes installed
+`physicsUsd::physicsUsd`. Its `readBoxScene()` validates a snapshot before Stage
+Runner creates the world. `PhysicsCollisionAPI` on a `UsdGeomCube` produces a
+static box; adding enabled `PhysicsRigidBodyAPI` and `PhysicsMassAPI` with
+positive explicit `physics:mass` produces a dynamic box. Cube size and scale
+determine collision dimensions. The subset requires Y-up meters/kilograms,
+translate followed by scale ops, and identity ancestors or resetXformStack.
+Other geometry, scenes, joints, density inference, velocity properties,
+kinematic bodies, instancing, and compound layouts are rejected.
+
+Stage Runner retains filters, prim/body handles, Character/Camera policy,
+world creation, stepping, and runtime-layer writes. Standard and Runner physics
+may coexist on different prims; both families on one prim are rejected before
+world creation. Reset restores captured translations; Stop rebuilds persistent
+Stage opinions. The installed `stageRuntime` config carries the conditional
+`physicsUsd` dependency without a sibling source edge.
+
+The feature is off by default pending pinned OpenStrata artifacts. An OFF build
+rejects standard bodies with an enable-option diagnostic. Four `standard_*.usda`
+fixtures cover falling, walking/jumping, camera obstruction, and Character
+camera following. A Jolt test compares 180 frames, counts, dirty writes, Reset,
+persistent edits, and Stop against the compatibility fixtures. Standalone and
+usdview native tests also cover standard declarations. Windows Python imports
+`pxr.UsdPhysics` before loading the native adapter for DLL discovery.
 
 ## Input boundary
 

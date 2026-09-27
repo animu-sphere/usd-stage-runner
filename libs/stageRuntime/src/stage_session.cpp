@@ -6,6 +6,9 @@
 #include "usd_stage_runner/stage/physics_runtime.h"
 #include "usd_physics/core/ground_query.h"
 #include "usd_physics/core/segment_query.h"
+#ifdef USD_STAGE_RUNNER_HAS_PHYSICS_USD
+#include "usd_physics/usd/box_scene.h"
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -245,13 +248,30 @@ double readBodyMass(const pxr::UsdPrim& prim, MotionType motionType) {
   return mass;
 }
 
-std::size_t validateDeclarationsAndCountPhysicsBodies(const pxr::UsdStageRefPtr& stage) {
+using StandardBodies = std::unordered_map<PrimId, MotionType>;
+
+std::size_t validateDeclarationsAndCountPhysicsBodies(const pxr::UsdStageRefPtr& stage,
+                                                      const StandardBodies& standardBodies) {
   std::size_t count = 0;
   for (const auto& prim : stage->Traverse()) {
     const bool hasBodySchema = hasAppliedSchema(prim, physicsBodySchema);
     const bool hasColliderSchema = hasAppliedSchema(prim, colliderSchema);
     const bool hasCharacterSchema = hasAppliedSchema(prim, characterSchema);
     const bool hasCameraSchema = hasAppliedSchema(prim, cameraRigSchema);
+    const auto standardBody = standardBodies.find(prim.GetPath().GetString());
+    const bool standard = standardBody != standardBodies.end();
+    const bool standardDeclaration = hasAppliedSchema(prim, pxr::TfToken{"PhysicsRigidBodyAPI"}) ||
+                                     hasAppliedSchema(prim, pxr::TfToken{"PhysicsCollisionAPI"}) ||
+                                     hasAppliedSchema(prim, pxr::TfToken{"PhysicsMassAPI"});
+#ifndef USD_STAGE_RUNNER_HAS_PHYSICS_USD
+    if (standardDeclaration || prim.GetTypeName().GetString().rfind("Physics", 0) == 0) {
+      throw std::runtime_error("standard physics requires USD_STAGE_RUNNER_ENABLE_PHYSICS_USD");
+    }
+#endif
+    if (standardDeclaration && (hasBodySchema || hasColliderSchema)) {
+      throw std::runtime_error("standard and Runner physics APIs must not share a prim: " +
+                               prim.GetPath().GetString());
+    }
     if (!hasBodySchema && (hasAuthoredAttribute(prim, physicsMotionTypeAttribute) ||
                            hasAuthoredAttribute(prim, physicsMassAttribute))) {
       throw std::runtime_error("authored body attributes require RunnerPhysicsBodyAPI: " +
@@ -273,12 +293,13 @@ std::size_t validateDeclarationsAndCountPhysicsBodies(const pxr::UsdStageRefPtr&
       throw std::runtime_error("authored character attributes require RunnerCharacterAPI: " +
                                prim.GetPath().GetString());
     }
-    if (hasCharacterSchema && (!hasBodySchema || !hasColliderSchema)) {
+    if (hasCharacterSchema && !standard && (!hasBodySchema || !hasColliderSchema)) {
       throw std::runtime_error(
           "character prim must apply RunnerPhysicsBodyAPI and RunnerColliderAPI: " +
           prim.GetPath().GetString());
     }
-    if (hasCharacterSchema && readMotionType(prim) != MotionType::dynamicBody) {
+    if (hasCharacterSchema && (standard ? standardBody->second != MotionType::dynamicBody
+                                       : readMotionType(prim) != MotionType::dynamicBody)) {
       throw std::runtime_error("RunnerCharacterAPI requires a dynamic physics body: " +
                                prim.GetPath().GetString());
     }
@@ -859,7 +880,13 @@ public:
       }
     }
 
-    const auto declaredPhysicsBodies = validateDeclarationsAndCountPhysicsBodies(stage_);
+    StandardBodies standardBodies;
+#ifdef USD_STAGE_RUNNER_HAS_PHYSICS_USD
+    const auto standardScene = usd_physics::usd::readBoxScene(stage_);
+    for (const auto& body : standardScene) standardBodies.emplace(body.path, body.motionType);
+#endif
+    const auto declaredPhysicsBodies =
+        validateDeclarationsAndCountPhysicsBodies(stage_, standardBodies) + standardBodies.size();
     if (declaredPhysicsBodies != 0) {
       if (!physicsWorldFactory_) {
         throw std::runtime_error(
@@ -871,6 +898,20 @@ public:
             "Stage declares physics bodies, but the configured physics backend is unavailable");
       }
       next->physicsRuntime = std::make_unique<PhysicsRuntime>(*next->physicsWorld, next->world);
+#ifdef USD_STAGE_RUNNER_HAS_PHYSICS_USD
+      for (const auto& declaration : standardScene) {
+        const auto shape = next->physicsWorld->createShape(declaration.shape);
+        const bool dynamic = declaration.motionType == MotionType::dynamicBody;
+        // Reset may restore a captured translation after a persistent host edit.
+        const auto transform = toPhysicsTransform(*next->world.transform(declaration.path));
+        const auto body = next->physicsWorld->createBody(BodyDescriptor{
+            shape, declaration.motionType, transform, declaration.mass,
+            dynamic ? config_.dynamicCollisionFilter : config_.staticCollisionFilter});
+        next->physicsRuntime->bindBody(declaration.path, body);
+        ++nextStats.physicsShapeCount;
+        ++nextStats.physicsBodyCount;
+      }
+#endif
       importPhysicsBodies(stage_, *next, config_, nextStats);
       importCharacters(stage_, *next, nextStats);
     }

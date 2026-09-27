@@ -214,6 +214,19 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   )
 
   if(USD_STAGE_RUNNER_JOLT_AVAILABLE)
+    if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
+      add_test(NAME stage_runner.standard_falling_cube COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/standard_falling_cube.usda --frames 180 --deterministic)
+      set_tests_properties(stage_runner.standard_falling_cube PROPERTIES PASS_REGULAR_EXPRESSION
+        "player_translation=\\([^,]+, 0\\.48, [^)]+\\), physics_shapes=2, physics_bodies=2")
+    else()
+      add_test(NAME stage_runner.standard_requires_package COMMAND ${CMAKE_COMMAND}
+        -DEXECUTABLE=$<TARGET_FILE:stage_runner>
+        -DSTAGE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/standard_falling_cube.usda
+        -DOPTION=--frames -DVALUE=1
+        "-DEXPECTED=standard physics requires USD_STAGE_RUNNER_ENABLE_PHYSICS_USD"
+        -P ${CMAKE_CURRENT_SOURCE_DIR}/assert_command_fails.cmake)
+    endif()
     add_test(
       NAME stage_runner.camera_collision_and_sync
       COMMAND stage_runner
