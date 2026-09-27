@@ -8,6 +8,10 @@ project(
 )
 
 include(CTest)
+option(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD "Import standard physics through installed physicsUsd" OFF)
+if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
+  find_package(physicsUsd 0.1 CONFIG REQUIRED)
+endif()
 
 if(NOT TARGET runtimeCore::runtimeCore)
   find_package(runtimeCore CONFIG REQUIRED)
@@ -56,6 +60,10 @@ add_library(stageRuntime
   src/stage_session.cpp
 )
 add_library(stageRuntime::stageRuntime ALIAS stageRuntime)
+if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
+  target_link_libraries(stageRuntime PRIVATE physicsUsd::physicsUsd)
+  target_compile_definitions(stageRuntime PRIVATE USD_STAGE_RUNNER_HAS_PHYSICS_USD=1)
+endif()
 set_target_properties(stageRuntime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_compile_features(stageRuntime PUBLIC cxx_std_17)

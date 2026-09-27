@@ -1,6 +1,6 @@
 # Planned Delivery Phases
 
-Status: Phases A-C complete; Phases D-G not started
+Status: Phases A-C complete; Phase D in progress; Phases E-G not started
 
 Character, camera, host integration, and the backend-neutral `vehicleCore`
 composition slice are implemented and recorded in the

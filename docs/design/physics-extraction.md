@@ -78,7 +78,7 @@ The receiving workspace reserves these surfaces:
 | --- | --- | --- |
 | `physicsCore` | `physicsCore::physicsCore` | `characterCore`, `vehicleCore`, `stageRuntime`, and their tests. |
 | `physicsJolt` | `physicsJolt::physicsJolt` | `stage_runner`, `usdviewStageRunner`, and Jolt-backed integration tests. |
-| `physicsUsd` | `physicsUsd::physicsUsd` | Later standard physics import; it is not required for the initial core/backend extraction. |
+| `physicsUsd` | `physicsUsd::physicsUsd` | Optional standard Box import via `USD_STAGE_RUNNER_ENABLE_PHYSICS_USD`; consumer artifact pins remain pending. |
 
 Plain CMake consumes installed packages. OpenStrata uses the same
 `physicsCore` and `physicsJolt` identities rather than a private sibling source
@@ -141,5 +141,5 @@ Stage Runner. Immutable Windows and Linux package artifacts are public and
 verified from fresh caches. The
 [hosted consumer report](../reports/ost/04-2026-09-23-phase-c-hosted-physics-consumer.md)
 records 46 passing OpenStrata tests on each OS, the usdview and Jolt scenarios,
-and successful plain-CMake jobs. Standard `UsdPhysics` interpretation remains
-the next authored-data migration.
+and successful plain-CMake jobs. Standard Box interpretation now has local
+Windows parity coverage; its artifact rollout and hosted parity remain pending.

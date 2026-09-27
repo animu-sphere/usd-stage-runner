@@ -20,6 +20,7 @@ Domain declarations are introduced only with the slice that consumes them:
 | Slice | Applied API schemas | Status |
 | --- | --- | --- |
 | Physics | `RunnerPhysicsBodyAPI`, `RunnerColliderAPI` | Implemented compatibility surface; migrate to standard `UsdPhysics`. |
+| Standard Box physics | `PhysicsRigidBodyAPI`, `PhysicsCollisionAPI`, `PhysicsMassAPI` | Optional installed `physicsUsd` subset implemented; distribution and broader support remain planned. |
 | Character | `RunnerCharacterAPI` | Implemented. |
 | Camera | `RunnerCameraRigAPI` | Implemented. |
 | Vehicle | `RunnerVehicleAPI`, `RunnerWheelAPI`, followed by focused suspension, steering, and drivetrain APIs as needed | Planned after the physics boundary stabilizes. |
@@ -75,8 +76,9 @@ a physics-declaring Stage is rejected when Jolt is unavailable.
 The implemented `RunnerCharacterAPI` declares
 `runner:character:groundProbeDistance`,
 `runner:character:maximumSlopeAngleRadians`, and
-`runner:character:jumpSpeed`. It must be applied with both physics APIs to the
-same dynamic body prim. After physics import, `StageSession` binds a prim-indexed
+`runner:character:jumpSpeed`. It must be applied to an imported dynamic body,
+using standard Box declarations or both compatibility physics APIs.
+After physics import, `StageSession` binds a prim-indexed
 runtime `CharacterController` to that body and the backend-neutral ground-query
 capability. The schema importer does not itself choose or update player intent.
 `StageSession` feeds movement and jump actions through `CharacterIntent` at each

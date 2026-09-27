@@ -2,12 +2,12 @@
 
 from pathlib import Path
 
-from pxr import Plug, Usd, UsdGeom
+from pxr import Plug, Usd, UsdGeom, UsdPhysics
 
-# Import both binding modules before loading the native adapter. On Windows,
+# Import the USD binding modules before loading the native adapter. On Windows,
 # Python's extension loader does not search PATH for every transitive DLL; the
 # imports also register the Usd.Stage converter consumed by createSession().
-del Usd, UsdGeom
+del Usd, UsdGeom, UsdPhysics
 
 _schemaResources = Path(__file__).resolve().parent / "resources" / "runnerSchema"
 if (_schemaResources / "plugInfo.json").is_file():
