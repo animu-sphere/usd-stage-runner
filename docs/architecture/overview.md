@@ -208,7 +208,7 @@ usdview native tests also cover standard declarations. Windows Python imports
 The `physics-usd` OpenStrata intent enables the standard importer, requires
 OpenUSD and Jolt, and stages the usdview adapter into the schema bundle.
 Source CI installs `libs/physicsUsd` from pinned sibling revision
-`193d01c4897d6a261733c09d2ab7339a088b2b2d` against the existing runtime/core
+`3daad33a1f9f8418ce25f41d14526f0450062d35` against the existing runtime/core
 artifact graph. `tests/run_physics_usd_ci.ps1` then builds and tests both plain
 CMake and this intent on Windows and Linux. A coverage check requires standard
 and compatibility falling, walking, jumping, camera collision, session parity,
