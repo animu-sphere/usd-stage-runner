@@ -367,6 +367,14 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
   endif()
 endif()
 
+# Installation removes the build RPATH. The install smoke test runs with an
+# external OpenUSD SDK, whose shared libraries must remain discoverable.
+if(UNIX AND NOT APPLE AND TEST stage_runner.installed_physics_schema_defaults)
+  set_property(TEST stage_runner.installed_physics_schema_defaults APPEND PROPERTY
+    ENVIRONMENT_MODIFICATION
+    "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:${USD_STAGE_RUNNER_OPENUSD_TARGET}>")
+endif()
+
 if(TARGET stage_runner)
   add_test(
     NAME stage_runner.rejects_negative_frames

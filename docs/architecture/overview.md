@@ -205,6 +205,10 @@ persistent edits, and Stop against the compatibility fixtures. Standalone and
 usdview native tests also cover standard declarations. Windows Python imports
 `pxr.UsdPhysics` before loading the native adapter for DLL discovery.
 
+The Linux installed-host smoke test prepends the imported OpenUSD library
+directory to `LD_LIBRARY_PATH`, preserving external SDK discovery after the
+install step removes the executable's build RPATH.
+
 The `physics-usd` OpenStrata intent enables the standard importer, requires
 OpenUSD and Jolt, and stages the usdview adapter into the schema bundle.
 Source CI installs `libs/physicsUsd` from pinned sibling revision
