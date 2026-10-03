@@ -17,6 +17,14 @@ cache = {
   USD_STAGE_RUNNER_REQUIRE_JOLT = { type = "BOOL", value = true }
 }
 
+[build.intents.physics-usd]
+cache = {
+  USD_STAGE_RUNNER_ENABLE_PHYSICS_USD = { type = "BOOL", value = true },
+  USD_STAGE_RUNNER_REQUIRE_OPENUSD = { type = "BOOL", value = true },
+  USD_STAGE_RUNNER_REQUIRE_JOLT = { type = "BOOL", value = true },
+  USD_STAGE_RUNNER_OST_PLUGIN_BUNDLE_DIR = { type = "PATH", value = "plugins/runnerSchema", portability = "portable" }
+}
+
 [workspace]
 members = [
   "libs/runtimeCore",

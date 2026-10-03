@@ -205,6 +205,18 @@ persistent edits, and Stop against the compatibility fixtures. Standalone and
 usdview native tests also cover standard declarations. Windows Python imports
 `pxr.UsdPhysics` before loading the native adapter for DLL discovery.
 
+The `physics-usd` OpenStrata intent enables the standard importer, requires
+OpenUSD and Jolt, and stages the usdview adapter into the schema bundle.
+Source CI installs `libs/physicsUsd` from pinned sibling revision
+`193d01c4897d6a261733c09d2ab7339a088b2b2d` against the existing runtime/core
+artifact graph. `tests/run_physics_usd_ci.ps1` then builds and tests both plain
+CMake and this intent on Windows and Linux. A coverage check requires standard
+and compatibility falling, walking, jumping, camera collision, session parity,
+and native usdview tests; Plugin View also checks both authored representations
+through the staged adapter. This is a pre-publication installed-package gate;
+it does not yet consume a pinned `physicsUsd` artifact. Local Windows evidence
+is recorded in the [Phase D report](../reports/ost/05-2026-10-04-phase-d-standard-physics.md).
+
 ## Input boundary
 
 `ActionState` stores normalized values keyed by names. Missing actions read as

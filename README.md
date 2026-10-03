@@ -183,6 +183,12 @@ For standard Box declarations, install the sibling repository with
 `tests/fixtures/standard_character_follow_camera.usda` with either host.
 See the [supported subset](docs/architecture/overview.md#standard-box-physics-import).
 
+With that installed parser on `CMAKE_PREFIX_PATH`, `ost build --intent physics-usd`
+and `ost test --intent physics-usd` enable the same standard import and stage the
+usdview adapter. The intent requires OpenUSD and a Jolt-enabled installed
+backend. It is a pre-publication validation path; automatic `physicsUsd`
+artifact resolution and the default switch remain pending.
+
 The two core/backend physics packages are required at configure time. Without OpenUSD, the
 host still compiles but reports that Stage loading is unavailable; the
 backend-neutral unit tests remain buildable. Set

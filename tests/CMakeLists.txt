@@ -279,6 +279,23 @@ if(TARGET stage_runner AND USD_STAGE_RUNNER_OPENUSD_TARGET)
         "fixed_steps=30, dropped_steps=0, synchronized_transforms=[1-9][0-9]*, player_translation=\\([1-9][0-9.]*, [1-9][0-9.]*, [^)]+\\).*character_controllers=1, character_grounded=false, character_jump_state=rising"
     )
 
+    if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
+      add_test(NAME stage_runner.standard_character_walk_and_ground COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/standard_character_walk.usda
+        --frames 60 --deterministic --move-x 1)
+      add_test(NAME stage_runner.standard_character_jump COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/standard_character_walk.usda
+        --frames 30 --deterministic --move-x 1 --jump)
+      add_test(NAME stage_runner.standard_camera_collision_and_sync COMMAND stage_runner
+        ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/standard_third_person_camera.usda
+        --frames 4 --deterministic --move-x 1)
+      foreach(scenario IN ITEMS character_walk_and_ground character_jump camera_collision_and_sync)
+        get_test_property(stage_runner.${scenario} PASS_REGULAR_EXPRESSION _parity_expected)
+        set_tests_properties(stage_runner.standard_${scenario} PROPERTIES
+          PASS_REGULAR_EXPRESSION "${_parity_expected}")
+      endforeach()
+    endif()
+
     add_test(
       NAME stage_runner.physics_falling_cube
       COMMAND stage_runner

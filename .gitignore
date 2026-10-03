@@ -39,3 +39,4 @@ __pycache__/
 *.pyc
 /.ost-ci/
 /.ost-ci-home/
+/.ci/
