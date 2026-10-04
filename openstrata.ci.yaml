@@ -4,7 +4,7 @@ schema: 1
 # check that the combined OpenUSD/Jolt integration tests are present. Retain
 # those repository-specific steps after regenerating the workflow.
 # Also retain the published physicsUsd artifact checks through plain CMake and
-# the physics-usd intent on both OSes.
+# the physics-usd intent, plus the explicit compatibility-only build on both OSes.
 
 bootstrap:
   ost:

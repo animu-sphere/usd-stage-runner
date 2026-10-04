@@ -53,10 +53,10 @@ empty promises.
 
 | Capability | Planned fixture |
 | --- | --- |
-| Physics | `falling_cube.usda` (implemented) |
-| Character | `character_walk.usda` (implemented) |
-| Camera | `third_person_camera.usda` (implemented) |
-| Host play session | `character_walk.usda` and `third_person_camera.usda` (reused) |
+| Physics | `standard_falling_cube.usda` and compatibility `falling_cube.usda` (implemented) |
+| Character | `standard_character_walk.usda` and compatibility `character_walk.usda` (implemented) |
+| Camera | `standard_third_person_camera.usda` and compatibility `third_person_camera.usda` (implemented) |
+| Host play session | `standard_character_follow_camera.usda` plus both authored families' Character/Camera fixtures (reused) |
 | Vehicle | `four_wheel_vehicle.usda` |
 | Behavior | `behavior_chase.usda` |
 
@@ -64,6 +64,12 @@ Each fixture should remain small, reproducible, and useful from both automated
 tests and an interactive host. Host tests should reuse the representative
 character and camera Stages and verify session-layer discard and reset
 semantics instead of introducing a host-specific scene.
+
+The Windows/Linux public-package gate must verify default-enabled standard
+import and compatibility declarations through both CMake and OpenStrata. An
+explicit OFF build must retain compatibility execution and reject standard
+bodies with the enable-option diagnostic. The parser used by the gate must
+resolve to the digest-pinned external prefix rather than a stale local install.
 
 ## Per-milestone verification
 

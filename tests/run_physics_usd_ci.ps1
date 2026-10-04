@@ -4,7 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-# Run after the compatibility OpenStrata build has materialized its toolchain.
+# Run after the default OpenStrata build has materialized its toolchain.
 $state = @(Get-ChildItem .strata/targets -Directory |
     Where-Object Name -Like "$Target-*-$Profile")
 if ($state.Count -ne 1) { throw 'Expected exactly one selected target toolchain' }
@@ -36,13 +36,30 @@ cmake -S . -B .ci/standard-cmake "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
     "-DCMAKE_PREFIX_PATH=$($prefixes -join ';')" -DCMAKE_BUILD_TYPE=Release `
     "-DphysicsUsd_DIR:PATH=$parserConfig" `
     -DBUILD_TESTING=ON -DUSD_STAGE_RUNNER_REQUIRE_OPENUSD=ON `
-    -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON -DUSD_STAGE_RUNNER_ENABLE_PHYSICS_USD=ON
+    -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON -UUSD_STAGE_RUNNER_ENABLE_PHYSICS_USD
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 Assert-PublishedParser .ci/standard-cmake
 cmake --build .ci/standard-cmake --config Release
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & "$PSScriptRoot/assert_physics_usd_tests.ps1" -BuildDirectory .ci/standard-cmake
 ctest --test-dir .ci/standard-cmake -C Release --output-on-failure --no-tests=error
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+# Keep the explicit compatibility-only build and its enable-option diagnostic.
+cmake -S . -B .ci/compatibility-cmake "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
+    "-DCMAKE_PREFIX_PATH=$($prefixes -join ';')" -DCMAKE_BUILD_TYPE=Release `
+    -DBUILD_TESTING=ON -DUSD_STAGE_RUNNER_REQUIRE_OPENUSD=ON `
+    -DUSD_STAGE_RUNNER_REQUIRE_JOLT=ON -DUSD_STAGE_RUNNER_ENABLE_PHYSICS_USD=OFF
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+cmake --build .ci/compatibility-cmake --config Release
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+$offTests = ctest --test-dir .ci/compatibility-cmake -C Release --show-only=json-v1 |
+    ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+if ('stage_runner.standard_requires_package' -notin $offTests.tests.name) {
+    throw 'Compatibility-only build is missing the standard-import enable-option diagnostic test'
+}
+ctest --test-dir .ci/compatibility-cmake -C Release --output-on-failure --no-tests=error
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 $env:CMAKE_PREFIX_PATH = $prefixes -join [IO.Path]::PathSeparator

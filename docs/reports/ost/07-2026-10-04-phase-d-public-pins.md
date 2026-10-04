@@ -46,4 +46,33 @@ OpenStrata `physics-usd` tests with MSVC 19.51, Python 3.13.14, and OpenStrata
 0.23.14. Both cache assertions resolved the public parser prefix. The coverage
 assertions found all 11 required host tests in CMake and all 13 in Plugin View.
 
-Hosted Windows/Linux parity and the standard-default switch remain pending.
+## Hosted public-pin parity
+
+[Stage Runner run 37184752376](https://github.com/animu-sphere/usd-stage-runner/actions/runs/37184752376)
+passed on `windows-2025-vs2026` and `ubuntu-24.04` at consumer commit
+`7fc37961ed604bd0b2eb22ed8d3c4aac094fd5ac`, using OpenStrata 0.23.1 and the
+existing runtime/core/backend pins. The logs identify the public parser prefix
+for each target; neither cell checked out or built the sibling parser.
+
+| Check | Windows | Linux |
+| --- | --- | --- |
+| Compatibility workspace tests before default switch | 47 passed | 47 passed |
+| Standard-enabled plain CMake | 52 passed | 52 passed |
+| Standard-enabled OpenStrata `physics-usd` intent | 55 passed | 55 passed |
+
+Both cells found all 11 required standard/compatibility host tests in CMake and
+all 13 in Plugin View. The ordinary CMake workflow also passed its two core
+cells and Jolt cell in
+[run 37184752288](https://github.com/animu-sphere/usd-stage-runner/actions/runs/37184752288).
+
+This completed the delivery gate for enabling standard import by default and
+switching the host examples to standard fixtures. The follow-up CI clears any
+cached standard-import option before the plain-CMake configure, checks the
+default workspace's standard/compatibility coverage, and retains a separate
+explicit OFF build with the enable-option diagnostic test.
+
+After the switch, the local Windows gate again passed 52 default-enabled
+plain-CMake tests, 47 explicit OFF compatibility tests (including
+`stage_runner.standard_requires_package`), and 55 OpenStrata intent tests.
+The standard configure removed the cached option rather than forcing ON, so
+the 11-test coverage assertion also verified the new default.

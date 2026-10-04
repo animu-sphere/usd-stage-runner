@@ -351,11 +351,7 @@ jobs:
           if (-not $build) {
             throw "OpenStrata did not create the expected workspace build directory"
           }
-          $testList = ctest --test-dir $build.FullName -N
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (($testList -join "`n") -notmatch "stage_runner.physics_falling_cube") {
-            throw "The workspace configured without the real Jolt physics tests"
-          }
+          ./tests/assert_physics_usd_tests.ps1 -BuildDirectory $build.FullName
       - name: Run the workspace test suite
         if: ${{ matrix.verify != 'build' }}
         shell: pwsh
@@ -391,3 +387,4 @@ jobs:
             dist/products/
             .ost-ci/
             .ci/standard-cmake/Testing/
+            .ci/compatibility-cmake/Testing/

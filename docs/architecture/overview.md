@@ -33,7 +33,7 @@ behavior targets do not exist yet.
 | `inputSdl` | `backends/inputSdl` | Map WASD, arrow keys, and the first gamepad's left stick to `move.x` and `move.y`; map Space and the gamepad south button to `jump`; own SDL window, controller, and subsystem lifetime. | `inputCore`; SDL3 or SDL2 when available. |
 | `physicsJolt::physicsJolt` | installed `usd-physics-plugins` package | Own Jolt initialization and shutdown, shapes, bodies, constraints, semantic collision filtering, fixed stepping, changed-body extraction, ground shape casts, and first-hit segment ray casts behind `physicsCore`. | `physicsCore`; Jolt when the package is backend-enabled. |
 | `runnerSchema` | `plugins/runnerSchema` | Register the codeless single-apply `RunnerPhysicsBodyAPI`, `RunnerColliderAPI`, `RunnerCharacterAPI`, and `RunnerCameraRigAPI` authored-data contracts. | OpenUSD resource-plugin discovery; no C++ ABI. |
-| `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, own the prim/body bridge, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, external `physicsCore`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
+| `stageRuntime` | `libs/stageRuntime` | Import an open Stage into a Runtime World, own the prim/body bridge, create physics through an injected factory, import character and camera systems, drive the shared play-session lifecycle, rebuild initial state on reset, and synchronize dirty translations and camera orientations. | `runtimeCore`, `inputCore`, external `physicsCore` and default-enabled `physicsUsd`, `characterCore`, `cameraCore`; OpenUSD `usd` and `usdGeom`. |
 | `stage_runner` | `apps/stage_runner` | Parse host options, register schemas, open a Stage, select SDL and external Jolt adapters, poll or inject input, drive `StageSession`, and report results. | `stageRuntime`, `inputSdl`, external `physicsJolt`; OpenUSD `plug` when available. |
 | `usdviewStageRunner` | `plugins/usdviewStageRunner` | Register Runner schemas, bind usdview's current Stage to `StageSession`, expose play/pause/stop/single-step/reset commands, drive elapsed host time, refresh the viewport, and dispose the session when the Stage changes. | `stageRuntime`, external `physicsJolt`, OpenUSD Python bindings, and usdview Qt APIs. |
 
@@ -158,7 +158,7 @@ synchronization point. Removing a prim removes its components and any pending
 dirty entry.
 
 When a Stage session starts, `stageRuntime` traverses its prims and imports local translate ops
-for xformable prims. A physics prim applies both `RunnerPhysicsBodyAPI` and
+for xformable prims. A compatibility physics prim applies both `RunnerPhysicsBodyAPI` and
 `RunnerColliderAPI`. Motion type, mass, shape, and local-space box half extents
 come from their declared `runner:physics:*` attributes; ordered scale ops
 multiply the half extents. The importer currently accepts `static` or `dynamic`
@@ -180,7 +180,7 @@ the removed temporary convention.
 
 ## Standard Box physics import
 
-With `USD_STAGE_RUNNER_ENABLE_PHYSICS_USD=ON`, `stageRuntime` consumes installed
+With the default `USD_STAGE_RUNNER_ENABLE_PHYSICS_USD=ON`, `stageRuntime` consumes installed
 `physicsUsd::physicsUsd`. Its `readBoxScene()` validates a snapshot before Stage
 Runner creates the world. `PhysicsCollisionAPI` on a `UsdGeomCube` produces a
 static box; adding enabled `PhysicsRigidBodyAPI` and `PhysicsMassAPI` with
@@ -197,8 +197,10 @@ world creation. Reset restores captured translations; Stop rebuilds persistent
 Stage opinions. The installed `stageRuntime` config carries the conditional
 `physicsUsd` dependency without a sibling source edge.
 
-The feature is off by default pending the published-artifact hosted gate. An OFF build
-rejects standard bodies with an enable-option diagnostic. Four `standard_*.usda`
+Standard import is enabled by default after Windows/Linux parity passed against
+the public parser pins. An explicit OFF build omits the parser dependency and
+rejects standard bodies with an enable-option diagnostic. Host examples use
+standard fixtures while compatibility fixtures remain covered. Four `standard_*.usda`
 fixtures cover falling, walking/jumping, camera obstruction, and Character
 camera following. A Jolt test compares 180 frames, counts, dirty writes, Reset,
 persistent edits, and Stop against the compatibility fixtures. Standalone and
@@ -220,13 +222,16 @@ and compatibility falling, walking, jumping, camera collision, session parity,
 and native usdview tests; Plugin View also checks both authored representations
 through the staged adapter. Both build caches must resolve the parser config
 from the prefix returned by `ost library pull`, preventing stale source-built
-packages from satisfying the gate. The earlier pre-publication hosted gate
-passed 52 plain-CMake tests and 55 OpenStrata tests on each OS. Local Windows evidence
+packages from satisfying the gate. The published-artifact hosted gate passed
+52 plain-CMake tests and 55 OpenStrata tests on each OS before the default
+switch. CI also retains an explicit OFF CMake build with all compatibility
+tests and the standard-import enable-option diagnostic. Local Windows evidence
 is recorded in the [local Phase D report](../reports/ost/05-2026-10-04-phase-d-standard-physics.md);
 the [hosted delivery report](../reports/ost/06-2026-10-04-phase-d-hosted-delivery.md)
 records the hosted results and a Windows consumer check against the packaged
 parser binary. The [public-pin report](../reports/ost/07-2026-10-04-phase-d-public-pins.md)
-records publication and fresh anonymous verification of both packages.
+records publication, fresh anonymous verification, and hosted consumption of
+both packages.
 
 ## Input boundary
 
@@ -361,7 +366,8 @@ usdviewStageRunner --> stageRuntime + external physicsJolt
                        + OpenUSD Python + usdview Qt
 
 stageRuntime --------> runtimeCore + inputCore + characterCore + cameraCore
-                       + external physicsCore + OpenUSD usd/usdGeom
+                       + external physicsCore + default-enabled physicsUsd
+                       + OpenUSD usd/usdGeom
 characterCore -------> runtimeCore + external physicsCore
 vehicleCore ---------> runtimeCore + external physicsCore
 cameraCore ----------> runtimeCore

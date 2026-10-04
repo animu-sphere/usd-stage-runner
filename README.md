@@ -14,9 +14,9 @@ The project is a lightweight runtime orchestration layer, not the owner of a
 physics implementation. Reusable physics contracts and the Jolt backend are
 consumed from installed `usd-physics-plugins` packages; Stage Runner retains
 Runtime World, fixed-step scheduling, gameplay policy, Stage-specific import,
-host lifecycle, and discardable USD synchronization. Optional installed
-`physicsUsd` now supports standard Box declarations; broader support and
-artifact rollout remain in progress. See the
+host lifecycle, and discardable USD synchronization. Installed `physicsUsd`
+supports standard Box declarations by default through pinned Windows/Linux
+packages; broader support remains in progress. See the
 [physics repository boundary](docs/design/proposed/0002-physics-repository-boundary.md).
 
 The intended architecture and the distinction between implemented and planned
@@ -31,11 +31,12 @@ Replace the example install path with your own:
 
 ```powershell
 $usdRoot = 'C:\path\to\openusd-with-usdview'
+$env:CMAKE_PREFIX_PATH = 'C:\path\to\jolt-install'
 ost runtime pull cy2026 --profile usd --from-usd $usdRoot
 ost runtime pull cy2026 --profile lookdev --from-usd $usdRoot
 ost library pull
-ost build --intent plugin-view
-$fixture = (Resolve-Path .\tests\fixtures\minimal.usda).Path
+ost build --intent physics-usd
+$fixture = (Resolve-Path .\tests\fixtures\standard_character_follow_camera.usda).Path
 ost plugin view plugins/runnerSchema $fixture --profile lookdev
 ```
 
@@ -44,20 +45,9 @@ needed. Choose **Stage Runner > Play**, then use WASD to move `PlayerCube`.
 The fixture path is absolute because `ost plugin view` resolves relative fixture
 paths from the bundle directory.
 
-To try jumping and a camera that follows `PlayerCube`, make the pinned
-Jolt-enabled physics artifacts and their Jolt dependency discoverable, then use
-the Jolt build intent:
-
-```powershell
-$env:CMAKE_PREFIX_PATH = 'C:\path\to\jolt-install'
-ost library pull
-ost build --intent plugin-view-jolt
-$fixture = (Resolve-Path .\tests\fixtures\character_follow_camera.usda).Path
-ost plugin view plugins/runnerSchema $fixture --profile lookdev
-```
-
-Choose **Stage Runner > Play**. WASD and the arrow keys move the cube; Space
-jumps. Play selects the scene's third-person rig when usdview is using its free
+The pinned Jolt-enabled physics artifacts require their matching Jolt SDK on
+`CMAKE_PREFIX_PATH`. WASD and the arrow keys move the cube; Space jumps. Play
+selects the scene's third-person rig when usdview is using its free
 camera. The camera then follows the cube. If you have already chosen another
 scene camera, Play keeps that choice.
 
@@ -114,8 +104,9 @@ scene camera, Play keeps that choice.
 The character-control, camera-rig, and host-integration milestones are
 implemented end to end. The physics core and Jolt backend have been extracted,
 their pinned Windows/Linux packages are publicly available, and Stage Runner's
-package migration has passed hosted verification. Optional standard Box import
-now has local Windows parity coverage. Vehicle physics application remains
+package migration has passed hosted verification. Standard Box import has
+passed Windows/Linux parity against the published parser pins. Vehicle physics
+application remains
 paused until standard physics delivery and shared MMD/VRM validation advance.
 Behavior and OpenExec integration are later slices.
 
@@ -159,13 +150,14 @@ ost devshell cy2026 --profile usd
 Then run the deterministic smoke path inside that shell:
 
 ```powershell
-.\apps\stage_runner\bin\stage_runner.exe tests\fixtures\minimal.usda --frames 4 --deterministic
+.\apps\stage_runner\bin\stage_runner.exe tests\fixtures\standard_falling_cube.usda --frames 180 --deterministic
 ```
 
 ## Build with plain CMake
 
 A C++17 compiler is sufficient for `runtimeCore`. The complete repository build
-requires installed `physicsCore` and `physicsJolt` packages. Point
+requires installed `physicsCore` and `physicsJolt` packages, plus `physicsUsd`
+when building Stage integration with its default standard importer. Point
 `CMAKE_PREFIX_PATH` at those packages and OpenUSD; a Jolt-enabled
 `physicsJolt` package also requires its Jolt SDK dependency to be discoverable:
 
@@ -175,21 +167,23 @@ cmake --build --preset dev
 ctest --preset dev
 ```
 
-For standard Box declarations, install the sibling repository with
-`USDPHYSICS_BUILD_USD=ON`, add its prefix and the same OpenUSD SDK to
-`CMAKE_PREFIX_PATH`, then configure Stage Runner with
-`USD_STAGE_RUNNER_ENABLE_PHYSICS_USD=ON`. Try
+Standard Box import is enabled by default. Obtain the published parser with
+`ost library pull`, or install the sibling repository with
+`USDPHYSICS_BUILD_USD=ON`, then add its prefix and the same OpenUSD SDK to
+`CMAKE_PREFIX_PATH`. Try
 `tests/fixtures/standard_falling_cube.usda` or
 `tests/fixtures/standard_character_follow_camera.usda` with either host.
 See the [supported subset](docs/architecture/overview.md#standard-box-physics-import).
 
-With that installed parser on `CMAKE_PREFIX_PATH`, `ost build --intent physics-usd`
-and `ost test --intent physics-usd` enable the same standard import and stage the
-usdview adapter. The intent requires OpenUSD and a Jolt-enabled installed
+`ost build --intent physics-usd` and `ost test --intent physics-usd` require the
+same standard import and stage the usdview adapter. The intent requires OpenUSD
+and a Jolt-enabled installed
 backend. `ost library pull` now resolves published Windows/Linux `physicsUsd`
 packages through exact content and OCI digests. The CI gate consumes those
-binaries through plain CMake and this intent; the default switch awaits its
-hosted result. See the [public-pin report](docs/reports/ost/07-2026-10-04-phase-d-public-pins.md).
+binaries through default-enabled plain CMake, an explicit compatibility-only
+build, and this intent. Set `USD_STAGE_RUNNER_ENABLE_PHYSICS_USD=OFF` for a
+compatibility-only build without the parser; standard bodies then produce an
+enable-option diagnostic. See the [public-pin report](docs/reports/ost/07-2026-10-04-phase-d-public-pins.md).
 
 The two core/backend physics packages are required at configure time. Without OpenUSD, the
 host still compiles but reports that Stage loading is unavailable; the
@@ -213,7 +207,7 @@ generated package parent to `PYTHONPATH` and the package directory containing
 ```powershell
 $env:PYTHONPATH = "$PWD\build\cy2026-windows-x86_64-py313-usd\plugins\usdviewStageRunner\python;$env:PYTHONPATH"
 $env:PXR_PLUGINPATH_NAME = "$PWD\build\cy2026-windows-x86_64-py313-usd\plugins\usdviewStageRunner\python\usdviewStageRunner;$env:PXR_PLUGINPATH_NAME"
-usdview tests\fixtures\minimal.usda
+usdview tests\fixtures\standard_character_follow_camera.usda
 ```
 
 The **Stage Runner** menu exposes Play, Pause, Stop, Single Step, and Reset.
@@ -237,8 +231,8 @@ but this repository's pinned `usd` profile does not promise usdview. Moving
 the adapter to its own bundle also requires a runtime artifact with the
 `usdview` capability and corresponding CI coverage.
 
-`third_person_camera.usda` can be opened the same way. The selected OpenStrata
-runtime must contain usdview, and the installed `physicsJolt` package must have
+`standard_third_person_camera.usda` can be opened the same way. The selected
+OpenStrata runtime must contain usdview, and the installed `physicsJolt` package must have
 backend support to execute physics declarations; otherwise the shared adapter
 reports the same unavailable-backend error as `stage_runner` and ordinary
 usdview.
