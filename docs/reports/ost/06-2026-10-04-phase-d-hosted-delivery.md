@@ -1,5 +1,8 @@
 # Phase D hosted delivery preparation
 
+Follow-up: the [public-pin report](07-2026-10-04-phase-d-public-pins.md) records
+publication and downstream verification after this preparation check.
+
 Date: 2026-10-04 (Asia/Tokyo). Scope: hosted pre-publication results and local
 verification of the resulting packages. This follows the
 [local standard-physics gate](05-2026-10-04-phase-d-standard-physics.md).

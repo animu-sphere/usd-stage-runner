@@ -186,8 +186,10 @@ See the [supported subset](docs/architecture/overview.md#standard-box-physics-im
 With that installed parser on `CMAKE_PREFIX_PATH`, `ost build --intent physics-usd`
 and `ost test --intent physics-usd` enable the same standard import and stage the
 usdview adapter. The intent requires OpenUSD and a Jolt-enabled installed
-backend. It is a pre-publication validation path; automatic `physicsUsd`
-artifact resolution and the default switch remain pending.
+backend. `ost library pull` now resolves published Windows/Linux `physicsUsd`
+packages through exact content and OCI digests. The CI gate consumes those
+binaries through plain CMake and this intent; the default switch awaits its
+hosted result. See the [public-pin report](docs/reports/ost/07-2026-10-04-phase-d-public-pins.md).
 
 The two core/backend physics packages are required at configure time. Without OpenUSD, the
 host still compiles but reports that Stage loading is unavailable; the

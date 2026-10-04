@@ -197,7 +197,7 @@ world creation. Reset restores captured translations; Stop rebuilds persistent
 Stage opinions. The installed `stageRuntime` config carries the conditional
 `physicsUsd` dependency without a sibling source edge.
 
-The feature is off by default pending pinned OpenStrata artifacts. An OFF build
+The feature is off by default pending the published-artifact hosted gate. An OFF build
 rejects standard bodies with an enable-option diagnostic. Four `standard_*.usda`
 fixtures cover falling, walking/jumping, camera obstruction, and Character
 camera following. A Jolt test compares 180 frames, counts, dirty writes, Reset,
@@ -211,19 +211,22 @@ install step removes the executable's build RPATH.
 
 The `physics-usd` OpenStrata intent enables the standard importer, requires
 OpenUSD and Jolt, and stages the usdview adapter into the schema bundle.
-Source CI installs `libs/physicsUsd` from pinned sibling revision
-`3daad33a1f9f8418ce25f41d14526f0450062d35` against the existing runtime/core
-artifact graph. `tests/run_physics_usd_ci.ps1` then builds and tests both plain
+Source CI resolves published `physicsUsd` Windows/Linux packages through the
+exact content and OCI digests in `libs/stageRuntime/openstrata.library.yaml`.
+It uses the existing runtime/core/backend pins and does not check out or build
+the parser source. `tests/run_physics_usd_ci.ps1` builds and tests both plain
 CMake and this intent on Windows and Linux. A coverage check requires standard
 and compatibility falling, walking, jumping, camera collision, session parity,
 and native usdview tests; Plugin View also checks both authored representations
-through the staged adapter. This is a pre-publication installed-package gate;
-it does not yet consume a pinned `physicsUsd` artifact. The hosted gate passed
-52 plain-CMake tests and 55 OpenStrata tests on each OS. Local Windows evidence
+through the staged adapter. Both build caches must resolve the parser config
+from the prefix returned by `ost library pull`, preventing stale source-built
+packages from satisfying the gate. The earlier pre-publication hosted gate
+passed 52 plain-CMake tests and 55 OpenStrata tests on each OS. Local Windows evidence
 is recorded in the [local Phase D report](../reports/ost/05-2026-10-04-phase-d-standard-physics.md);
 the [hosted delivery report](../reports/ost/06-2026-10-04-phase-d-hosted-delivery.md)
 records the hosted results and a Windows consumer check against the packaged
-parser binary.
+parser binary. The [public-pin report](../reports/ost/07-2026-10-04-phase-d-public-pins.md)
+records publication and fresh anonymous verification of both packages.
 
 ## Input boundary
 

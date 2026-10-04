@@ -21,6 +21,16 @@ requires:
           cy2026-windows-x86_64-py313-usd:
             digest: sha256:48586c60e8e9678c52c80ab831000b403787f84678b1bd69b944e86c0d0bdef9
             source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:bc6e405c128375dce390e95b0e2103b4a86e47cc02dcd266fb61a1c66d0a761a
+    - id: physicsUsd
+      version: ">=0.1,<0.2"
+      artifact:
+        targets:
+          cy2026-linux-x86_64-py313-usd:
+            digest: sha256:46d4ea15d829fd8333ea9fe5dc432c26bb996bf59c0c953550fb636394aece2e
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:f84f4a731e6a9d7325a8092ef46c40e614a80384538a11cf0b8583919450fbf5
+          cy2026-windows-x86_64-py313-usd:
+            digest: sha256:a3a1cc3e90ba56f99151f26f6db22673944b94da51e72259de05a4dbee548876
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:2b5289786e0a8a7d807922057a552d5111674c729baad75baec111f49f710269
     - id: characterCore
       version: ">=0.1,<0.2"
     - id: cameraCore

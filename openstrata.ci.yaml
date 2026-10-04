@@ -3,8 +3,8 @@ schema: 1
 # The generated workflow still needs the pinned Jolt checkout and a root-CMake
 # check that the combined OpenUSD/Jolt integration tests are present. Retain
 # those repository-specific steps after regenerating the workflow.
-# Also retain the pinned, installed physicsUsd pre-publication checks through
-# plain CMake and the physics-usd intent on both OSes.
+# Also retain the published physicsUsd artifact checks through plain CMake and
+# the physics-usd intent on both OSes.
 
 bootstrap:
   ost:
