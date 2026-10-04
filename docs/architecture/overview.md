@@ -218,8 +218,12 @@ CMake and this intent on Windows and Linux. A coverage check requires standard
 and compatibility falling, walking, jumping, camera collision, session parity,
 and native usdview tests; Plugin View also checks both authored representations
 through the staged adapter. This is a pre-publication installed-package gate;
-it does not yet consume a pinned `physicsUsd` artifact. Local Windows evidence
-is recorded in the [Phase D report](../reports/ost/05-2026-10-04-phase-d-standard-physics.md).
+it does not yet consume a pinned `physicsUsd` artifact. The hosted gate passed
+52 plain-CMake tests and 55 OpenStrata tests on each OS. Local Windows evidence
+is recorded in the [local Phase D report](../reports/ost/05-2026-10-04-phase-d-standard-physics.md);
+the [hosted delivery report](../reports/ost/06-2026-10-04-phase-d-hosted-delivery.md)
+records the hosted results and a Windows consumer check against the packaged
+parser binary.
 
 ## Input boundary
 

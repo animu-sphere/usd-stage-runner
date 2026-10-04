@@ -3,6 +3,9 @@
 Date: 2026-10-04 (Asia/Tokyo). Scope: local Windows verification and CI
 preparation, before `physicsUsd` artifact publication.
 
+Follow-up: the [hosted delivery report](06-2026-10-04-phase-d-hosted-delivery.md)
+records subsequent Windows/Linux CI success and package-candidate verification.
+
 ## Environment and inputs
 
 - Windows x86_64, MSVC 19.51 / Visual Studio 18 2026, CMake 4.4,

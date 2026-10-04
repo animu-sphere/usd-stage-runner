@@ -14,18 +14,20 @@ The [current architecture](../architecture/overview.md#standard-box-physics-impo
 records the optional installed `physicsUsd` path. The default build retains
 Runner compatibility until the new package enters the pinned artifact graph.
 
-The pre-publication CI gate now installs a pinned parser and checks CMake and
-OpenStrata on both OSes. The [local Phase D report](../reports/ost/05-2026-10-04-phase-d-standard-physics.md)
-records Windows results; hosted execution and artifact publication remain open.
+The pre-publication CI gate installs a pinned parser and has passed CMake and
+OpenStrata on Windows and Linux. The
+[hosted Phase D report](../reports/ost/06-2026-10-04-phase-d-hosted-delivery.md)
+records those results, verified package candidates, and a local Windows consumer
+check against the hosted parser binary. Artifact publication and downstream
+verification against public pins remain open.
 
 ### Next slice
 
 - Publish and pin Windows/Linux `physicsUsd` artifacts, add the package to
   Stage Runner's OpenStrata requirements, then enable it by default.
-- Execute the standard/compatibility CI gate in hosted CMake/OpenStrata on both
-  platforms, then repeat against published artifact pins. Local Windows
-  coverage includes falling bodies, Character, Camera, standalone, native
-  usdview, and the OpenStrata-staged adapter.
+- Repeat the passing standard/compatibility CI gate against published artifact
+  pins on both platforms. Coverage includes falling bodies, Character, Camera,
+  standalone, native usdview, and the OpenStrata-staged adapter.
 - Switch default host examples to standard fixtures after that delivery gate;
   retain compatibility fixtures until Runner physics schemas can be removed.
 - Extend the sibling parser through working fixtures for gravity, additional
