@@ -4,34 +4,34 @@
 
 ### Status
 
-In progress: the optional standard Box slice is implemented. Phase C's
+In progress: the standard Box slice is implemented and enabled by default. Phase C's
 installed-package migration is complete. The
 [hosted consumer report](../reports/ost/04-2026-09-23-phase-c-hosted-physics-consumer.md)
 records Windows and Linux CMake and OpenStrata results, including a successful
 run with artifact caches disabled.
 
 The [current architecture](../architecture/overview.md#standard-box-physics-import)
-records the optional installed `physicsUsd` path. The default build retains
-Runner compatibility until the new package enters the pinned artifact graph.
+records the installed `physicsUsd` path. Standard import uses published,
+digest-pinned Windows/Linux packages; Runner compatibility remains available.
 
-The pre-publication CI gate installs a pinned parser and has passed CMake and
+The pre-publication CI gate installed a pinned parser and passed CMake and
 OpenStrata on Windows and Linux. The
 [hosted Phase D report](../reports/ost/06-2026-10-04-phase-d-hosted-delivery.md)
 records those results, verified package candidates, and a local Windows consumer
-check against the hosted parser binary. Artifact publication and downstream
-verification against public pins remain open.
+check against the hosted parser binary. Both parser artifacts are now published
+and pinned in Stage Runner's library requirements. The
+[public-pin report](../reports/ost/07-2026-10-04-phase-d-public-pins.md) records
+fresh anonymous pulls with digest, target, SBOM, and provenance verification,
+and successful hosted CMake/OpenStrata parity against those pins on both OSes.
+Host examples now use standard declarations, and CI retains an explicit OFF
+compatibility-only build.
 
 ### Next slice
 
-- Publish and pin Windows/Linux `physicsUsd` artifacts, add the package to
-  Stage Runner's OpenStrata requirements, then enable it by default.
-- Repeat the passing standard/compatibility CI gate against published artifact
-  pins on both platforms. Coverage includes falling bodies, Character, Camera,
-  standalone, native usdview, and the OpenStrata-staged adapter.
-- Switch default host examples to standard fixtures after that delivery gate;
-  retain compatibility fixtures until Runner physics schemas can be removed.
 - Extend the sibling parser through working fixtures for gravity, additional
   shapes, mass inference, joints, drives, and limits.
+- Retain compatibility fixtures until the wider standard contract allows
+  Runner physics schemas to be removed.
 - Keep generic physics contracts and backend implementation in the sibling
   repository; Stage Runner retains Stage/session orchestration and gameplay
   policy.

@@ -78,7 +78,7 @@ The receiving workspace reserves these surfaces:
 | --- | --- | --- |
 | `physicsCore` | `physicsCore::physicsCore` | `characterCore`, `vehicleCore`, `stageRuntime`, and their tests. |
 | `physicsJolt` | `physicsJolt::physicsJolt` | `stage_runner`, `usdviewStageRunner`, and Jolt-backed integration tests. |
-| `physicsUsd` | `physicsUsd::physicsUsd` | Optional standard Box import via `USD_STAGE_RUNNER_ENABLE_PHYSICS_USD`; consumer artifact pins remain pending. |
+| `physicsUsd` | `physicsUsd::physicsUsd` | Standard Box import enabled by default via `USD_STAGE_RUNNER_ENABLE_PHYSICS_USD`, with published Windows/Linux artifact pins and an explicit compatibility-only OFF setting. |
 
 Plain CMake consumes installed packages. OpenStrata uses the same
 `physicsCore` and `physicsJolt` identities rather than a private sibling source

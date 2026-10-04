@@ -26,7 +26,7 @@ keys to move `/World/PlayerCube`; **Space** requests a jump for a character
 Stage. These keys work in the viewport and other usdview panels while playing,
 except in text editors, menus, and buttons. Releasing a key or deactivating
 usdview clears that input. `minimal.usda` demonstrates movement without Jolt.
-`character_follow_camera.usda` demonstrates jumping and third-person following
+`standard_character_follow_camera.usda` demonstrates jumping and third-person following
 with a Jolt-enabled build. Play selects its follow camera if usdview is using
 the free camera, and keeps any camera you explicitly selected.
 
@@ -35,8 +35,8 @@ inside the `runnerSchema` bundle, whose schema `plugInfo.json` includes the
 Python plugin registration:
 
 ```powershell
-ost build --intent plugin-view
-$fixture = (Resolve-Path .\tests\fixtures\minimal.usda).Path
+ost build --intent physics-usd
+$fixture = (Resolve-Path .\tests\fixtures\standard_character_follow_camera.usda).Path
 ost plugin view plugins/runnerSchema $fixture --profile lookdev
 ```
 

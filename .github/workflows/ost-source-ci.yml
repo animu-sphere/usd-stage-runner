@@ -15,8 +15,8 @@
 # Repository additions retained after regeneration: build pinned Jolt beside
 # the pinned USD runtime and require the root CMake suite to expose its real
 # OpenUSD/Jolt integration tests.
-# Standard physics pre-publication checks install the pinned sibling parser
-# against the same runtime/core artifacts, then exercise CMake and OpenStrata.
+# Standard physics checks consume the published, digest-pinned parser alongside
+# the runtime/core artifacts, then exercise CMake and OpenStrata.
 name: ost source ci
 
 on:
@@ -95,12 +95,6 @@ jobs:
           repository: jrouwe/JoltPhysics
           ref: 23dadd0e603f1b321142d4c74df07fce85064989
           path: .ci/jolt
-      - name: Check out the standard Box parser
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          repository: animu-sphere/usd-physics-plugins
-          ref: 3daad33a1f9f8418ce25f41d14526f0450062d35
-          path: .ci/physics
       - name: Hosted runner billing notice
         if: ${{ matrix.hosted }}
         shell: bash
@@ -357,11 +351,7 @@ jobs:
           if (-not $build) {
             throw "OpenStrata did not create the expected workspace build directory"
           }
-          $testList = ctest --test-dir $build.FullName -N
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          if (($testList -join "`n") -notmatch "stage_runner.physics_falling_cube") {
-            throw "The workspace configured without the real Jolt physics tests"
-          }
+          ./tests/assert_physics_usd_tests.ps1 -BuildDirectory $build.FullName
       - name: Run the workspace test suite
         if: ${{ matrix.verify != 'build' }}
         shell: pwsh
@@ -396,5 +386,5 @@ jobs:
             **/dist/tools/
             dist/products/
             .ost-ci/
-            .ci/physics-usd-build/Testing/
             .ci/standard-cmake/Testing/
+            .ci/compatibility-cmake/Testing/

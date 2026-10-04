@@ -8,7 +8,7 @@ project(
 )
 
 include(CTest)
-option(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD "Import standard physics through installed physicsUsd" OFF)
+option(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD "Import standard physics through installed physicsUsd" ON)
 if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
   find_package(physicsUsd 0.1 CONFIG REQUIRED)
 endif()
