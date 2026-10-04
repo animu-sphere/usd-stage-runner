@@ -202,6 +202,17 @@ if(BUILD_TESTING AND Python3_EXECUTABLE)
         ENVIRONMENT_MODIFICATION
           "PYTHONPATH=path_list_prepend:${_ost_bundle_dir}/python;PYTHONPATH=path_list_prepend:${pxr_DIR}/lib/python;PATH=path_list_prepend:${_ost_python_package_dir};PATH=path_list_prepend:${pxr_DIR}/lib;PATH=path_list_prepend:${pxr_DIR}/bin;PATH=path_list_prepend:${_python_runtime_dir};PXR_PLUGINPATH_NAME=path_list_prepend:${_ost_bundle_dir}/plugin/resources/runnerSchema;PYTHONDONTWRITEBYTECODE=set:1"
       )
+      if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
+        add_test(NAME usdviewStageRunner.ost_plugin_view_standard_character
+          COMMAND "${Python3_EXECUTABLE}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tests/ost_plugin_view_character_smoke.py"
+            "${_ost_bundle_dir}/plugin/resources/runnerSchema"
+            "${CMAKE_SOURCE_DIR}/tests/fixtures/standard_character_follow_camera.usda")
+        get_test_property(usdviewStageRunner.ost_plugin_view_character
+          ENVIRONMENT_MODIFICATION _ost_standard_environment)
+        set_tests_properties(usdviewStageRunner.ost_plugin_view_standard_character PROPERTIES
+          ENVIRONMENT_MODIFICATION "${_ost_standard_environment}")
+      endif()
     endif()
   endif()
 endif()
