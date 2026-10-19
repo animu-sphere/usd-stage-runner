@@ -233,6 +233,47 @@ parser binary. The [public-pin report](../reports/ost/07-2026-10-04-phase-d-publ
 records publication, fresh anonymous verification, and hosted consumption of
 both packages.
 
+## Experimental full-scene physics rebuild
+
+`stageRuntime` additionally provides `PhysicsSceneRuntime` in
+`usd_stage_runner/stage/physics_scene_runtime.h`. It is separate from
+`StageSession` and is enabled with
+`USD_STAGE_RUNNER_ENABLE_PHYSICS_SCENE=ON` (default OFF), which requires
+standard import to be enabled and rebuilt physics packages containing
+`readPhysicsScene()` and `toSixDofConstraint()`. Published Box pins are unchanged.
+The installed config reports `stageRuntime_PHYSICS_SCENE_AVAILABLE`; the
+class's `available()` reports the same build choice. The OFF build keeps the
+public API but rejects rebuild with an enable-option diagnostic.
+
+The component owns a complete world, the source Stage reference, bidirectional
+prim/body mappings and constraint identities. `rebuild(stage)` first destroys
+the previous world and mappings, then reads the complete validated snapshot.
+Its factory receives optional world-space gravity: absent settings delegate
+defaults to the host factory. It constructs shapes and bodies from the snapshot's
+world transforms and builds enabled joints through the neutral six-DOF
+capability. Missing capability and unsupported conversion semantics retain
+typed `usd_physics::usd::ImportError` code/path diagnostics. Disabled joints require
+no capability. Backend construction failures retain a neutral error code and
+declaration path through `PhysicsSceneBuildError`.
+
+Only complete construction publishes a world. Any failure destroys partial
+resources and leaves the component empty, without retaining the prior Stage.
+`clear()` discards the world and all mappings; handles from previous worlds
+are not mapped by a rebuilt component and are rejected by its new backend.
+Callers may step, query and issue commands through the world pointer, whose
+lifetime ends on clear, rebuild or destruction. Resource creation/destruction
+belongs to the component. Reading and execution author no USD opinions, and
+authored edits become physical changes only after explicit rebuild.
+
+The generated `stage_runtime.physics_scene_rebuild` fixture exercises falling
+and rest, zero/changed gravity, Stage replacement, stale handles, fixed world
+anchors, capability rejection and rollback after partial shape/body/constraint
+creation. This library-level slice does not connect the wider snapshot to
+`StageSession`, host scheduling or display transforms. The existing Box host
+path and compatibility fixtures retain their independent parity tests.
+Local verification and installed API consumption are recorded in the
+[full-rebuild report](../reports/2026-10-20-physics-scene-rebuild.md).
+
 ## Input boundary
 
 `ActionState` stores normalized values keyed by names. Missing actions read as

@@ -8,3 +8,4 @@ architecture or future design.
 | Series | Scope |
 | --- | --- |
 | [OpenStrata dogfooding](ost/) | Build, test, packaging, runtime, and host-environment behavior observed while using `ost`. |
+| [2026-10-20 Physics scene full rebuild](2026-10-20-physics-scene-rebuild.md) | Local Windows consumer-owned rebuild, rollback, joint execution and installed API verification. |

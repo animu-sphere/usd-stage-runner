@@ -9,6 +9,10 @@ project(
 
 include(CTest)
 option(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD "Import standard physics through installed physicsUsd" ON)
+option(USD_STAGE_RUNNER_ENABLE_PHYSICS_SCENE "Enable experimental full-scene physics rebuild with rebuilt physics packages" OFF)
+if(USD_STAGE_RUNNER_ENABLE_PHYSICS_SCENE AND NOT USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
+  message(FATAL_ERROR "Physics scene rebuild requires USD_STAGE_RUNNER_ENABLE_PHYSICS_USD")
+endif()
 if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
   find_package(physicsUsd 0.1 CONFIG REQUIRED)
 endif()
@@ -56,6 +60,7 @@ else()
 endif()
 
 add_library(stageRuntime
+  src/physics_scene_runtime.cpp
   src/physics_runtime.cpp
   src/stage_session.cpp
 )
@@ -63,6 +68,9 @@ add_library(stageRuntime::stageRuntime ALIAS stageRuntime)
 if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD)
   target_link_libraries(stageRuntime PRIVATE physicsUsd::physicsUsd)
   target_compile_definitions(stageRuntime PRIVATE USD_STAGE_RUNNER_HAS_PHYSICS_USD=1)
+endif()
+if(USD_STAGE_RUNNER_ENABLE_PHYSICS_SCENE)
+  target_compile_definitions(stageRuntime PRIVATE USD_STAGE_RUNNER_HAS_PHYSICS_SCENE=1)
 endif()
 set_target_properties(stageRuntime PROPERTIES POSITION_INDEPENDENT_CODE ON)
 

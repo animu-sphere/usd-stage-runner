@@ -13,6 +13,20 @@ target_link_libraries(stage_runtime_physics_tests PRIVATE
   $<BUILD_INTERFACE:stageRuntime_warnings>
 )
 add_test(NAME stage_runtime.physics_bridge COMMAND stage_runtime_physics_tests)
+if(NOT USD_STAGE_RUNNER_ENABLE_PHYSICS_SCENE)
+  add_executable(stage_runtime_physics_scene_disabled_tests physics_scene_disabled_tests.cpp)
+  target_link_libraries(stage_runtime_physics_scene_disabled_tests PRIVATE stageRuntime::stageRuntime)
+  add_test(NAME stage_runtime.physics_scene_disabled COMMAND stage_runtime_physics_scene_disabled_tests)
+endif()
+if(USD_STAGE_RUNNER_ENABLE_PHYSICS_SCENE AND USD_STAGE_RUNNER_JOLT_AVAILABLE)
+  add_executable(stage_runtime_physics_scene_tests physics_scene_runtime_tests.cpp)
+  target_link_libraries(stage_runtime_physics_scene_tests PRIVATE
+    stageRuntime::stageRuntime physicsJolt::physicsJolt physicsUsd::physicsUsd)
+  if(physicsJolt_SIX_DOF_AVAILABLE)
+    target_compile_definitions(stage_runtime_physics_scene_tests PRIVATE TEST_SIX_DOF)
+  endif()
+  add_test(NAME stage_runtime.physics_scene_rebuild COMMAND stage_runtime_physics_scene_tests)
+endif()
 if(USD_STAGE_RUNNER_ENABLE_PHYSICS_USD AND USD_STAGE_RUNNER_JOLT_AVAILABLE)
   add_executable(stage_runtime_standard_physics_tests standard_physics_tests.cpp)
   target_link_libraries(stage_runtime_standard_physics_tests PRIVATE
@@ -36,6 +50,14 @@ if(WIN32)
   )
   if(TEST stage_runtime.standard_physics_parity)
     set_tests_properties(stage_runtime.standard_physics_parity PROPERTIES
+      ENVIRONMENT_MODIFICATION "${_stage_runtime_test_paths}")
+  endif()
+  if(TEST stage_runtime.physics_scene_rebuild)
+    set_tests_properties(stage_runtime.physics_scene_rebuild PROPERTIES
+      ENVIRONMENT_MODIFICATION "${_stage_runtime_test_paths}")
+  endif()
+  if(TEST stage_runtime.physics_scene_disabled)
+    set_tests_properties(stage_runtime.physics_scene_disabled PROPERTIES
       ENVIRONMENT_MODIFICATION "${_stage_runtime_test_paths}")
   endif()
 endif()
