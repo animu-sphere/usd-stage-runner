@@ -28,8 +28,13 @@ compatibility-only build.
 
 ### Next slice
 
-- Extend the sibling parser through working fixtures for gravity, additional
-  shapes, mass inference, joints, drives, and limits.
+- Connect the opt-in full-scene rebuild component to `StageSession` lifecycle,
+  fixed stepping and display transforms, including composed world/local frames
+  and rotation. The component's implemented boundary belongs in the
+  [architecture](../architecture/overview.md#experimental-full-scene-physics-rebuild).
+- Validate the wider path on Windows/Linux and both hosts against a coherent
+  release artifact set before promotion. Add drives or wider limits only when
+  a concrete acceptance fixture requires them.
 - Retain compatibility fixtures until the wider standard contract allows
   Runner physics schemas to be removed.
 - Keep generic physics contracts and backend implementation in the sibling
