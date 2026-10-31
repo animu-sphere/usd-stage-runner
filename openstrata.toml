@@ -38,13 +38,6 @@ members = [
   "apps/stage_runner",
 ]
 release_members = [
-  "runtimeCore",
-  "inputCore",
-  "characterCore",
-  "cameraCore",
-  "vehicleCore",
-  "stageRuntime",
-  "inputSdl",
   "runnerSchema",
   "stage_runner",
 ]
