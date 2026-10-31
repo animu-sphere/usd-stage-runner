@@ -16,21 +16,21 @@ requires:
       artifact:
         targets:
           cy2026-linux-x86_64-py313-usd:
-            digest: sha256:5d295ba71ce2226e0f427222f53027326129d9ede9e5d1d8543440a97b641b19
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:935777f72f589c8fa16a5ef63b459e0fb28d1b2b9e66dbb99317d2da166f104b
+            digest: sha256:a34556b2c8cd14467bba8f633886444259a6b80e4a584a2f438a66158ebc6a8b
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:98f4914fa0573f556190ac19d75913554b20a35f0cb0bc0ac00ae04dbac45cc9
           cy2026-windows-x86_64-py313-usd:
-            digest: sha256:b0efa51d466d7d3762293da36ec1dcca3d1c8496c1302b1733f4588287e7a011
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:576d69279823f2617b07837af75dfe5a6c5a4fdc25b68563cb96e5a93982857c
+            digest: sha256:e9a9dd69a28ead12944bcc731ffdb173132052f97d5f1becbef0f95a8c74008d
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:1158a79bfd7f269e892eb6924d3c25a70b451915dfa087d59608e80c83c2295f
     - id: physicsUsd
       version: ">=0.1,<0.2"
       artifact:
         targets:
           cy2026-linux-x86_64-py313-usd:
             digest: sha256:ca58f6a5d1516647494644c0da611923dc7cfe5cb10e6db5c29cae7247945e8c
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:2c35e27d44638021ea56504ce95ccb5079aa9200fd105f615652e0cdcae7e8cf
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:05277257012173a15b3ebc0b5163292aae33970b5d9efb909b2fdfdb11414aad
           cy2026-windows-x86_64-py313-usd:
-            digest: sha256:825a3175ffee62e4505c46745ef917d30f467b3137b3e80abf2124a9afa7288e
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:3bda9d9915b2bddf4c68b9639ce22d8dc12a68c94d8d0c130961804bc8d9b382
+            digest: sha256:baaa8dea4cd3232965e4851f14f098dd8d1ca59d238cffbdcc8e4a3bd297393c
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:bc22096d3477d42f49d03a3cec8110db7722fc78de89dc2c89d6c7de20b8ca65
     - id: characterCore
       version: ">=0.1,<0.2"
     - id: cameraCore

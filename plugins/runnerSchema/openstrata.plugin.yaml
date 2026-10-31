@@ -14,21 +14,21 @@ requires:
       artifact:
         targets:
           cy2026-linux-x86_64-py313-usd:
-            digest: sha256:5d295ba71ce2226e0f427222f53027326129d9ede9e5d1d8543440a97b641b19
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:935777f72f589c8fa16a5ef63b459e0fb28d1b2b9e66dbb99317d2da166f104b
+            digest: sha256:a34556b2c8cd14467bba8f633886444259a6b80e4a584a2f438a66158ebc6a8b
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:98f4914fa0573f556190ac19d75913554b20a35f0cb0bc0ac00ae04dbac45cc9
           cy2026-windows-x86_64-py313-usd:
-            digest: sha256:b0efa51d466d7d3762293da36ec1dcca3d1c8496c1302b1733f4588287e7a011
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:576d69279823f2617b07837af75dfe5a6c5a4fdc25b68563cb96e5a93982857c
+            digest: sha256:e9a9dd69a28ead12944bcc731ffdb173132052f97d5f1becbef0f95a8c74008d
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:1158a79bfd7f269e892eb6924d3c25a70b451915dfa087d59608e80c83c2295f
     - id: physicsJolt
       version: ">=0.1,<0.2"
       artifact:
         targets:
           cy2026-linux-x86_64-py313-usd:
             digest: sha256:8f427a6b8a0c27ab2ebb3e3918c196e20e4ca24bcc0430236bbc60a499347f84
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:cccd7e084f3657c3ec0f40474ea971741cf0164fb0cd3611f3ffb22960262140
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:f79ed3e2510521f8e20c8cdff5c95e01e87b7beaa8d26f5b7da7441c45d2f5a3
           cy2026-windows-x86_64-py313-usd:
-            digest: sha256:d924ad86f1538e9b4d1a154a05e244c542380803b948291df0772b30e2b7bf99
-            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:25dcb0154aba74f508b8e2f825711a5a79215f2539c168c2dbc5548e9579e354
+            digest: sha256:17177bf0e890552f6f90117631d0ca59dcd59b5c6b451f77ac91d487b32c8635
+            source: oci://ghcr.io/animu-sphere/usd-physics-plugins@sha256:8a21bafbab95acabba3ccb7c2fbde8f29cb355b1c8152fda52afb860be1dc192
 schema:
   codeless: true
   contract: 1
